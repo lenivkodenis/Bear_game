@@ -16,10 +16,11 @@ import '../services/level_service.dart';
 import '../services/progress_service.dart';
 
 class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
-  BearMathGame();
+  BearMathGame({required this.levelId});
 
   static const mentorDialogOverlay = 'mentorDialog';
 
+  final int levelId;
   late final PlayerBear player;
   late final WiseMentor mentor;
 
@@ -55,10 +56,10 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   Future<void> onLoad() async {
     await super.onLoad();
 
-    currentLevel = await _levelService.loadLevel(1);
+    currentLevel = await _levelService.loadLevel(levelId);
     _progress = await _progressService.loadProgress();
     _currentQuestionIndex = math.min(
-      _progress.currentQuestionIndex,
+      _progress.questionIndexForLevel(levelId),
       currentLevel!.questions.length,
     );
     scoreNotifier.value = _progress.score;
@@ -138,11 +139,18 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     final nextQuestionIndex = _currentQuestionIndex + 1;
     final newScore = _progress.score + question.rewardPoints;
     final levelComplete = nextQuestionIndex >= totalQuestions;
+    final questionIndexes = Map<int, int>.of(_progress.currentQuestionIndexes)
+      ..[currentLevel!.id] = nextQuestionIndex;
+    final completedLevelIds = Set<int>.of(_progress.completedLevelIds);
+    if (levelComplete) {
+      completedLevelIds.add(currentLevel!.id);
+    }
 
     _progress = _progress.copyWith(
       score: newScore,
       solvedExamples: _progress.solvedExamples + 1,
-      currentQuestionIndex: nextQuestionIndex,
+      currentQuestionIndexes: questionIndexes,
+      completedLevelIds: completedLevelIds,
       unlockedLocation: levelComplete
           ? math.max(_progress.unlockedLocation, currentLevel!.id + 1)
           : _progress.unlockedLocation,

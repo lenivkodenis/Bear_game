@@ -48,6 +48,9 @@ class _LevelCompleteScreenState extends State<LevelCompleteScreen> {
                   final progress = snapshot.data ?? PlayerProgress.initial();
                   final locationName = summary?.locationName ?? 'Льдина';
                   final mentorName = summary?.mentorName ?? 'Морская чайка';
+                  final completionText =
+                      summary?.completionText ??
+                      'Ты справился. Теперь ты знаешь, что таблица умножения помогает считать быстрее и увереннее. Я покажу тебе путь к следующей локации.';
                   final score = summary?.score ?? progress.score;
                   final solvedQuestions =
                       summary?.solvedQuestions ?? progress.currentQuestionIndex;
@@ -89,10 +92,10 @@ class _LevelCompleteScreenState extends State<LevelCompleteScreen> {
                         value: solvedQuestions.toString(),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
-                        'Ты справился. Теперь ты знаешь, что таблица умножения помогает считать быстрее и увереннее. Я покажу тебе путь к следующей локации.',
+                      Text(
+                        completionText,
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 18),
+                        style: const TextStyle(fontSize: 18),
                       ),
                       const SizedBox(height: 24),
                       FilledButton.icon(

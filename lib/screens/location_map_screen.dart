@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/map_location.dart';
 import '../models/player_progress.dart';
+import '../services/level_service.dart';
 import '../services/progress_service.dart';
 import 'game_screen.dart';
 
@@ -15,8 +16,9 @@ class LocationMapScreen extends StatefulWidget {
 }
 
 class _LocationMapScreenState extends State<LocationMapScreen> {
+  final LevelService _levelService = LevelService();
   final ProgressService _progressService = ProgressService();
-  late Future<PlayerProgress> _progressFuture;
+  late Future<_LocationMapData> _mapDataFuture;
 
   static const _locations = [
     MapLocation(id: 1, name: 'Льдина'),
@@ -34,32 +36,38 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
   @override
   void initState() {
     super.initState();
-    _progressFuture = _progressService.loadProgress();
+    _mapDataFuture = _loadMapData();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Карта')),
-      body: FutureBuilder<PlayerProgress>(
-        future: _progressFuture,
+      body: FutureBuilder<_LocationMapData>(
+        future: _mapDataFuture,
         builder: (context, snapshot) {
-          final progress = snapshot.data ?? PlayerProgress.initial();
+          final mapData =
+              snapshot.data ?? _LocationMapData.empty(PlayerProgress.initial());
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: _locations.length,
             itemBuilder: (context, index) {
               final location = _locations[index];
-              final isUnlocked = location.id <= progress.unlockedLocation;
-              final isPlayable = location.id == 1;
+              final isUnlocked =
+                  location.id <= mapData.progress.unlockedLocation;
+              final hasLevel = mapData.availableLevelIds.contains(location.id);
+              final isCompleted = mapData.progress.isLevelCompleted(
+                location.id,
+              );
 
               return _LocationCard(
                 location: location,
                 isUnlocked: isUnlocked,
-                isPlayable: isPlayable,
+                hasLevel: hasLevel,
+                isCompleted: isCompleted,
                 onTap: isUnlocked
-                    ? () => _openLocation(context, location, isPlayable)
+                    ? () => _openLocation(context, location, hasLevel)
                     : null,
               );
             },
@@ -69,21 +77,45 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
     );
   }
 
+  Future<_LocationMapData> _loadMapData() async {
+    final progress = await _progressService.loadProgress();
+    final levels = await _levelService.loadLevels();
+
+    return _LocationMapData(
+      progress: progress,
+      availableLevelIds: levels.map((level) => level.id).toSet(),
+    );
+  }
+
   void _openLocation(
     BuildContext context,
     MapLocation location,
-    bool isPlayable,
+    bool hasLevel,
   ) {
-    if (!isPlayable) {
+    if (!hasLevel) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${location.name} открыта. Задания появятся позже.'),
-        ),
+        const SnackBar(content: Text('Эта локация скоро откроется')),
       );
       return;
     }
 
-    Navigator.of(context).pushNamed(GameScreen.routeName);
+    Navigator.of(
+      context,
+    ).pushNamed(GameScreen.routeName, arguments: location.id);
+  }
+}
+
+class _LocationMapData {
+  const _LocationMapData({
+    required this.progress,
+    required this.availableLevelIds,
+  });
+
+  final PlayerProgress progress;
+  final Set<int> availableLevelIds;
+
+  factory _LocationMapData.empty(PlayerProgress progress) {
+    return _LocationMapData(progress: progress, availableLevelIds: const {});
   }
 }
 
@@ -91,22 +123,28 @@ class _LocationCard extends StatelessWidget {
   const _LocationCard({
     required this.location,
     required this.isUnlocked,
-    required this.isPlayable,
+    required this.hasLevel,
+    required this.isCompleted,
     required this.onTap,
   });
 
   final MapLocation location;
   final bool isUnlocked;
-  final bool isPlayable;
+  final bool hasLevel;
+  final bool isCompleted;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final icon = isUnlocked ? Icons.place_rounded : Icons.lock_rounded;
-    final status = isUnlocked
-        ? (isPlayable ? 'Доступна' : 'Открыта')
-        : 'Заблокирована';
+    final status = !isUnlocked
+        ? 'Заблокирована'
+        : isCompleted
+        ? 'Пройдена'
+        : hasLevel
+        ? 'Доступна'
+        : 'Скоро откроется';
 
     return Card(
       child: ListTile(

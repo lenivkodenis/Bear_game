@@ -18,22 +18,32 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
-  late final BearMathGame _game;
+  BearMathGame? _game;
+  bool _gameWasCreated = false;
 
   @override
-  void initState() {
-    super.initState();
-    _game = BearMathGame();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (_gameWasCreated) {
+      return;
+    }
+
+    final levelId = ModalRoute.of(context)?.settings.arguments as int? ?? 1;
+    _game = BearMathGame(levelId: levelId);
+    _gameWasCreated = true;
   }
 
   @override
   Widget build(BuildContext context) {
+    final game = _game!;
+
     return Scaffold(
       body: SafeArea(
         child: Stack(
           children: [
             GameWidget<BearMathGame>(
-              game: _game,
+              game: game,
               overlayBuilderMap: {
                 BearMathGame.mentorDialogOverlay: (context, game) {
                   return MentorDialog(
@@ -56,15 +66,15 @@ class _GameScreenState extends State<GameScreen> {
             Positioned(
               top: 12,
               right: 12,
-              child: ScoreHud(scoreListenable: _game.scoreNotifier),
+              child: ScoreHud(scoreListenable: game.scoreNotifier),
             ),
             Align(
               alignment: Alignment.bottomCenter,
               child: GameControls(
-                onMoveLeftStart: _game.startMovingLeft,
-                onMoveRightStart: _game.startMovingRight,
-                onMoveEnd: _game.stopMoving,
-                onJump: _game.jump,
+                onMoveLeftStart: game.startMovingLeft,
+                onMoveRightStart: game.startMovingRight,
+                onMoveEnd: game.stopMoving,
+                onJump: game.jump,
               ),
             ),
           ],
@@ -74,19 +84,21 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _openLevelCompleteScreen() {
-    final level = _game.currentLevel;
+    final game = _game;
+    final level = game?.currentLevel;
     if (level == null) {
       return;
     }
 
-    _game.closeMentorDialog();
+    game!.closeMentorDialog();
     Navigator.of(context).pushReplacementNamed(
       LevelCompleteScreen.routeName,
       arguments: LevelCompletionSummary(
         locationName: level.locationName,
         mentorName: level.mentorName,
-        score: _game.scoreNotifier.value,
-        solvedQuestions: _game.totalQuestions,
+        completionText: level.completionText,
+        score: game.scoreNotifier.value,
+        solvedQuestions: game.totalQuestions,
       ),
     );
   }
