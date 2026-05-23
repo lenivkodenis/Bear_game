@@ -47,13 +47,16 @@ class _SnowfallOverlayState extends State<SnowfallOverlay>
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
-      child: CustomPaint(
-        painter: _SnowfallPainter(
-          animation: _controller,
-          particles: _particles,
-          intensity: widget.intensity,
+      child: SizedBox.expand(
+        child: CustomPaint(
+          isComplex: true,
+          willChange: true,
+          painter: _SnowfallPainter(
+            animation: _controller,
+            particles: _particles,
+            intensity: widget.intensity,
+          ),
         ),
-        size: Size.infinite,
       ),
     );
   }
@@ -175,32 +178,32 @@ class _LayerProfile {
   static _LayerProfile forDepth(_SnowDepthLayer depthLayer) {
     return switch (depthLayer) {
       _SnowDepthLayer.far => const _LayerProfile(
-        minRadius: 0.55,
-        maxRadius: 1.25,
+        minRadius: 0.75,
+        maxRadius: 1.45,
         minSpeed: 0.035,
         maxSpeed: 0.07,
-        minOpacity: 0.14,
-        maxOpacity: 0.34,
+        minOpacity: 0.2,
+        maxOpacity: 0.42,
         minDrift: 2,
         maxDrift: 9,
       ),
       _SnowDepthLayer.middle => const _LayerProfile(
-        minRadius: 1.0,
-        maxRadius: 2.05,
+        minRadius: 1.25,
+        maxRadius: 2.4,
         minSpeed: 0.065,
         maxSpeed: 0.13,
-        minOpacity: 0.24,
-        maxOpacity: 0.52,
+        minOpacity: 0.34,
+        maxOpacity: 0.66,
         minDrift: 8,
         maxDrift: 22,
       ),
       _SnowDepthLayer.front => const _LayerProfile(
-        minRadius: 1.8,
-        maxRadius: 3.4,
+        minRadius: 2.15,
+        maxRadius: 4.2,
         minSpeed: 0.105,
         maxSpeed: 0.19,
-        minOpacity: 0.32,
-        maxOpacity: 0.62,
+        minOpacity: 0.42,
+        maxOpacity: 0.76,
         minDrift: 14,
         maxDrift: 34,
       ),
@@ -365,8 +368,8 @@ class _SnowfallPainter extends CustomPainter {
         ? _snowWhite
         : _snowBlue;
     final glowPaint = Paint()
-      ..color = tint.withValues(alpha: opacity * 0.2)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, particle.radius * 0.85);
+      ..color = tint.withValues(alpha: opacity * 0.34)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, particle.radius * 0.9);
     final corePaint = Paint()
       ..color = tint.withValues(alpha: opacity)
       ..isAntiAlias = true;
