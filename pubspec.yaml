@@ -22,6 +22,7 @@ flutter:
   uses-material-design: true
   assets:
     - public/assets/main_screen/main_screen_bear_bg.png
+    - assets/images/map/progression_map.png
     - assets/images/
     - assets/audio/
     - assets/data/
