@@ -6,6 +6,7 @@ class ProgressService {
   static const _scoreKey = 'score';
   static const _unlockedLocationKey = 'unlocked_location';
   static const _solvedExamplesKey = 'solved_examples';
+  static const _currentQuestionIndexKey = 'current_question_index';
 
   Future<PlayerProgress> loadProgress() async {
     final preferences = await SharedPreferences.getInstance();
@@ -14,6 +15,7 @@ class ProgressService {
       score: preferences.getInt(_scoreKey) ?? 0,
       unlockedLocation: preferences.getInt(_unlockedLocationKey) ?? 1,
       solvedExamples: preferences.getInt(_solvedExamplesKey) ?? 0,
+      currentQuestionIndex: preferences.getInt(_currentQuestionIndexKey) ?? 0,
     );
   }
 
@@ -24,6 +26,10 @@ class ProgressService {
       preferences.setInt(_scoreKey, progress.score),
       preferences.setInt(_unlockedLocationKey, progress.unlockedLocation),
       preferences.setInt(_solvedExamplesKey, progress.solvedExamples),
+      preferences.setInt(
+        _currentQuestionIndexKey,
+        progress.currentQuestionIndex,
+      ),
     ]);
   }
 }

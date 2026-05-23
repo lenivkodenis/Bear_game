@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../game/bear_math_game.dart';
 import '../widgets/game_controls.dart';
 import '../widgets/mentor_dialog.dart';
+import '../widgets/score_hud.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -33,7 +34,10 @@ class _GameScreenState extends State<GameScreen> {
               game: _game,
               overlayBuilderMap: {
                 BearMathGame.mentorDialogOverlay: (context, game) {
-                  return MentorDialog(onClose: game.closeMentorDialog);
+                  return MentorDialog(
+                    game: game,
+                    onClose: game.closeMentorDialog,
+                  );
                 },
               },
             ),
@@ -45,6 +49,11 @@ class _GameScreenState extends State<GameScreen> {
                 icon: const Icon(Icons.arrow_back_rounded),
                 tooltip: 'Назад',
               ),
+            ),
+            Positioned(
+              top: 12,
+              right: 12,
+              child: ScoreHud(scoreListenable: _game.scoreNotifier),
             ),
             Align(
               alignment: Alignment.bottomCenter,
