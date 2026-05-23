@@ -17,16 +17,17 @@ class SnowfallOverlay extends StatefulWidget {
 
 class _SnowfallOverlayState extends State<SnowfallOverlay>
     with SingleTickerProviderStateMixin {
+  static const _animationPeriod = Duration(minutes: 12);
+  static const _motionCyclesPerPeriod = 30.0;
+
   late final AnimationController _controller;
   late List<_SnowParticle> _particles;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 24),
-    )..repeat();
+    _controller = AnimationController(vsync: this, duration: _animationPeriod)
+      ..repeat();
     _particles = _SnowParticleFactory.create(widget.intensity);
   }
 
@@ -89,19 +90,19 @@ class _SnowParticleFactory {
     final random = math.Random(20260523 + intensity.index);
     final counts = switch (intensity) {
       SnowfallIntensity.light => const _LayerCounts(
-        far: 36,
-        middle: 24,
-        front: 10,
+        far: 43,
+        middle: 29,
+        front: 12,
       ),
       SnowfallIntensity.medium => const _LayerCounts(
-        far: 76,
-        middle: 52,
-        front: 22,
+        far: 91,
+        middle: 62,
+        front: 26,
       ),
       SnowfallIntensity.heavy => const _LayerCounts(
-        far: 96,
-        middle: 68,
-        front: 30,
+        far: 115,
+        middle: 82,
+        front: 36,
       ),
     };
 
@@ -180,8 +181,8 @@ class _LayerProfile {
       _SnowDepthLayer.far => const _LayerProfile(
         minRadius: 0.75,
         maxRadius: 1.45,
-        minSpeed: 0.05,
-        maxSpeed: 0.09,
+        minSpeed: 0.065,
+        maxSpeed: 0.117,
         minOpacity: 0.2,
         maxOpacity: 0.42,
         minDrift: 2,
@@ -190,8 +191,8 @@ class _LayerProfile {
       _SnowDepthLayer.middle => const _LayerProfile(
         minRadius: 1.25,
         maxRadius: 2.4,
-        minSpeed: 0.09,
-        maxSpeed: 0.16,
+        minSpeed: 0.117,
+        maxSpeed: 0.208,
         minOpacity: 0.34,
         maxOpacity: 0.66,
         minDrift: 8,
@@ -200,8 +201,8 @@ class _LayerProfile {
       _SnowDepthLayer.front => const _LayerProfile(
         minRadius: 2.15,
         maxRadius: 4.2,
-        minSpeed: 0.14,
-        maxSpeed: 0.25,
+        minSpeed: 0.182,
+        maxSpeed: 0.325,
         minOpacity: 0.42,
         maxOpacity: 0.76,
         minDrift: 14,
@@ -233,8 +234,9 @@ class _SnowfallPainter extends CustomPainter {
     }
 
     final elapsed = _animation.value;
+    final motionTime = elapsed * _SnowfallOverlayState._motionCyclesPerPeriod;
     final visibleCounts = _visibleLayerCounts(size);
-    final wind = math.sin(elapsed * math.pi * 2) * 7;
+    final wind = math.sin(motionTime * math.pi * 2) * 7;
     var farCount = 0;
     var middleCount = 0;
     var frontCount = 0;
@@ -259,11 +261,11 @@ class _SnowfallPainter extends CustomPainter {
       }
 
       final layerWeight = _layerWeight(particle.depthLayer);
-      final fall = (particle.y + elapsed * particle.speed) % 1;
+      final fall = (particle.y + motionTime * particle.speed) % 1;
       final sway = math.sin(
-        elapsed * math.pi * 2 * layerWeight + particle.phase,
+        motionTime * math.pi * 2 * layerWeight + particle.phase,
       );
-      final diagonalDrift = elapsed * particle.drift * layerWeight;
+      final diagonalDrift = motionTime * particle.drift * layerWeight;
       final x = _wrapHorizontal(
         particle.x * size.width +
             sway * particle.drift +
