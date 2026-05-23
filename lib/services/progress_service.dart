@@ -61,6 +61,19 @@ class ProgressService {
     ]);
   }
 
+  Future<void> resetProgress() async {
+    final preferences = await SharedPreferences.getInstance();
+
+    await Future.wait([
+      preferences.remove(_scoreKey),
+      preferences.remove(_unlockedLocationKey),
+      preferences.remove(_solvedExamplesKey),
+      preferences.remove(_currentQuestionIndexKey),
+      preferences.remove(_currentQuestionIndexesKey),
+      preferences.remove(_completedLevelIdsKey),
+    ]);
+  }
+
   Map<int, int> _loadQuestionIndexes(SharedPreferences preferences) {
     final storedValue = preferences.getString(_currentQuestionIndexesKey);
     if (storedValue != null) {

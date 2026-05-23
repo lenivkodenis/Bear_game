@@ -6,6 +6,7 @@ import '../models/level_completion_summary.dart';
 import '../widgets/game_controls.dart';
 import '../widgets/mentor_dialog.dart';
 import '../widgets/score_hud.dart';
+import 'final_screen.dart';
 import 'level_complete_screen.dart';
 
 class GameScreen extends StatefulWidget {
@@ -91,8 +92,12 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     game!.closeMentorDialog();
+    final routeName = level.id == 10
+        ? FinalScreen.routeName
+        : LevelCompleteScreen.routeName;
+
     Navigator.of(context).pushReplacementNamed(
-      LevelCompleteScreen.routeName,
+      routeName,
       arguments: LevelCompletionSummary(
         locationName: level.locationName,
         mentorName: level.mentorName,

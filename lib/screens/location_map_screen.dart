@@ -139,11 +139,11 @@ class _LocationCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final icon = isUnlocked ? Icons.place_rounded : Icons.lock_rounded;
     final status = !isUnlocked
-        ? 'Заблокирована'
+        ? 'Закрыто'
         : isCompleted
-        ? 'Пройдена'
+        ? 'Пройдено'
         : hasLevel
-        ? 'Доступна'
+        ? 'Доступно'
         : 'Скоро откроется';
 
     return Card(
