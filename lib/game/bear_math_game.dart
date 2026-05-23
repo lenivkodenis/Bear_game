@@ -16,11 +16,12 @@ import '../services/level_service.dart';
 import '../services/progress_service.dart';
 
 class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
-  BearMathGame({required this.levelId});
+  BearMathGame({required this.levelId, this.onMentorReached});
 
   static const mentorDialogOverlay = 'mentorDialog';
 
   final int levelId;
+  final VoidCallback? onMentorReached;
   late final PlayerBear player;
   late final WiseMentor mentor;
 
@@ -195,7 +196,12 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     if (!_mentorDialogWasShown && player.distance(mentor) < 92) {
       _mentorDialogWasShown = true;
       player.stopMoving();
-      overlays.add(mentorDialogOverlay);
+      final callback = onMentorReached;
+      if (callback != null) {
+        callback();
+      } else {
+        overlays.add(mentorDialogOverlay);
+      }
     }
   }
 }
