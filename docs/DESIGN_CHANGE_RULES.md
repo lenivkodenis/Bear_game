@@ -26,7 +26,16 @@ Design-only tasks must not change:
 
 Always verify:
 
+- `flutter analyze`
+- `flutter test`
 - Mentor question opening
 - Correct and wrong answer behavior
 - Level completion
 - Next location unlock
+
+Manual browser flow:
+
+1. Map -> level -> mentor -> dialog -> question.
+2. Wrong answer -> hint.
+3. Correct answer -> points.
+4. Level completion -> next location unlock.
