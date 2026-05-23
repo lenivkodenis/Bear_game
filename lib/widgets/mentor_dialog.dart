@@ -7,11 +7,13 @@ class MentorDialog extends StatefulWidget {
   const MentorDialog({
     required this.game,
     required this.onClose,
+    required this.onLevelComplete,
     super.key,
   });
 
   final BearMathGame game;
   final VoidCallback onClose;
+  final VoidCallback onLevelComplete;
 
   @override
   State<MentorDialog> createState() => _MentorDialogState();
@@ -82,10 +84,7 @@ class _MentorDialogState extends State<MentorDialog> {
           style: TextStyle(fontSize: 18),
         ),
         const SizedBox(height: 20),
-        FilledButton(
-          onPressed: widget.onClose,
-          child: const Text('Закрыть'),
-        ),
+        FilledButton(onPressed: widget.onClose, child: const Text('Закрыть')),
       ];
     }
 
@@ -97,8 +96,10 @@ class _MentorDialogState extends State<MentorDialog> {
         Text(result.message, style: const TextStyle(fontSize: 18)),
         const SizedBox(height: 20),
         FilledButton(
-          onPressed: result.isLevelComplete ? widget.onClose : _showNextQuestion,
-          child: Text(result.isLevelComplete ? 'Закрыть' : 'Следующий вопрос'),
+          onPressed: result.isLevelComplete
+              ? widget.onLevelComplete
+              : _showNextQuestion,
+          child: Text(result.isLevelComplete ? 'К итогам' : 'Следующий вопрос'),
         ),
       ];
     }
@@ -110,10 +111,7 @@ class _MentorDialogState extends State<MentorDialog> {
         const SizedBox(height: 12),
         const Text('Задачи закончились.', style: TextStyle(fontSize: 18)),
         const SizedBox(height: 20),
-        FilledButton(
-          onPressed: widget.onClose,
-          child: const Text('Закрыть'),
-        ),
+        FilledButton(onPressed: widget.onClose, child: const Text('Закрыть')),
       ];
     }
 
@@ -129,9 +127,9 @@ class _MentorDialogState extends State<MentorDialog> {
       Text(
         question.expression,
         textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
       ),
       if (result != null && !result.isCorrect) ...[
         const SizedBox(height: 12),
@@ -174,10 +172,7 @@ class _MentorDialogState extends State<MentorDialog> {
 }
 
 class _DialogTitle extends StatelessWidget {
-  const _DialogTitle({
-    required this.title,
-    required this.subtitle,
-  });
+  const _DialogTitle({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
@@ -189,9 +184,9 @@ class _DialogTitle extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 4),
         Text(

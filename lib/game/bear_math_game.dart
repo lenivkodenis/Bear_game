@@ -144,7 +144,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       solvedExamples: _progress.solvedExamples + 1,
       currentQuestionIndex: nextQuestionIndex,
       unlockedLocation: levelComplete
-          ? math.max(_progress.unlockedLocation, currentLevel!.id)
+          ? math.max(_progress.unlockedLocation, currentLevel!.id + 1)
           : _progress.unlockedLocation,
     );
     _currentQuestionIndex = nextQuestionIndex;

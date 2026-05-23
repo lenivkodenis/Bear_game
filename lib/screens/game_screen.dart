@@ -2,9 +2,11 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import '../game/bear_math_game.dart';
+import '../models/level_completion_summary.dart';
 import '../widgets/game_controls.dart';
 import '../widgets/mentor_dialog.dart';
 import '../widgets/score_hud.dart';
+import 'level_complete_screen.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -37,6 +39,7 @@ class _GameScreenState extends State<GameScreen> {
                   return MentorDialog(
                     game: game,
                     onClose: game.closeMentorDialog,
+                    onLevelComplete: _openLevelCompleteScreen,
                   );
                 },
               },
@@ -66,6 +69,24 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _openLevelCompleteScreen() {
+    final level = _game.currentLevel;
+    if (level == null) {
+      return;
+    }
+
+    _game.closeMentorDialog();
+    Navigator.of(context).pushReplacementNamed(
+      LevelCompleteScreen.routeName,
+      arguments: LevelCompletionSummary(
+        locationName: level.locationName,
+        mentorName: level.mentorName,
+        score: _game.scoreNotifier.value,
+        solvedQuestions: _game.totalQuestions,
       ),
     );
   }

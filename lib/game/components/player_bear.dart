@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:flame/components.dart';
-import 'package:flame/events.dart';
 import 'package:flutter/services.dart';
 
 class PlayerBear extends PositionComponent with KeyboardHandler {
@@ -115,6 +114,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     }
   }
 
+  @override
   double distance(PositionComponent other) {
     return position.distanceTo(other.position);
   }

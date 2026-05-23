@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 
+import '../services/progress_service.dart';
 import '../widgets/menu_button.dart';
 import 'game_screen.dart';
+import 'location_map_screen.dart';
 import 'parents_screen.dart';
 import 'progress_screen.dart';
 
-class MainMenuScreen extends StatelessWidget {
+class MainMenuScreen extends StatefulWidget {
   const MainMenuScreen({super.key});
 
   static const routeName = '/';
+
+  @override
+  State<MainMenuScreen> createState() => _MainMenuScreenState();
+}
+
+class _MainMenuScreenState extends State<MainMenuScreen> {
+  final ProgressService _progressService = ProgressService();
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +49,8 @@ class MainMenuScreen extends StatelessWidget {
                     Text(
                       'Медвежонок и таблица умножения',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFF17435A),
                           ),
@@ -49,25 +59,23 @@ class MainMenuScreen extends StatelessWidget {
                     MenuButton(
                       label: 'Начать игру',
                       icon: Icons.play_arrow_rounded,
-                      onPressed: () => Navigator.of(context).pushNamed(
-                        GameScreen.routeName,
-                      ),
+                      onPressed: _startGame,
                     ),
                     const SizedBox(height: 12),
                     MenuButton(
                       label: 'Прогресс',
                       icon: Icons.emoji_events_rounded,
-                      onPressed: () => Navigator.of(context).pushNamed(
-                        ProgressScreen.routeName,
-                      ),
+                      onPressed: () => Navigator.of(
+                        context,
+                      ).pushNamed(ProgressScreen.routeName),
                     ),
                     const SizedBox(height: 12),
                     MenuButton(
                       label: 'Родителям',
                       icon: Icons.family_restroom_rounded,
-                      onPressed: () => Navigator.of(context).pushNamed(
-                        ParentsScreen.routeName,
-                      ),
+                      onPressed: () => Navigator.of(
+                        context,
+                      ).pushNamed(ParentsScreen.routeName),
                     ),
                   ],
                 ),
@@ -76,6 +84,20 @@ class MainMenuScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _startGame() async {
+    final progress = await _progressService.loadProgress();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pushNamed(
+      progress.unlockedLocation > 1
+          ? LocationMapScreen.routeName
+          : GameScreen.routeName,
     );
   }
 }
