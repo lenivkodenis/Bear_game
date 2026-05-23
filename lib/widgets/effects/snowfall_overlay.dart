@@ -94,14 +94,14 @@ class _SnowParticleFactory {
         front: 10,
       ),
       SnowfallIntensity.medium => const _LayerCounts(
-        far: 62,
-        middle: 40,
-        front: 16,
+        far: 76,
+        middle: 52,
+        front: 22,
       ),
       SnowfallIntensity.heavy => const _LayerCounts(
-        far: 82,
-        middle: 54,
-        front: 22,
+        far: 96,
+        middle: 68,
+        front: 30,
       ),
     };
 
@@ -180,8 +180,8 @@ class _LayerProfile {
       _SnowDepthLayer.far => const _LayerProfile(
         minRadius: 0.75,
         maxRadius: 1.45,
-        minSpeed: 0.035,
-        maxSpeed: 0.07,
+        minSpeed: 0.05,
+        maxSpeed: 0.09,
         minOpacity: 0.2,
         maxOpacity: 0.42,
         minDrift: 2,
@@ -190,8 +190,8 @@ class _LayerProfile {
       _SnowDepthLayer.middle => const _LayerProfile(
         minRadius: 1.25,
         maxRadius: 2.4,
-        minSpeed: 0.065,
-        maxSpeed: 0.13,
+        minSpeed: 0.09,
+        maxSpeed: 0.16,
         minOpacity: 0.34,
         maxOpacity: 0.66,
         minDrift: 8,
@@ -200,8 +200,8 @@ class _LayerProfile {
       _SnowDepthLayer.front => const _LayerProfile(
         minRadius: 2.15,
         maxRadius: 4.2,
-        minSpeed: 0.105,
-        maxSpeed: 0.19,
+        minSpeed: 0.14,
+        maxSpeed: 0.25,
         minOpacity: 0.42,
         maxOpacity: 0.76,
         minDrift: 14,
