@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../models/map_location.dart';
 import '../models/player_progress.dart';
-import '../services/level_service.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/back_text_button.dart';
 import '../widgets/game_card.dart';
 import '../widgets/location_card.dart';
 import '../widgets/score_badge.dart';
@@ -20,7 +20,6 @@ class LocationMapScreen extends StatefulWidget {
 }
 
 class _LocationMapScreenState extends State<LocationMapScreen> {
-  final LevelService _levelService = LevelService();
   final ProgressService _progressService = ProgressService();
   late Future<_LocationMapData> _mapDataFuture;
 
@@ -46,7 +45,10 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Карта')),
+      appBar: AppBar(
+        leading: const BackTextButton(),
+        title: const Text('Карта'),
+      ),
       body: DecoratedBox(
         decoration: AppTheme.snowyGradient,
         child: FutureBuilder<_LocationMapData>(
@@ -108,9 +110,7 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
                     final location = _locations[index - 1];
                     final isUnlocked =
                         location.id <= mapData.progress.unlockedLocation;
-                    final hasLevel = mapData.availableLevelIds.contains(
-                      location.id,
-                    );
+                    final hasLevel = location.id <= 10;
                     final isCompleted = mapData.progress.isLevelCompleted(
                       location.id,
                     );
@@ -136,11 +136,10 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
 
   Future<_LocationMapData> _loadMapData() async {
     final progress = await _progressService.loadProgress();
-    final levels = await _levelService.loadLevels();
 
     return _LocationMapData(
       progress: progress,
-      availableLevelIds: levels.map((level) => level.id).toSet(),
+      availableLevelIds: const {1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
     );
   }
 
@@ -149,13 +148,6 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
     MapLocation location,
     bool hasLevel,
   ) {
-    if (!hasLevel) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Эта локация скоро откроется')),
-      );
-      return;
-    }
-
     Navigator.of(
       context,
     ).pushNamed(GameScreen.routeName, arguments: location.id);
@@ -186,7 +178,14 @@ class _MapBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppTheme.gentleGreen),
+            Text(
+              icon == Icons.flag_rounded ? '⚑' : '•',
+              style: const TextStyle(
+                color: AppTheme.gentleGreen,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             const SizedBox(width: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,

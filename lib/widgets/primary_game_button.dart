@@ -7,6 +7,7 @@ class PrimaryGameButton extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onPressed,
+    this.symbol,
     this.secondary = false,
     super.key,
   });
@@ -14,6 +15,7 @@ class PrimaryGameButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final VoidCallback? onPressed;
+  final String? symbol;
   final bool secondary;
 
   @override
@@ -26,7 +28,14 @@ class PrimaryGameButton extends StatelessWidget {
 
     return FilledButton.icon(
       onPressed: onPressed,
-      icon: Icon(icon),
+      icon: Text(
+        symbol ?? '•',
+        style: TextStyle(
+          color: foregroundColor,
+          fontSize: 20,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
       label: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Text(label, textAlign: TextAlign.center),

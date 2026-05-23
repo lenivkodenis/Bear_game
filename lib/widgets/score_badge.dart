@@ -40,10 +40,13 @@ class ScoreBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.star_rounded,
-              color: AppTheme.warmYellow,
-              size: iconSize,
+            Text(
+              '★',
+              style: TextStyle(
+                color: AppTheme.warmYellow,
+                fontSize: iconSize,
+                fontWeight: FontWeight.w900,
+              ),
             ),
             const SizedBox(width: 8),
             Column(

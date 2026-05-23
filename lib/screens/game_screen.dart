@@ -58,10 +58,16 @@ class _GameScreenState extends State<GameScreen> {
             Positioned(
               top: 12,
               left: 12,
-              child: IconButton.filledTonal(
+              child: FilledButton.tonal(
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.arrow_back_rounded),
-                tooltip: 'Назад',
+                style: FilledButton.styleFrom(
+                  shape: const CircleBorder(),
+                  padding: const EdgeInsets.all(14),
+                ),
+                child: const Text(
+                  '‹',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+                ),
               ),
             ),
             Positioned(

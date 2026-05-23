@@ -80,7 +80,7 @@ class _FinalScreenState extends State<FinalScreen> {
                                   label: 'Итоговые очки',
                                 ),
                                 _FinalBadge(
-                                  icon: Icons.map_rounded,
+                                  symbol: '⌂',
                                   label: 'Уровни',
                                   value: progress.completedLevelIds.length
                                       .toString(),
@@ -93,6 +93,7 @@ class _FinalScreenState extends State<FinalScreen> {
                       const SizedBox(height: 24),
                       PrimaryGameButton(
                         icon: Icons.map_rounded,
+                        symbol: '⌂',
                         label: 'На карту',
                         onPressed: () {
                           Navigator.of(context).pushNamedAndRemoveUntil(
@@ -104,6 +105,7 @@ class _FinalScreenState extends State<FinalScreen> {
                       const SizedBox(height: 12),
                       PrimaryGameButton(
                         icon: Icons.replay_rounded,
+                        symbol: '↺',
                         label: 'Повторить путь',
                         secondary: true,
                         onPressed: _restartJourney,
@@ -136,12 +138,12 @@ class _FinalScreenState extends State<FinalScreen> {
 
 class _FinalBadge extends StatelessWidget {
   const _FinalBadge({
-    required this.icon,
+    required this.symbol,
     required this.label,
     required this.value,
   });
 
-  final IconData icon;
+  final String symbol;
   final String label;
   final String value;
 
@@ -158,7 +160,14 @@ class _FinalBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppTheme.softBlue),
+            Text(
+              symbol,
+              style: const TextStyle(
+                color: AppTheme.softBlue,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             const SizedBox(width: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,10 +224,13 @@ class _FamilyMark extends StatelessWidget {
           const Positioned(right: 34, bottom: 18, child: _BearFace(size: 58)),
           const Positioned(
             top: 8,
-            child: Icon(
-              Icons.favorite_rounded,
-              color: AppTheme.warmYellow,
-              size: 28,
+            child: Text(
+              '♥',
+              style: TextStyle(
+                color: AppTheme.warmYellow,
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],

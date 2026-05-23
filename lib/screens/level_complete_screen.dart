@@ -89,7 +89,7 @@ class _LevelCompleteScreenState extends State<LevelCompleteScreen> {
                               children: [
                                 ScoreBadge(score: score),
                                 _SummaryBadge(
-                                  icon: Icons.calculate_rounded,
+                                  symbol: '×',
                                   label: 'Вопросы',
                                   value: solvedQuestions.toString(),
                                 ),
@@ -110,6 +110,7 @@ class _LevelCompleteScreenState extends State<LevelCompleteScreen> {
                       const SizedBox(height: 24),
                       PrimaryGameButton(
                         icon: Icons.map_rounded,
+                        symbol: '⌂',
                         label: 'К карте',
                         onPressed: () {
                           Navigator.of(context).pushNamedAndRemoveUntil(
@@ -132,12 +133,12 @@ class _LevelCompleteScreenState extends State<LevelCompleteScreen> {
 
 class _SummaryBadge extends StatelessWidget {
   const _SummaryBadge({
-    required this.icon,
+    required this.symbol,
     required this.label,
     required this.value,
   });
 
-  final IconData icon;
+  final String symbol;
   final String label;
   final String value;
 
@@ -154,7 +155,14 @@ class _SummaryBadge extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppTheme.softBlue),
+            Text(
+              symbol,
+              style: const TextStyle(
+                color: AppTheme.softBlue,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             const SizedBox(width: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,27 +212,37 @@ class _VictoryMark extends StatelessWidget {
               border: Border.all(color: AppTheme.snowWhite, width: 3),
             ),
           ),
-          const Icon(
-            Icons.emoji_events_rounded,
-            size: 68,
-            color: AppTheme.warmYellow,
+          const Text(
+            '★',
+            style: TextStyle(
+              color: AppTheme.warmYellow,
+              fontSize: 68,
+              fontWeight: FontWeight.w900,
+              height: 1,
+            ),
           ),
           const Positioned(
             top: 8,
             right: 22,
-            child: Icon(
-              Icons.auto_awesome_rounded,
-              color: AppTheme.gentleGreen,
-              size: 24,
+            child: Text(
+              '✦',
+              style: TextStyle(
+                color: AppTheme.gentleGreen,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
           const Positioned(
             bottom: 10,
             left: 18,
-            child: Icon(
-              Icons.star_rounded,
-              color: AppTheme.warmYellow,
-              size: 22,
+            child: Text(
+              '★',
+              style: TextStyle(
+                color: AppTheme.warmYellow,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],

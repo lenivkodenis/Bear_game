@@ -34,11 +34,11 @@ class LocationCard extends StatelessWidget {
         : isCurrent
         ? AppTheme.paleGreen
         : AppTheme.snowWhite;
-    final icon = !isUnlocked
-        ? Icons.lock_rounded
+    final symbol = !isUnlocked
+        ? '●'
         : isCompleted
-        ? Icons.star_rounded
-        : Icons.place_rounded;
+        ? '★'
+        : '•';
     final status = !isUnlocked
         ? 'Закрыто'
         : isCompleted
@@ -94,14 +94,17 @@ class LocationCard extends StatelessWidget {
                           : isCurrent
                           ? const Color(0xFFCFF5E8)
                           : AppTheme.frostBlue,
-                      child: Icon(
-                        icon,
-                        color: isCompleted
-                            ? AppTheme.warmYellow
-                            : isUnlocked
-                            ? AppTheme.deepBlue
-                            : AppTheme.lockedBlue,
-                        size: 30,
+                      child: Text(
+                        symbol,
+                        style: TextStyle(
+                          color: isCompleted
+                              ? AppTheme.warmYellow
+                              : isUnlocked
+                              ? AppTheme.deepBlue
+                              : AppTheme.lockedBlue,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                   ],
@@ -147,11 +150,13 @@ class LocationCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                isUnlocked
-                    ? Icons.chevron_right_rounded
-                    : Icons.lock_outline_rounded,
-                color: isUnlocked ? AppTheme.softBlue : AppTheme.lockedBlue,
+              Text(
+                isUnlocked ? '›' : '●',
+                style: TextStyle(
+                  color: isUnlocked ? AppTheme.softBlue : AppTheme.lockedBlue,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ],
           ),

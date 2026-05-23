@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/back_text_button.dart';
 import '../widgets/game_card.dart';
 
 class ParentsScreen extends StatelessWidget {
@@ -11,7 +12,10 @@ class ParentsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Родителям')),
+      appBar: AppBar(
+        leading: const BackTextButton(),
+        title: const Text('Родителям'),
+      ),
       body: DecoratedBox(
         decoration: AppTheme.snowyGradient,
         child: Center(
@@ -28,9 +32,13 @@ class ParentsScreen extends StatelessWidget {
                         children: [
                           CircleAvatar(
                             backgroundColor: AppTheme.frostBlue,
-                            child: Icon(
-                              Icons.family_restroom_rounded,
-                              color: AppTheme.softBlue,
+                            child: Text(
+                              '♡',
+                              style: TextStyle(
+                                color: AppTheme.softBlue,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
                           ),
                           SizedBox(width: 12),

@@ -74,6 +74,7 @@ class _MentorDialogState extends State<MentorDialog> {
         const SizedBox(height: 20),
         PrimaryGameButton(
           icon: Icons.calculate_rounded,
+          symbol: '×',
           label: 'К задаче',
           onPressed: () => setState(() => _showIntro = false),
         ),
@@ -91,6 +92,7 @@ class _MentorDialogState extends State<MentorDialog> {
         const SizedBox(height: 20),
         PrimaryGameButton(
           icon: Icons.check_rounded,
+          symbol: '✓',
           label: 'Закрыть',
           onPressed: widget.onClose,
         ),
@@ -108,6 +110,7 @@ class _MentorDialogState extends State<MentorDialog> {
           icon: result.isLevelComplete
               ? Icons.emoji_events_rounded
               : Icons.arrow_forward_rounded,
+          symbol: result.isLevelComplete ? '★' : '›',
           label: result.isLevelComplete ? 'К итогам' : 'Следующий вопрос',
           onPressed: result.isLevelComplete
               ? widget.onLevelComplete
@@ -125,6 +128,7 @@ class _MentorDialogState extends State<MentorDialog> {
         const SizedBox(height: 20),
         PrimaryGameButton(
           icon: Icons.check_rounded,
+          symbol: '✓',
           label: 'Закрыть',
           onPressed: widget.onClose,
         ),
@@ -174,6 +178,7 @@ class _MentorDialogState extends State<MentorDialog> {
       for (final option in question.options) ...[
         PrimaryGameButton(
           icon: Icons.panorama_fish_eye_rounded,
+          symbol: '•',
           label: option.toString(),
           secondary: true,
           onPressed: _isSubmitting ? null : () => _submitAnswer(option),
@@ -216,7 +221,14 @@ class _DialogTitle extends StatelessWidget {
         const CircleAvatar(
           radius: 24,
           backgroundColor: AppTheme.frostBlue,
-          child: Icon(Icons.auto_awesome_rounded, color: AppTheme.softBlue),
+          child: Text(
+            '✦',
+            style: TextStyle(
+              color: AppTheme.softBlue,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -250,9 +262,7 @@ class _FeedbackBox extends StatelessWidget {
     final isCorrect = result.isCorrect;
     final color = isCorrect ? AppTheme.gentleGreen : AppTheme.softCoral;
     final backgroundColor = isCorrect ? AppTheme.paleGreen : AppTheme.paleCoral;
-    final icon = isCorrect
-        ? Icons.check_circle_rounded
-        : Icons.lightbulb_rounded;
+    final symbol = isCorrect ? '✓' : '!';
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -265,7 +275,14 @@ class _FeedbackBox extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 28),
+            Text(
+              symbol,
+              style: TextStyle(
+                color: color,
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

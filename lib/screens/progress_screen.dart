@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/player_progress.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/back_text_button.dart';
 import '../widgets/game_card.dart';
 import '../widgets/score_badge.dart';
 
@@ -28,7 +29,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Прогресс')),
+      appBar: AppBar(
+        leading: const BackTextButton(),
+        title: const Text('Прогресс'),
+      ),
       body: DecoratedBox(
         decoration: AppTheme.snowyGradient,
         child: FutureBuilder<PlayerProgress>(
@@ -58,17 +62,17 @@ class _ProgressScreenState extends State<ProgressScreen> {
                     ),
                     const SizedBox(height: 16),
                     _ProgressTile(
-                      icon: Icons.map_rounded,
+                      symbol: '⌂',
                       title: 'Открытая локация',
                       value: '${progress.unlockedLocation.clamp(1, 10)}/10',
                     ),
                     _ProgressTile(
-                      icon: Icons.calculate_rounded,
+                      symbol: '×',
                       title: 'Решено примеров',
                       value: progress.solvedExamples.toString(),
                     ),
                     _ProgressTile(
-                      icon: Icons.star_rounded,
+                      symbol: '★',
                       title: 'Пройдено уровней',
                       value: progress.completedLevelIds.length.toString(),
                     ),
@@ -85,12 +89,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
 class _ProgressTile extends StatelessWidget {
   const _ProgressTile({
-    required this.icon,
+    required this.symbol,
     required this.title,
     required this.value,
   });
 
-  final IconData icon;
+  final String symbol;
   final String title;
   final String value;
 
@@ -104,7 +108,14 @@ class _ProgressTile extends StatelessWidget {
           children: [
             CircleAvatar(
               backgroundColor: AppTheme.frostBlue,
-              child: Icon(icon, color: AppTheme.softBlue),
+              child: Text(
+                symbol,
+                style: const TextStyle(
+                  color: AppTheme.softBlue,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(

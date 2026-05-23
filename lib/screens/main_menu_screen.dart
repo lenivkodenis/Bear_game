@@ -66,12 +66,14 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                               PrimaryGameButton(
                                 label: 'Начать игру',
                                 icon: Icons.play_arrow_rounded,
+                                symbol: '▶',
                                 onPressed: _startGame,
                               ),
                               const SizedBox(height: 12),
                               PrimaryGameButton(
                                 label: 'Карта',
                                 icon: Icons.map_rounded,
+                                symbol: '⌂',
                                 secondary: true,
                                 onPressed: () => Navigator.of(
                                   context,
@@ -81,6 +83,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                               PrimaryGameButton(
                                 label: 'Прогресс',
                                 icon: Icons.emoji_events_rounded,
+                                symbol: '★',
                                 secondary: true,
                                 onPressed: () => Navigator.of(
                                   context,
@@ -90,6 +93,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                               PrimaryGameButton(
                                 label: 'Родителям',
                                 icon: Icons.family_restroom_rounded,
+                                symbol: '♡',
                                 secondary: true,
                                 onPressed: () => Navigator.of(
                                   context,
