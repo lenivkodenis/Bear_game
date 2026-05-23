@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 class GameControls extends StatelessWidget {
   const GameControls({
     required this.onMoveLeftStart,
@@ -43,6 +45,13 @@ class GameControls extends StatelessWidget {
             icon: const Icon(Icons.arrow_upward_rounded),
             iconSize: 32,
             tooltip: 'Прыжок',
+            style: IconButton.styleFrom(
+              backgroundColor: AppTheme.gentleGreen,
+              foregroundColor: AppTheme.snowWhite,
+              side: const BorderSide(color: AppTheme.snowWhite, width: 3),
+              shadowColor: AppTheme.softShadow,
+              elevation: 8,
+            ),
           ),
         ],
       ),
@@ -73,8 +82,16 @@ class _HoldButton extends StatelessWidget {
         message: tooltip,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary,
+            color: AppTheme.softBlue,
             shape: BoxShape.circle,
+            border: Border.all(color: AppTheme.snowWhite, width: 3),
+            boxShadow: const [
+              BoxShadow(
+                color: AppTheme.softShadow,
+                blurRadius: 12,
+                offset: Offset(0, 6),
+              ),
+            ],
           ),
           child: SizedBox.square(
             dimension: 56,

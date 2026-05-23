@@ -7,6 +7,7 @@ import 'screens/location_map_screen.dart';
 import 'screens/main_menu_screen.dart';
 import 'screens/parents_screen.dart';
 import 'screens/progress_screen.dart';
+import 'theme/app_theme.dart';
 
 class BearGameApp extends StatelessWidget {
   const BearGameApp({super.key});
@@ -16,14 +17,7 @@ class BearGameApp extends StatelessWidget {
     return MaterialApp(
       title: 'Медвежонок и таблица умножения',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF3A8FB7),
-          brightness: Brightness.light,
-        ),
-        fontFamily: 'Roboto',
-        useMaterial3: true,
-      ),
+      theme: AppTheme.theme,
       routes: {
         MainMenuScreen.routeName: (_) => const MainMenuScreen(),
         GameScreen.routeName: (_) => const GameScreen(),

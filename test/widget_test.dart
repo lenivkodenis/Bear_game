@@ -7,6 +7,7 @@ void main() {
 
     expect(find.text('Медвежонок и таблица умножения'), findsOneWidget);
     expect(find.text('Начать игру'), findsOneWidget);
+    expect(find.text('Карта'), findsOneWidget);
     expect(find.text('Прогресс'), findsOneWidget);
     expect(find.text('Родителям'), findsOneWidget);
   });

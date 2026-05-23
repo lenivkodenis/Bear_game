@@ -4,6 +4,10 @@ import '../models/map_location.dart';
 import '../models/player_progress.dart';
 import '../services/level_service.dart';
 import '../services/progress_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/game_card.dart';
+import '../widgets/location_card.dart';
+import '../widgets/score_badge.dart';
 import 'game_screen.dart';
 
 class LocationMapScreen extends StatefulWidget {
@@ -43,36 +47,89 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Карта')),
-      body: FutureBuilder<_LocationMapData>(
-        future: _mapDataFuture,
-        builder: (context, snapshot) {
-          final mapData =
-              snapshot.data ?? _LocationMapData.empty(PlayerProgress.initial());
+      body: DecoratedBox(
+        decoration: AppTheme.snowyGradient,
+        child: FutureBuilder<_LocationMapData>(
+          future: _mapDataFuture,
+          builder: (context, snapshot) {
+            final mapData =
+                snapshot.data ??
+                _LocationMapData.empty(PlayerProgress.initial());
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: _locations.length,
-            itemBuilder: (context, index) {
-              final location = _locations[index];
-              final isUnlocked =
-                  location.id <= mapData.progress.unlockedLocation;
-              final hasLevel = mapData.availableLevelIds.contains(location.id);
-              final isCompleted = mapData.progress.isLevelCompleted(
-                location.id,
-              );
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _locations.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 18),
+                        child: GameCard(
+                          backgroundColor: AppTheme.frostBlue,
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Путь медвежонка домой',
+                                textAlign: TextAlign.center,
+                                style: AppTheme.screenTitleStyle,
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Выбирай открытую локацию и продолжай путешествие',
+                                textAlign: TextAlign.center,
+                                style: AppTheme.helperStyle,
+                              ),
+                              const SizedBox(height: 16),
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                spacing: 12,
+                                runSpacing: 12,
+                                children: [
+                                  ScoreBadge(
+                                    score: mapData.progress.score,
+                                    compact: true,
+                                  ),
+                                  _MapBadge(
+                                    icon: Icons.flag_rounded,
+                                    label: 'Открыто',
+                                    value:
+                                        '${mapData.progress.unlockedLocation.clamp(1, 10)}/10',
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
 
-              return _LocationCard(
-                location: location,
-                isUnlocked: isUnlocked,
-                hasLevel: hasLevel,
-                isCompleted: isCompleted,
-                onTap: isUnlocked
-                    ? () => _openLocation(context, location, hasLevel)
-                    : null,
-              );
-            },
-          );
-        },
+                    final location = _locations[index - 1];
+                    final isUnlocked =
+                        location.id <= mapData.progress.unlockedLocation;
+                    final hasLevel = mapData.availableLevelIds.contains(
+                      location.id,
+                    );
+                    final isCompleted = mapData.progress.isLevelCompleted(
+                      location.id,
+                    );
+
+                    return LocationCard(
+                      location: location,
+                      isUnlocked: isUnlocked,
+                      hasLevel: hasLevel,
+                      isCompleted: isCompleted,
+                      onTap: isUnlocked
+                          ? () => _openLocation(context, location, hasLevel)
+                          : null,
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -105,6 +162,53 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
   }
 }
 
+class _MapBadge extends StatelessWidget {
+  const _MapBadge({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppTheme.snowWhite,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.iceBlue, width: 2),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: AppTheme.gentleGreen),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: AppTheme.helperStyle.copyWith(fontSize: 11)),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: AppTheme.deepBlue,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _LocationMapData {
   const _LocationMapData({
     required this.progress,
@@ -116,57 +220,5 @@ class _LocationMapData {
 
   factory _LocationMapData.empty(PlayerProgress progress) {
     return _LocationMapData(progress: progress, availableLevelIds: const {});
-  }
-}
-
-class _LocationCard extends StatelessWidget {
-  const _LocationCard({
-    required this.location,
-    required this.isUnlocked,
-    required this.hasLevel,
-    required this.isCompleted,
-    required this.onTap,
-  });
-
-  final MapLocation location;
-  final bool isUnlocked;
-  final bool hasLevel;
-  final bool isCompleted;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final icon = isUnlocked ? Icons.place_rounded : Icons.lock_rounded;
-    final status = !isUnlocked
-        ? 'Закрыто'
-        : isCompleted
-        ? 'Пройдено'
-        : hasLevel
-        ? 'Доступно'
-        : 'Скоро откроется';
-
-    return Card(
-      child: ListTile(
-        enabled: isUnlocked,
-        onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: isUnlocked
-              ? colorScheme.primaryContainer
-              : const Color(0xFFE7EEF2),
-          child: Icon(
-            icon,
-            color: isUnlocked
-                ? colorScheme.onPrimaryContainer
-                : colorScheme.onSurfaceVariant,
-          ),
-        ),
-        title: Text('${location.id}. ${location.name}'),
-        subtitle: Text(status),
-        trailing: isUnlocked
-            ? const Icon(Icons.chevron_right_rounded)
-            : const Icon(Icons.lock_outline_rounded),
-      ),
-    );
   }
 }

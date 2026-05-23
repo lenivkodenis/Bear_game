@@ -27,16 +27,47 @@ class SnowyBackground extends PositionComponent {
         size.x * 0.55,
         size.y * 0.72,
       )
-      ..quadraticBezierTo(
-        size.x * 0.78,
-        size.y * 0.84,
-        size.x,
-        size.y * 0.68,
-      )
+      ..quadraticBezierTo(size.x * 0.78, size.y * 0.84, size.x, size.y * 0.68)
       ..lineTo(size.x, size.y)
       ..lineTo(0, size.y)
       ..close();
     canvas.drawPath(hillPath, hillPaint);
+
+    final farHillPaint = Paint()..color = const Color(0xFFD8EEF7);
+    final farHillPath = Path()
+      ..moveTo(0, size.y * 0.62)
+      ..quadraticBezierTo(
+        size.x * 0.18,
+        size.y * 0.52,
+        size.x * 0.38,
+        size.y * 0.62,
+      )
+      ..quadraticBezierTo(size.x * 0.62, size.y * 0.74, size.x, size.y * 0.58)
+      ..lineTo(size.x, size.y)
+      ..lineTo(0, size.y)
+      ..close();
+    canvas.drawPath(farHillPath, farHillPaint);
+    canvas.drawPath(hillPath, hillPaint);
+
+    final cloudPaint = Paint()..color = const Color(0xCCFFFFFF);
+    _drawCloud(canvas, Offset(size.x * 0.18, size.y * 0.18), cloudPaint);
+    _drawCloud(canvas, Offset(size.x * 0.78, size.y * 0.24), cloudPaint);
+
+    final icePaint = Paint()..color = const Color(0xCCFFFFFF);
+    final iceBorderPaint = Paint()
+      ..color = const Color(0xFFBFEAFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    for (final floe in _iceFloes) {
+      final rect = Rect.fromCenter(
+        center: Offset(size.x * floe.x, size.y * floe.y),
+        width: floe.width,
+        height: floe.height,
+      );
+      final radius = Radius.circular(floe.height / 2);
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), icePaint);
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), iceBorderPaint);
+    }
 
     for (final flake in _flakes) {
       canvas.drawCircle(
@@ -45,6 +76,16 @@ class SnowyBackground extends PositionComponent {
         snowPaint,
       );
     }
+  }
+
+  void _drawCloud(Canvas canvas, Offset center, Paint paint) {
+    canvas.drawOval(
+      Rect.fromCenter(center: center, width: 86, height: 28),
+      paint,
+    );
+    canvas.drawCircle(center.translate(-28, -4), 18, paint);
+    canvas.drawCircle(center.translate(2, -10), 24, paint);
+    canvas.drawCircle(center.translate(30, -2), 16, paint);
   }
 
   static const _flakes = [
@@ -56,6 +97,12 @@ class SnowyBackground extends PositionComponent {
     _SnowFlake(0.82, 0.32, 2),
     _SnowFlake(0.93, 0.48, 3),
   ];
+
+  static const _iceFloes = [
+    _IceFloe(0.18, 0.78, 92, 22),
+    _IceFloe(0.52, 0.83, 122, 26),
+    _IceFloe(0.84, 0.76, 78, 20),
+  ];
 }
 
 class _SnowFlake {
@@ -64,4 +111,13 @@ class _SnowFlake {
   final double x;
   final double y;
   final double radius;
+}
+
+class _IceFloe {
+  const _IceFloe(this.x, this.y, this.width, this.height);
+
+  final double x;
+  final double y;
+  final double width;
+  final double height;
 }

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../models/player_progress.dart';
 import '../services/progress_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/game_card.dart';
+import '../widgets/score_badge.dart';
 
 class ProgressScreen extends StatefulWidget {
   const ProgressScreen({super.key});
@@ -26,32 +29,55 @@ class _ProgressScreenState extends State<ProgressScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Прогресс')),
-      body: FutureBuilder<PlayerProgress>(
-        future: _progressFuture,
-        builder: (context, snapshot) {
-          final progress = snapshot.data ?? PlayerProgress.initial();
+      body: DecoratedBox(
+        decoration: AppTheme.snowyGradient,
+        child: FutureBuilder<PlayerProgress>(
+          future: _progressFuture,
+          builder: (context, snapshot) {
+            final progress = snapshot.data ?? PlayerProgress.initial();
 
-          return ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              _ProgressTile(
-                icon: Icons.star_rounded,
-                title: 'Очки',
-                value: progress.score.toString(),
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: ListView(
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    GameCard(
+                      backgroundColor: AppTheme.frostBlue,
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Твои успехи',
+                            textAlign: TextAlign.center,
+                            style: AppTheme.screenTitleStyle,
+                          ),
+                          const SizedBox(height: 16),
+                          ScoreBadge(score: progress.score),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _ProgressTile(
+                      icon: Icons.map_rounded,
+                      title: 'Открытая локация',
+                      value: '${progress.unlockedLocation.clamp(1, 10)}/10',
+                    ),
+                    _ProgressTile(
+                      icon: Icons.calculate_rounded,
+                      title: 'Решено примеров',
+                      value: progress.solvedExamples.toString(),
+                    ),
+                    _ProgressTile(
+                      icon: Icons.star_rounded,
+                      title: 'Пройдено уровней',
+                      value: progress.completedLevelIds.length.toString(),
+                    ),
+                  ],
+                ),
               ),
-              _ProgressTile(
-                icon: Icons.map_rounded,
-                title: 'Открытая локация',
-                value: '${progress.unlockedLocation}/10',
-              ),
-              _ProgressTile(
-                icon: Icons.calculate_rounded,
-                title: 'Решено примеров',
-                value: progress.solvedExamples.toString(),
-              ),
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -70,13 +96,36 @@ class _ProgressTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-        title: Text(title),
-        trailing: Text(
-          value,
-          style: Theme.of(context).textTheme.titleLarge,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GameCard(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: AppTheme.frostBlue,
+              child: Icon(icon, color: AppTheme.softBlue),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: AppTheme.deepBlue,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Text(
+              value,
+              style: const TextStyle(
+                color: AppTheme.deepBlue,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
         ),
       ),
     );

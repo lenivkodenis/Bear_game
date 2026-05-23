@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../game/bear_math_game.dart';
 import '../models/question_answer_result.dart';
+import '../theme/app_theme.dart';
+import 'game_card.dart';
+import 'primary_game_button.dart';
 
 class MentorDialog extends StatefulWidget {
   const MentorDialog({
@@ -32,18 +35,19 @@ class _MentorDialogState extends State<MentorDialog> {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Card(
-            elevation: 12,
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: level == null
-                    ? _buildLoadingContent()
-                    : _buildLevelContent(context),
-              ),
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: GameCard(
+            borderColor: _answerResult == null
+                ? AppTheme.iceBlue
+                : _answerResult!.isCorrect
+                ? AppTheme.gentleGreen
+                : AppTheme.softCoral,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: level == null
+                  ? _buildLoadingContent()
+                  : _buildLevelContent(context),
             ),
           ),
         ),
@@ -66,11 +70,12 @@ class _MentorDialogState extends State<MentorDialog> {
       return [
         _DialogTitle(title: level.mentorName, subtitle: level.locationName),
         const SizedBox(height: 12),
-        Text(level.introText, style: const TextStyle(fontSize: 18)),
+        Text(level.introText, style: AppTheme.bodyStyle),
         const SizedBox(height: 20),
-        FilledButton(
+        PrimaryGameButton(
+          icon: Icons.calculate_rounded,
+          label: 'К задаче',
           onPressed: () => setState(() => _showIntro = false),
-          child: const Text('К задаче'),
         ),
       ];
     }
@@ -81,10 +86,14 @@ class _MentorDialogState extends State<MentorDialog> {
         const SizedBox(height: 12),
         const Text(
           'Все задачи этой льдины решены. Морская чайка показывает путь дальше.',
-          style: TextStyle(fontSize: 18),
+          style: AppTheme.bodyStyle,
         ),
         const SizedBox(height: 20),
-        FilledButton(onPressed: widget.onClose, child: const Text('Закрыть')),
+        PrimaryGameButton(
+          icon: Icons.check_rounded,
+          label: 'Закрыть',
+          onPressed: widget.onClose,
+        ),
       ];
     }
 
@@ -93,13 +102,16 @@ class _MentorDialogState extends State<MentorDialog> {
       return [
         _DialogTitle(title: level.mentorName, subtitle: level.locationName),
         const SizedBox(height: 12),
-        Text(result.message, style: const TextStyle(fontSize: 18)),
+        _FeedbackBox(result: result),
         const SizedBox(height: 20),
-        FilledButton(
+        PrimaryGameButton(
+          icon: result.isLevelComplete
+              ? Icons.emoji_events_rounded
+              : Icons.arrow_forward_rounded,
+          label: result.isLevelComplete ? 'К итогам' : 'Следующий вопрос',
           onPressed: result.isLevelComplete
               ? widget.onLevelComplete
               : _showNextQuestion,
-          child: Text(result.isLevelComplete ? 'К итогам' : 'Следующий вопрос'),
         ),
       ];
     }
@@ -109,9 +121,13 @@ class _MentorDialogState extends State<MentorDialog> {
       return [
         _DialogTitle(title: level.mentorName, subtitle: level.locationName),
         const SizedBox(height: 12),
-        const Text('Задачи закончились.', style: TextStyle(fontSize: 18)),
+        const Text('Задачи закончились.', style: AppTheme.bodyStyle),
         const SizedBox(height: 20),
-        FilledButton(onPressed: widget.onClose, child: const Text('Закрыть')),
+        PrimaryGameButton(
+          icon: Icons.check_rounded,
+          label: 'Закрыть',
+          onPressed: widget.onClose,
+        ),
       ];
     }
 
@@ -122,30 +138,45 @@ class _MentorDialogState extends State<MentorDialog> {
             'Вопрос ${widget.game.currentQuestionNumber} из ${widget.game.totalQuestions}',
       ),
       const SizedBox(height: 12),
-      Text(question.questionText, style: const TextStyle(fontSize: 18)),
-      const SizedBox(height: 8),
-      Text(
-        question.expression,
-        textAlign: TextAlign.center,
-        style: Theme.of(
-          context,
-        ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+      DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppTheme.frostBlue,
+          borderRadius: BorderRadius.circular(AppTheme.smallRadius),
+          border: Border.all(color: AppTheme.iceBlue),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            children: [
+              Text(
+                question.questionText,
+                textAlign: TextAlign.center,
+                style: AppTheme.bodyStyle,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                question.expression,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  color: AppTheme.deepBlue,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       if (result != null && !result.isCorrect) ...[
         const SizedBox(height: 12),
-        Text(
-          result.message,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.error,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        _FeedbackBox(result: result),
       ],
       const SizedBox(height: 20),
       for (final option in question.options) ...[
-        FilledButton.tonal(
+        PrimaryGameButton(
+          icon: Icons.panorama_fish_eye_rounded,
+          label: option.toString(),
+          secondary: true,
           onPressed: _isSubmitting ? null : () => _submitAnswer(option),
-          child: Text(option.toString()),
         ),
         const SizedBox(height: 8),
       ],
@@ -179,21 +210,77 @@ class _DialogTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+        const CircleAvatar(
+          radius: 24,
+          backgroundColor: AppTheme.frostBlue,
+          child: Icon(Icons.auto_awesome_rounded, color: AppTheme.softBlue),
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: AppTheme.deepBlue,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(subtitle, style: AppTheme.helperStyle),
+            ],
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _FeedbackBox extends StatelessWidget {
+  const _FeedbackBox({required this.result});
+
+  final QuestionAnswerResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCorrect = result.isCorrect;
+    final color = isCorrect ? AppTheme.gentleGreen : AppTheme.softCoral;
+    final backgroundColor = isCorrect ? AppTheme.paleGreen : AppTheme.paleCoral;
+    final icon = isCorrect
+        ? Icons.check_circle_rounded
+        : Icons.lightbulb_rounded;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(AppTheme.smallRadius),
+        border: Border.all(color: color.withValues(alpha: 0.55), width: 2),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                result.message,
+                style: const TextStyle(
+                  color: AppTheme.deepBlue,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

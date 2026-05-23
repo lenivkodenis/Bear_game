@@ -2,10 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 class PlatformComponent extends PositionComponent {
-  PlatformComponent({
-    required super.position,
-    required super.size,
-  });
+  PlatformComponent({required super.position, required super.size});
 
   @override
   void render(Canvas canvas) {
