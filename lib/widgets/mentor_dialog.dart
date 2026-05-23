@@ -30,24 +30,31 @@ class _MentorDialogState extends State<MentorDialog> {
   @override
   Widget build(BuildContext context) {
     final level = widget.game.currentLevel;
+    final canOpenQuestion = level != null && _showIntro;
 
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
-          child: GameCard(
-            borderColor: _answerResult == null
-                ? AppTheme.iceBlue
-                : _answerResult!.isCorrect
-                ? AppTheme.gentleGreen
-                : AppTheme.softCoral,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: level == null
-                  ? _buildLoadingContent()
-                  : _buildLevelContent(context),
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: canOpenQuestion
+                ? () => setState(() => _showIntro = false)
+                : null,
+            child: GameCard(
+              borderColor: _answerResult == null
+                  ? AppTheme.iceBlue
+                  : _answerResult!.isCorrect
+                  ? AppTheme.gentleGreen
+                  : AppTheme.softCoral,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: level == null
+                    ? _buildLoadingContent()
+                    : _buildLevelContent(context),
+              ),
             ),
           ),
         ),

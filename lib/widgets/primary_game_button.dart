@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-class PrimaryGameButton extends StatelessWidget {
+class PrimaryGameButton extends StatefulWidget {
   const PrimaryGameButton({
     required this.label,
     required this.icon,
@@ -19,76 +19,104 @@ class PrimaryGameButton extends StatelessWidget {
   final bool secondary;
 
   @override
+  State<PrimaryGameButton> createState() => _PrimaryGameButtonState();
+}
+
+class _PrimaryGameButtonState extends State<PrimaryGameButton> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    final backgroundColor = secondary ? AppTheme.snowWhite : AppTheme.softBlue;
-    final foregroundColor = secondary ? AppTheme.deepBlue : AppTheme.snowWhite;
-    final pressedColor = secondary
+    final isEnabled = widget.onPressed != null;
+    final backgroundColor = widget.secondary
+        ? AppTheme.snowWhite
+        : AppTheme.softBlue;
+    final foregroundColor = widget.secondary
+        ? AppTheme.deepBlue
+        : AppTheme.snowWhite;
+    final activeColor = widget.secondary
         ? AppTheme.frostBlue
         : AppTheme.softBluePressed;
+    final color = !isEnabled
+        ? AppTheme.lockedPanel
+        : (_isHovered || _isPressed)
+        ? activeColor
+        : backgroundColor;
+    final textColor = isEnabled ? foregroundColor : AppTheme.lockedBlue;
 
-    return FilledButton.icon(
-      onPressed: onPressed,
-      icon: Text(
-        symbol ?? '•',
-        style: TextStyle(
-          color: foregroundColor,
-          fontSize: 20,
-          fontWeight: FontWeight.w900,
+    return Semantics(
+      button: true,
+      enabled: isEnabled,
+      label: widget.label,
+      child: MouseRegion(
+        cursor: isEnabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() {
+          _isHovered = false;
+          _isPressed = false;
+        }),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: isEnabled
+              ? (_) => setState(() => _isPressed = true)
+              : null,
+          onTapUp: isEnabled ? (_) => setState(() => _isPressed = false) : null,
+          onTapCancel: isEnabled
+              ? () => setState(() => _isPressed = false)
+              : null,
+          onTap: widget.onPressed,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            constraints: const BoxConstraints(
+              minHeight: AppTheme.minButtonHeight,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+              border: widget.secondary
+                  ? Border.all(color: AppTheme.iceBlue, width: 1.5)
+                  : null,
+              boxShadow: isEnabled
+                  ? const [
+                      BoxShadow(
+                        color: AppTheme.softShadow,
+                        blurRadius: 12,
+                        offset: Offset(0, 6),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                Text(
+                  widget.symbol ?? '•',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    widget.label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      label: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text(label, textAlign: TextAlign.center),
-      ),
-      style:
-          FilledButton.styleFrom(
-            backgroundColor: backgroundColor,
-            foregroundColor: foregroundColor,
-            minimumSize: const Size.fromHeight(AppTheme.minButtonHeight),
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            disabledBackgroundColor: AppTheme.lockedPanel,
-            disabledForegroundColor: AppTheme.lockedBlue,
-            side: secondary ? const BorderSide(color: AppTheme.iceBlue) : null,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-            ),
-            textStyle: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ).copyWith(
-            backgroundColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.disabled)) {
-                return AppTheme.lockedPanel;
-              }
-              if (states.contains(WidgetState.pressed) ||
-                  states.contains(WidgetState.hovered)) {
-                return pressedColor;
-              }
-              return backgroundColor;
-            }),
-            overlayColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.pressed)) {
-                return AppTheme.snowWhite.withValues(alpha: 0.14);
-              }
-              if (states.contains(WidgetState.hovered)) {
-                return AppTheme.snowWhite.withValues(alpha: 0.08);
-              }
-              return null;
-            }),
-            elevation: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.disabled)) {
-                return 0;
-              }
-              if (states.contains(WidgetState.pressed)) {
-                return 1;
-              }
-              if (states.contains(WidgetState.hovered)) {
-                return 6;
-              }
-              return 3;
-            }),
-          ),
     );
   }
 }
