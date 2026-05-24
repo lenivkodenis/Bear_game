@@ -31,52 +31,82 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
     _MapStop(
       location: MapLocation(id: 1, name: 'Льдина'),
       center: Offset(0.12, 0.33),
+      markerCenter: Offset(0.115, 0.315),
       hitboxSize: Size(0.17, 0.12),
+      mistCenter: Offset(0.11, 0.25),
+      mistSize: Size(0.13, 0.10),
     ),
     _MapStop(
       location: MapLocation(id: 2, name: 'Ледяная река'),
       center: Offset(0.32, 0.35),
+      markerCenter: Offset(0.305, 0.345),
       hitboxSize: Size(0.18, 0.12),
+      mistCenter: Offset(0.33, 0.27),
+      mistSize: Size(0.18, 0.11),
     ),
     _MapStop(
       location: MapLocation(id: 3, name: 'Заснеженный берег'),
       center: Offset(0.50, 0.33),
+      markerCenter: Offset(0.485, 0.325),
       hitboxSize: Size(0.20, 0.12),
+      mistCenter: Offset(0.50, 0.25),
+      mistSize: Size(0.19, 0.12),
     ),
     _MapStop(
       location: MapLocation(id: 4, name: 'Северный лес'),
       center: Offset(0.70, 0.33),
+      markerCenter: Offset(0.655, 0.325),
       hitboxSize: Size(0.18, 0.12),
+      mistCenter: Offset(0.71, 0.25),
+      mistSize: Size(0.18, 0.13),
     ),
     _MapStop(
       location: MapLocation(id: 5, name: 'Ледяная пещера'),
       center: Offset(0.77, 0.58),
+      markerCenter: Offset(0.728, 0.575),
       hitboxSize: Size(0.20, 0.12),
+      mistCenter: Offset(0.78, 0.50),
+      mistSize: Size(0.19, 0.13),
     ),
     _MapStop(
       location: MapLocation(id: 6, name: 'Снежная долина'),
       center: Offset(0.46, 0.61),
+      markerCenter: Offset(0.435, 0.608),
       hitboxSize: Size(0.20, 0.12),
+      mistCenter: Offset(0.48, 0.52),
+      mistSize: Size(0.22, 0.13),
     ),
     _MapStop(
       location: MapLocation(id: 7, name: 'Горный перевал'),
       center: Offset(0.13, 0.60),
+      markerCenter: Offset(0.095, 0.585),
       hitboxSize: Size(0.20, 0.12),
+      mistCenter: Offset(0.17, 0.51),
+      mistSize: Size(0.22, 0.14),
     ),
     _MapStop(
       location: MapLocation(id: 8, name: 'Полярная ночь'),
       center: Offset(0.09, 0.88),
+      markerCenter: Offset(0.075, 0.875),
       hitboxSize: Size(0.19, 0.12),
+      mistCenter: Offset(0.13, 0.80),
+      mistSize: Size(0.21, 0.13),
     ),
     _MapStop(
       location: MapLocation(id: 9, name: 'Северное сияние'),
       center: Offset(0.35, 0.92),
+      markerCenter: Offset(0.335, 0.915),
       hitboxSize: Size(0.21, 0.12),
+      mistCenter: Offset(0.37, 0.83),
+      mistSize: Size(0.22, 0.13),
     ),
     _MapStop(
       location: MapLocation(id: 10, name: 'Северный океан'),
       center: Offset(0.63, 0.90),
+      markerCenter: Offset(0.585, 0.895),
       hitboxSize: Size(0.21, 0.12),
+      mistCenter: Offset(0.66, 0.81),
+      mistSize: Size(0.22, 0.13),
     ),
   ];
 
@@ -268,14 +298,39 @@ class _MapHotspot extends StatelessWidget {
       stop.center.dx * mapSize.width,
       stop.center.dy * mapSize.height,
     );
+    final markerCenter = Offset(
+      stop.markerCenter.dx * mapSize.width,
+      stop.markerCenter.dy * mapSize.height,
+    );
     final hitbox = Size(
       stop.hitboxSize.width * mapSize.width,
       stop.hitboxSize.height * mapSize.height,
+    );
+    final mistCenter = Offset(
+      stop.mistCenter.dx * mapSize.width,
+      stop.mistCenter.dy * mapSize.height,
+    );
+    final mistSize = Size(
+      stop.mistSize.width * mapSize.width,
+      stop.mistSize.height * mapSize.height,
     );
     final indicatorSize = (mapSize.width * 0.052).clamp(42.0, 74.0);
 
     return Stack(
       children: [
+        if (state == _MapStopState.locked)
+          Positioned(
+            left: mistCenter.dx - mistSize.width / 2,
+            top: mistCenter.dy - mistSize.height / 2,
+            width: mistSize.width,
+            height: mistSize.height,
+            child: IgnorePointer(
+              child: _LockedRegionMist(
+                seed: stop.location.id,
+                density: stop.location.id >= 8 ? 0.72 : 0.62,
+              ),
+            ),
+          ),
         Positioned(
           left: center.dx - hitbox.width / 2,
           top: center.dy - hitbox.height / 2,
@@ -292,16 +347,14 @@ class _MapHotspot extends StatelessWidget {
                 onTap: isUnlocked
                     ? () => onOpenLocation(context, stop.location)
                     : null,
-                child: state == _MapStopState.locked
-                    ? const _LockedFrost()
-                    : const SizedBox.expand(),
+                child: const SizedBox.expand(),
               ),
             ),
           ),
         ),
         Positioned(
-          left: center.dx - indicatorSize / 2,
-          top: center.dy - indicatorSize / 2,
+          left: markerCenter.dx - indicatorSize / 2,
+          top: markerCenter.dy - indicatorSize / 2,
           width: indicatorSize,
           height: indicatorSize,
           child: IgnorePointer(
@@ -416,7 +469,7 @@ class _LockedIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: Alignment.topRight,
+      alignment: Alignment.topLeft,
       child: DecoratedBox(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -436,27 +489,112 @@ class _LockedIndicator extends StatelessWidget {
   }
 }
 
-class _LockedFrost extends StatelessWidget {
-  const _LockedFrost();
+class _LockedRegionMist extends StatelessWidget {
+  const _LockedRegionMist({required this.seed, required this.density});
+
+  final int seed;
+  final double density;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 1.0, sigmaY: 1.0),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: const Color(0xFFEAF8FE).withValues(alpha: 0.34),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: AppTheme.snowWhite.withValues(alpha: 0.38),
-              width: 1.2,
-            ),
-          ),
-        ),
-      ),
+    return CustomPaint(
+      painter: _LockedRegionMistPainter(seed: seed, density: density),
+      child: const SizedBox.expand(),
     );
+  }
+}
+
+class _LockedRegionMistPainter extends CustomPainter {
+  const _LockedRegionMistPainter({required this.seed, required this.density});
+
+  final int seed;
+  final double density;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final mistPaint = Paint()
+      ..color = AppTheme.snowWhite.withValues(alpha: 0.16 * density)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18);
+    final blueMistPaint = Paint()
+      ..color = AppTheme.iceBlue.withValues(alpha: 0.12 * density)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
+    final sparklePaint = Paint()
+      ..color = AppTheme.snowWhite.withValues(alpha: 0.42 * density)
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 1.4;
+
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center,
+        width: size.width * 0.82,
+        height: size.height * 0.62,
+      ),
+      mistPaint,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: center.translate(size.width * 0.12, -size.height * 0.04),
+        width: size.width * 0.58,
+        height: size.height * 0.76,
+      ),
+      blueMistPaint,
+    );
+
+    for (var i = 0; i < 7; i += 1) {
+      final t = (seed * 37 + i * 19) % 100 / 100.0;
+      final u = (seed * 53 + i * 23) % 100 / 100.0;
+      final blobCenter = Offset(
+        size.width * (0.16 + t * 0.68),
+        size.height * (0.20 + u * 0.58),
+      );
+      final blobWidth = size.width * (0.20 + ((i + seed) % 4) * 0.055);
+      final blobHeight = size.height * (0.24 + ((i + seed) % 3) * 0.07);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: blobCenter,
+          width: blobWidth,
+          height: blobHeight,
+        ),
+        i.isEven ? mistPaint : blueMistPaint,
+      );
+    }
+
+    final veilPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          AppTheme.snowWhite.withValues(alpha: 0.24 * density),
+          AppTheme.iceBlue.withValues(alpha: 0.10 * density),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.54, 1.0],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, veilPaint);
+
+    for (var i = 0; i < 11; i += 1) {
+      final t = (seed * 29 + i * 17) % 100 / 100.0;
+      final u = (seed * 41 + i * 31) % 100 / 100.0;
+      final point = Offset(size.width * t, size.height * u);
+      final radius = i.isEven ? 2.2 : 1.4;
+      canvas.drawCircle(point, radius, sparklePaint);
+      if (i % 4 == 0) {
+        canvas.drawLine(
+          point.translate(-radius * 1.6, 0),
+          point.translate(radius * 1.6, 0),
+          sparklePaint,
+        );
+        canvas.drawLine(
+          point.translate(0, -radius * 1.6),
+          point.translate(0, radius * 1.6),
+          sparklePaint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _LockedRegionMistPainter oldDelegate) {
+    return oldDelegate.seed != seed || oldDelegate.density != density;
   }
 }
 
@@ -554,12 +692,18 @@ class _MapStop {
   const _MapStop({
     required this.location,
     required this.center,
+    required this.markerCenter,
     required this.hitboxSize,
+    required this.mistCenter,
+    required this.mistSize,
   });
 
   final MapLocation location;
   final Offset center;
+  final Offset markerCenter;
   final Size hitboxSize;
+  final Offset mistCenter;
+  final Size mistSize;
 }
 
 enum _MapStopState { completed, available, locked }
