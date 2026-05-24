@@ -9,6 +9,15 @@ import 'package:flutter/services.dart';
 
 const bool kBearDebugOverlay = false;
 
+const List<String> kBearWalkFrameOrder = [
+  'walk_01.png',
+  'walk_02.png',
+  'walk_03.png',
+  'walk_04.png',
+  'walk_05.png',
+  'walk_06.png',
+];
+
 enum BearAnimationState { idle, walking, jumping, interacting, sitting }
 
 class PlayerBear extends PositionComponent with KeyboardHandler {
@@ -23,14 +32,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   static final defaultSize = Vector2(_hitboxWidth, _hitboxHeight);
   static const _bearSpritePath =
       'characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png';
-  static const _walkSpritePaths = [
-    'characters/bear_cub/animations/walk/walk_01.png',
-    'characters/bear_cub/animations/walk/walk_02.png',
-    'characters/bear_cub/animations/walk/walk_03.png',
-    'characters/bear_cub/animations/walk/walk_04.png',
-    'characters/bear_cub/animations/walk/walk_05.png',
-    'characters/bear_cub/animations/walk/walk_06.png',
-  ];
+  static const _walkSpriteDirectory = 'characters/bear_cub/animations/walk';
   static const visualWidth = 112.0;
   static const visualHeight = 96.0;
   static const visualSize = Size(visualWidth, visualHeight);
@@ -96,7 +98,8 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     _image = await Flame.images.load(_bearSpritePath);
     try {
       final walkSprites = <Sprite>[];
-      for (final path in _walkSpritePaths) {
+      for (final frameName in kBearWalkFrameOrder) {
+        final path = '$_walkSpriteDirectory/$frameName';
         walkSprites.add(Sprite(await Flame.images.load(path)));
       }
       final walkAnimation = SpriteAnimation.spriteList(
