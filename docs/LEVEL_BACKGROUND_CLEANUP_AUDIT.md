@@ -30,8 +30,35 @@ Each level now has:
 - `source_with_bear/background_with_bear.png` for the audited baked-in-bear file;
 - `clean_source/` prepared for the future clean environment-only source.
 
+## Automatic Cleanup Attempt
+
+Automatic cleanup was not applied. The built-in image editing workflow did not
+reliably bind to each specific local background file, and the local environment
+does not have a production-quality content-aware inpainting tool available.
+Because rough clone/heal/inpaint artifacts would harm the production
+backgrounds, the current `background.png` files were left unchanged.
+
 ## Replacement Needed
 
 Add clean environment-only backgrounds for all 10 levels. Each replacement must
 match the canonical location, preserve the intended ground/platform readability,
 and contain no player bear, mentor sprite, UI, captions, or text.
+
+Expected manual clean source files:
+
+| Level | Clean source file to add |
+|---|---|
+| 1 | `assets/images/levels/level_01_ice_floe/clean_source/clean_background.png` |
+| 2 | `assets/images/levels/level_02_icy_river/clean_source/clean_background.png` |
+| 3 | `assets/images/levels/level_03_snowy_shore/clean_source/clean_background.png` |
+| 4 | `assets/images/levels/level_04_northern_forest/clean_source/clean_background.png` |
+| 5 | `assets/images/levels/level_05_ice_cave/clean_source/clean_background.png` |
+| 6 | `assets/images/levels/level_06_snowy_valley/clean_source/clean_background.png` |
+| 7 | `assets/images/levels/level_07_mountain_pass/clean_source/clean_background.png` |
+| 8 | `assets/images/levels/level_08_polar_night/clean_source/clean_background.png` |
+| 9 | `assets/images/levels/level_09_northern_lights/clean_source/clean_background.png` |
+| 10 | `assets/images/levels/level_10_northern_ocean/clean_source/clean_background.png` |
+
+After a clean source is approved, copy it to the level folder as
+`background.png` and keep `source_with_bear/background_with_bear.png` as the
+backup of the rejected baked-in-bear version.
