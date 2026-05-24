@@ -34,6 +34,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   int _currentQuestionIndex = 0;
   int _levelSnowflakes = 0;
   bool _mentorDialogWasShown = false;
+  bool _mentorDialogOpen = false;
   bool _sceneReady = false;
   final Set<int> _questionsWithWrongAttempts = <int>{};
 
@@ -95,13 +96,13 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   void startMovingLeft() {
-    if (_sceneReady) {
+    if (_sceneReady && !_mentorDialogOpen) {
       player.moveLeft();
     }
   }
 
   void startMovingRight() {
-    if (_sceneReady) {
+    if (_sceneReady && !_mentorDialogOpen) {
       player.moveRight();
     }
   }
@@ -113,7 +114,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   void jump() {
-    if (_sceneReady) {
+    if (_sceneReady && !_mentorDialogOpen) {
       player.jump();
     }
   }
@@ -137,6 +138,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   void closeMentorDialog() {
+    _mentorDialogOpen = false;
     player.stopInteracting();
     overlays.remove(mentorDialogOverlay);
   }
@@ -202,6 +204,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
     if (!_mentorDialogWasShown && player.distance(mentor) < 92) {
       _mentorDialogWasShown = true;
+      _mentorDialogOpen = true;
       player.stopMoving();
       player.startInteracting();
       overlays.add(mentorDialogOverlay);

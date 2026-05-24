@@ -33,6 +33,8 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   static const _bearSpritePath =
       'characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png';
   static const _walkSpriteDirectory = 'characters/bear_cub/animations/walk';
+  static const String? _jumpSpritePath = null;
+  static const String? _sitSpritePath = null;
   static const visualWidth = 112.0;
   static const visualHeight = 96.0;
   static const visualSize = Size(visualWidth, visualHeight);
@@ -65,6 +67,8 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   final double levelWidth;
   final Vector2 _velocity = Vector2.zero();
   Image? _image;
+  Image? _jumpImage;
+  Image? _sitImage;
   SpriteAnimationTicker? _walkTicker;
   double _animationTime = 0;
   BearAnimationState? _previousAnimationState;
@@ -96,6 +100,14 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   Future<void> onLoad() async {
     await super.onLoad();
     _image = await Flame.images.load(_bearSpritePath);
+    _jumpImage = await _loadOptionalStateImage(
+      _jumpSpritePath,
+      BearAnimationState.jumping,
+    );
+    _sitImage = await _loadOptionalStateImage(
+      _sitSpritePath,
+      BearAnimationState.sitting,
+    );
     try {
       final walkSprites = <Sprite>[];
       for (final frameName in kBearWalkFrameOrder) {
@@ -149,6 +161,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     final image = _image;
     final walkTicker = _walkTicker;
     if (image != null) {
+      final stateImage = _imageForState(state) ?? image;
       final transform = _visualTransform(state);
       final destinationRect = transform.destinationRect;
       final pivot = Offset(
@@ -170,8 +183,13 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
         );
       } else {
         canvas.drawImageRect(
-          image,
-          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+          stateImage,
+          Rect.fromLTWH(
+            0,
+            0,
+            stateImage.width.toDouble(),
+            stateImage.height.toDouble(),
+          ),
           destinationRect,
           paint,
         );
@@ -242,6 +260,11 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   }
 
   void moveLeft() {
+    if (_isInteracting || _isSitting) {
+      stopMoving();
+      return;
+    }
+
     _velocity.x = -_moveSpeed;
     _facesLeft = true;
     _isInteracting = false;
@@ -249,6 +272,11 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   }
 
   void moveRight() {
+    if (_isInteracting || _isSitting) {
+      stopMoving();
+      return;
+    }
+
     _velocity.x = _moveSpeed;
     _facesLeft = false;
     _isInteracting = false;
@@ -260,6 +288,11 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   }
 
   void jump() {
+    if (_isInteracting || _isSitting) {
+      stopMoving();
+      return;
+    }
+
     if (_isOnGround) {
       _velocity.y = _jumpImpulse;
       _walkTicker?.reset();
@@ -297,6 +330,35 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     if (value) {
       _isInteracting = false;
       stopMoving();
+    }
+  }
+
+  Future<Image?> _loadOptionalStateImage(
+    String? path,
+    BearAnimationState state,
+  ) async {
+    if (path == null) {
+      return null;
+    }
+
+    try {
+      return await Flame.images.load(path);
+    } catch (error) {
+      debugPrint('Failed to load bear $state image: $error');
+      return null;
+    }
+  }
+
+  Image? _imageForState(BearAnimationState state) {
+    switch (state) {
+      case BearAnimationState.jumping:
+        return _jumpImage;
+      case BearAnimationState.sitting:
+      case BearAnimationState.interacting:
+        return _sitImage;
+      case BearAnimationState.idle:
+      case BearAnimationState.walking:
+        return null;
     }
   }
 

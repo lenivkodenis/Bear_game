@@ -86,6 +86,38 @@ Remaining asset work for full animation:
 3. Add a verified `sit` frame for the mentor meeting.
 4. Re-check grounding after each new animated state is connected.
 
+# Jump and interaction states
+
+Asset inventory for this stage:
+
+- `assets/images/characters/bear_cub/animations/idle/` contains only `.gitkeep`.
+- `assets/images/characters/bear_cub/animations/jump/` contains only `.gitkeep`.
+- `assets/images/characters/bear_cub/animations/sit/` contains only `.gitkeep`.
+- `assets/images/characters/bear_cub/animations/walk/` contains the real `walk_01.png` through `walk_06.png` sequence.
+- `assets/images/characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png` remains the verified static side-view fallback.
+- `assets/images/characters/bear_cub/processed/bear_cub_base_6_clean.png` is still only a sitting-pose candidate. It has a different canvas size and has not been verified against the gameplay ground line, so it is not connected.
+
+There is no verified dedicated `jump_01.png` yet. `BearAnimationState.jumping` therefore keeps using the current static side-view fallback with the existing small jump transform. The walk ticker is reset when a jump begins, and jumping keeps priority over walking while the bear is airborne.
+
+There is no verified dedicated `sit_01.png` yet. `BearAnimationState.interacting` and `BearAnimationState.sitting` therefore use the same calm static fallback as idle. `PlayerBear` now has explicit optional image slots for future jump and sit assets; those paths remain unset until verified PNGs exist.
+
+The state priority is:
+
+1. `sitting` or `interacting` when the mentor dialog is active or a future scene explicitly requests sitting;
+2. `jumping` while the bear is off the ground or has vertical velocity;
+3. `walking` while grounded with horizontal velocity;
+4. `idle` otherwise.
+
+When the bear reaches the mentor, `BearMathGame` stops horizontal movement, starts the interacting state, and opens the mentor dialog. While that dialog is open, movement and jump commands are ignored so the walk animation cannot resume behind the dialog. Closing the dialog stops interacting and returns the bear to the normal idle/walk/jump state selection.
+
+Grounding remains unchanged. This stage did not modify `visualOffset`, `visualFeetAnchor`, `feetToGroundOffset`, hitbox size, collision clamp, gravity, jump impulse, level map, questions, rewards, or difficulty data.
+
+Assets still needed:
+
+- `assets/images/characters/bear_cub/animations/idle/idle_01.png` and optional additional idle frames;
+- `assets/images/characters/bear_cub/animations/jump/jump_01.png`;
+- `assets/images/characters/bear_cub/animations/sit/sit_01.png`.
+
 ## Current static sprite
 
 The first level currently uses one cleaned RGBA PNG:
