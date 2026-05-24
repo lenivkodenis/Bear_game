@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../game/bear_math_game.dart';
+import '../models/question.dart';
 import '../models/question_answer_result.dart';
+import '../utils/answer_option_order.dart';
 
 class MentorDialog extends StatefulWidget {
   const MentorDialog({
@@ -23,6 +25,8 @@ class _MentorDialogState extends State<MentorDialog> {
   bool _showIntro = true;
   bool _isSubmitting = false;
   QuestionAnswerResult? _answerResult;
+  int? _orderedQuestionId;
+  List<int> _orderedOptions = const [];
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +146,7 @@ class _MentorDialogState extends State<MentorDialog> {
         ),
       ],
       const SizedBox(height: 20),
-      for (final option in question.options) ...[
+      for (final option in _optionsFor(question)) ...[
         FilledButton.tonal(
           onPressed: _isSubmitting ? null : () => _submitAnswer(option),
           child: Text(option.toString()),
@@ -150,6 +154,15 @@ class _MentorDialogState extends State<MentorDialog> {
         const SizedBox(height: 8),
       ],
     ];
+  }
+
+  List<int> _optionsFor(Question question) {
+    if (_orderedQuestionId != question.id) {
+      _orderedQuestionId = question.id;
+      _orderedOptions = shuffledAnswerOptions(question.options);
+    }
+
+    return _orderedOptions;
   }
 
   Future<void> _submitAnswer(int option) async {
@@ -167,7 +180,11 @@ class _MentorDialogState extends State<MentorDialog> {
   }
 
   void _showNextQuestion() {
-    setState(() => _answerResult = null);
+    setState(() {
+      _answerResult = null;
+      _orderedQuestionId = null;
+      _orderedOptions = const [];
+    });
   }
 }
 

@@ -18,6 +18,23 @@ void main() {
     expect(game.scoreNotifier.value, question.rewardPoints);
   });
 
+  test('answer correctness is checked by value, not option index', () async {
+    SharedPreferences.setMockInitialValues({});
+    final game = await _loadGame(levelId: 1);
+    final question = game.currentQuestion!;
+    final reorderedOptions = [
+      ...question.options.where((option) => option != question.correctAnswer),
+      question.correctAnswer,
+    ];
+
+    expect(reorderedOptions.last, question.correctAnswer);
+
+    final result = await game.submitAnswer(reorderedOptions.last);
+
+    expect(result.isCorrect, isTrue);
+    expect(result.score, question.rewardPoints);
+  });
+
   test('wrong answer applies penalty', () async {
     SharedPreferences.setMockInitialValues({'score': 10});
     final game = await _loadGame(levelId: 1);
