@@ -2,6 +2,15 @@
 
 Date: 2026-05-24
 
+## Background generation rule
+
+All level backgrounds must be clean environment-only images. The player bear cub
+must never be baked into `background.png`.
+
+Generate level backgrounds without the playable bear cub, without mentor
+characters, without UI, and without text or captions. The player bear cub and
+mentor characters are connected separately as sprite assets in runtime.
+
 ## Naming recommendation
 
 Use `assets/data/levels.json` as the current canonical source for level names. Keep level 1 as `Льдина` and level 6 as `Снежная долина`.
