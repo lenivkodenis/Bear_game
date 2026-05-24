@@ -12,7 +12,10 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   }) : super(size: defaultSize, anchor: Anchor.topLeft);
 
   static final defaultSize = Vector2(78, 92);
-  static const _bearSourceRect = Rect.fromLTWH(175, 92, 900, 1000);
+  static const _bearSpritePath =
+      'characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png';
+  static const _spriteRenderSize = Size(108, 88);
+  static const _spriteRenderOffset = Offset(-15, 4);
 
   static const _moveSpeed = 160.0;
   static const _jumpImpulse = -360.0;
@@ -28,7 +31,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    _image = await Flame.images.load('bear_cub/bear_cub_base.png');
+    _image = await Flame.images.load(_bearSpritePath);
   }
 
   @override
@@ -56,8 +59,8 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     if (image != null) {
       canvas.drawImageRect(
         image,
-        _bearSourceRect,
-        Rect.fromLTWH(0, 0, size.x, size.y),
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        _spriteRenderOffset & _spriteRenderSize,
         Paint()..filterQuality = FilterQuality.high,
       );
       return;
