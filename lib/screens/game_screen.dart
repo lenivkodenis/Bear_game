@@ -103,6 +103,7 @@ class _GameScreenState extends State<GameScreen> {
         mentorName: level.mentorName,
         completionText: level.completionText,
         score: game.scoreNotifier.value,
+        levelSnowflakes: game.levelSnowflakes,
         solvedQuestions: game.totalQuestions,
       ),
     );

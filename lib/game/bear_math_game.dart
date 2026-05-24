@@ -12,6 +12,7 @@ import '../models/level.dart';
 import '../models/player_progress.dart';
 import '../models/question.dart';
 import '../models/question_answer_result.dart';
+import '../services/game_economy.dart';
 import '../services/level_service.dart';
 import '../services/progress_service.dart';
 
@@ -31,8 +32,10 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   Level? currentLevel;
   PlayerProgress _progress = PlayerProgress.initial();
   int _currentQuestionIndex = 0;
+  int _levelSnowflakes = 0;
   bool _mentorDialogWasShown = false;
   bool _sceneReady = false;
+  final Set<int> _questionsWithWrongAttempts = <int>{};
 
   Question? get currentQuestion {
     final level = currentLevel;
@@ -46,6 +49,8 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   int get currentQuestionNumber => _currentQuestionIndex + 1;
 
   int get totalQuestions => currentLevel?.questions.length ?? 0;
+
+  int get levelSnowflakes => _levelSnowflakes;
 
   bool get isLevelComplete {
     final level = currentLevel;
@@ -136,8 +141,14 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   Future<QuestionAnswerResult> _saveCorrectAnswer(Question question) async {
+    final hadWrongAttempt = _questionsWithWrongAttempts.contains(
+      _currentQuestionIndex,
+    );
+    final earnedSnowflakes = GameEconomy.snowflakesForCorrectAnswer(
+      hadWrongAttempt: hadWrongAttempt,
+    );
     final nextQuestionIndex = _currentQuestionIndex + 1;
-    final newScore = _progress.score + question.rewardPoints;
+    final newScore = _progress.score + earnedSnowflakes;
     final levelComplete = nextQuestionIndex >= totalQuestions;
     final questionIndexes = Map<int, int>.of(_progress.currentQuestionIndexes)
       ..[currentLevel!.id] = nextQuestionIndex;
@@ -156,30 +167,26 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
           : _progress.unlockedLocation,
     );
     _currentQuestionIndex = nextQuestionIndex;
+    _levelSnowflakes += earnedSnowflakes;
     scoreNotifier.value = newScore;
 
     await _progressService.saveProgress(_progress);
 
     return QuestionAnswerResult(
       isCorrect: true,
-      message: 'Верно! Медвежонок получает ${question.rewardPoints} очков.',
+      message: 'Верно! Медвежонок получает $earnedSnowflakes снежинок.',
       score: newScore,
       isLevelComplete: levelComplete,
     );
   }
 
   Future<QuestionAnswerResult> _saveWrongAnswer(Question question) async {
-    final newScore = math.max(0, _progress.score - question.penaltyPoints);
-    _progress = _progress.copyWith(score: newScore);
-    scoreNotifier.value = newScore;
-
-    await _progressService.saveProgress(_progress);
+    _questionsWithWrongAttempts.add(_currentQuestionIndex);
 
     return QuestionAnswerResult(
       isCorrect: false,
-      message:
-          'Пока неверно. -${question.penaltyPoints} очка. Подсказка: ${question.hint}',
-      score: newScore,
+      message: 'Пока неверно. Подсказка: ${question.hint}',
+      score: _progress.score,
       isLevelComplete: false,
     );
   }

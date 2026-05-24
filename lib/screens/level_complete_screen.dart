@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/level_completion_summary.dart';
 import '../models/player_progress.dart';
+import '../services/game_economy.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/game_card.dart';
@@ -50,6 +51,7 @@ class _LevelCompleteScreenState extends State<LevelCompleteScreen> {
                       summary?.completionText ??
                       'Ты справился. Теперь ты знаешь, что таблица умножения помогает считать быстрее и увереннее. Я покажу тебе путь к следующей локации.';
                   final score = summary?.score ?? progress.score;
+                  final levelSnowflakes = summary?.levelSnowflakes ?? 0;
                   final solvedQuestions =
                       summary?.solvedQuestions ?? progress.currentQuestionIndex;
 
@@ -89,6 +91,11 @@ class _LevelCompleteScreenState extends State<LevelCompleteScreen> {
                               children: [
                                 ScoreBadge(score: score),
                                 _SummaryBadge(
+                                  symbol: '✦',
+                                  label: 'За уровень',
+                                  value: levelSnowflakes.toString(),
+                                ),
+                                _SummaryBadge(
                                   symbol: '×',
                                   label: 'Вопросы',
                                   value: solvedQuestions.toString(),
@@ -96,6 +103,16 @@ class _LevelCompleteScreenState extends State<LevelCompleteScreen> {
                               ],
                             ),
                             const SizedBox(height: 20),
+                            Text(
+                              'Ты прошёл уровень и заработал $levelSnowflakes снежинок. Максимум за уровень: ${GameEconomy.maxSnowflakesPerLevel} снежинок.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: AppTheme.deepBlue,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
                             Text(
                               completionText,
                               textAlign: TextAlign.center,

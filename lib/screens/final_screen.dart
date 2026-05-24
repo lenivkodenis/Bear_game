@@ -77,7 +77,7 @@ class _FinalScreenState extends State<FinalScreen> {
                               children: [
                                 ScoreBadge(
                                   score: progress.score,
-                                  label: 'Итоговые очки',
+                                  label: 'Итоговые снежинки',
                                 ),
                                 _FinalBadge(
                                   symbol: '⌂',

@@ -4,6 +4,7 @@ class LevelCompletionSummary {
     required this.mentorName,
     required this.completionText,
     required this.score,
+    required this.levelSnowflakes,
     required this.solvedQuestions,
   });
 
@@ -11,5 +12,6 @@ class LevelCompletionSummary {
   final String mentorName;
   final String completionText;
   final int score;
+  final int levelSnowflakes;
   final int solvedQuestions;
 }
