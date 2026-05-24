@@ -5,7 +5,9 @@ import 'package:flame/components.dart';
 import 'package:flame/flame.dart';
 import 'package:flutter/services.dart';
 
-enum BearVisualState { idle, walking, jumping, interacting }
+const bool kBearDebugOverlay = false;
+
+enum BearAnimationState { idle, walking, jumping, interacting, sitting }
 
 class PlayerBear extends PositionComponent with KeyboardHandler {
   PlayerBear({
@@ -14,13 +16,26 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     required this.levelWidth,
   }) : super(size: defaultSize, anchor: Anchor.topLeft);
 
-  static final defaultSize = Vector2(78, 92);
+  static const _hitboxWidth = 78.0;
+  static const _hitboxHeight = 92.0;
+  static final defaultSize = Vector2(_hitboxWidth, _hitboxHeight);
   static const _bearSpritePath =
       'characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png';
-  static const visualSize = Size(112, 96);
-  static const visualOffset = Offset(-17, 0);
+  static const visualWidth = 112.0;
+  static const visualHeight = 96.0;
+  static const visualSize = Size(visualWidth, visualHeight);
+  static const visualGroundInset = 1.25;
+  static const visualSnowContactOffset = 18.0;
+  static const visualFeetAnchor = Offset(
+    _hitboxWidth / 2,
+    _hitboxHeight + visualSnowContactOffset,
+  );
+  static const visualOffset = Offset(
+    _hitboxWidth / 2 - visualWidth / 2,
+    _hitboxHeight + visualSnowContactOffset - visualHeight + visualGroundInset,
+  );
   static const idleBreathingAmplitude = 0.01;
-  static const walkBobAmplitude = 3.0;
+  static const walkBobAmplitude = 0.8;
   static const walkTiltAmplitude = math.pi / 72;
   static const jumpTiltAmplitude = math.pi / 90;
 
@@ -37,20 +52,24 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   double _animationTime = 0;
   bool _facesLeft = false;
   bool _isInteracting = false;
+  bool _isSitting = false;
 
   bool get _isOnGround => position.y >= groundY - size.y - 0.5;
 
-  BearVisualState get _visualState {
+  BearAnimationState get _animationState {
+    if (_isSitting) {
+      return BearAnimationState.sitting;
+    }
     if (_isInteracting) {
-      return BearVisualState.interacting;
+      return BearAnimationState.interacting;
     }
     if (!_isOnGround) {
-      return BearVisualState.jumping;
+      return BearAnimationState.jumping;
     }
     if (_velocity.x.abs() > 0.5) {
-      return BearVisualState.walking;
+      return BearAnimationState.walking;
     }
-    return BearVisualState.idle;
+    return BearAnimationState.idle;
   }
 
   @override
@@ -87,7 +106,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
       final destinationRect = transform.destinationRect;
       final pivot = Offset(
         destinationRect.left + destinationRect.width / 2,
-        destinationRect.bottom,
+        destinationRect.bottom - visualGroundInset,
       );
 
       canvas.save();
@@ -102,6 +121,10 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
         Paint()..filterQuality = FilterQuality.high,
       );
       canvas.restore();
+
+      if (kBearDebugOverlay) {
+        _renderDebugOverlay(canvas, destinationRect);
+      }
       return;
     }
 
@@ -134,6 +157,10 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     canvas.drawCircle(const Offset(17, 16), 2.5, detailPaint);
     canvas.drawCircle(const Offset(29, 16), 2.5, detailPaint);
     canvas.drawCircle(const Offset(23, 23), 3, detailPaint);
+
+    if (kBearDebugOverlay) {
+      _renderDebugOverlay(canvas, visualOffset & visualSize);
+    }
   }
 
   @override
@@ -162,12 +189,14 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     _velocity.x = -_moveSpeed;
     _facesLeft = true;
     _isInteracting = false;
+    _isSitting = false;
   }
 
   void moveRight() {
     _velocity.x = _moveSpeed;
     _facesLeft = false;
     _isInteracting = false;
+    _isSitting = false;
   }
 
   void stopMoving() {
@@ -178,24 +207,36 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     if (_isOnGround) {
       _velocity.y = _jumpImpulse;
       _isInteracting = false;
+      _isSitting = false;
     }
   }
 
   void startInteracting() {
     _isInteracting = true;
+    _isSitting = false;
   }
 
   void stopInteracting() {
     _isInteracting = false;
   }
 
+  void startSitting() {
+    _isSitting = true;
+    _isInteracting = false;
+    stopMoving();
+  }
+
+  void stopSitting() {
+    _isSitting = false;
+  }
+
   _BearVisualTransform _visualTransform() {
     final direction = _facesLeft ? -1.0 : 1.0;
-    final state = _visualState;
+    final state = _animationState;
     final baseRect = visualOffset & visualSize;
 
     switch (state) {
-      case BearVisualState.walking:
+      case BearAnimationState.walking:
         final cycle = _animationTime * _walkCycleSpeed;
         final step = math.sin(cycle);
         final bob = -step.abs() * walkBobAmplitude;
@@ -208,7 +249,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
               direction *
               (walkTiltAmplitude * 0.5 + step * walkTiltAmplitude * 0.5),
         );
-      case BearVisualState.jumping:
+      case BearAnimationState.jumping:
         final rising = _velocity.y < 0;
         return _BearVisualTransform(
           destinationRect: baseRect,
@@ -217,8 +258,9 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
           rotation:
               direction * (rising ? -jumpTiltAmplitude : jumpTiltAmplitude),
         );
-      case BearVisualState.interacting:
-      case BearVisualState.idle:
+      case BearAnimationState.sitting:
+      case BearAnimationState.interacting:
+      case BearAnimationState.idle:
         final breath = math.sin(_animationTime * _idleCycleSpeed);
         return _BearVisualTransform(
           destinationRect: baseRect,
@@ -227,6 +269,50 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
           rotation: 0,
         );
     }
+  }
+
+  void _renderDebugOverlay(Canvas canvas, Rect visualRect) {
+    final hitboxPaint = Paint()
+      ..color = const Color(0x663B82F6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final visualPaint = Paint()
+      ..color = const Color(0x6600C853)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final groundPaint = Paint()
+      ..color = const Color(0xCCFF1744)
+      ..strokeWidth = 1.5;
+    final visibleBottomPaint = Paint()
+      ..color = const Color(0xCCAA00FF)
+      ..strokeWidth = 1.5;
+    final feetPaint = Paint()
+      ..color = const Color(0xCCFFAB00)
+      ..strokeWidth = 1.5;
+
+    final hitbox = Rect.fromLTWH(0, 0, size.x, size.y);
+    final groundLine = size.y;
+    final visibleBottomLine = visualRect.bottom - visualGroundInset;
+    final guideLeft = math.min(hitbox.left, visualRect.left) - 12;
+    final guideRight = math.max(hitbox.right, visualRect.right) + 12;
+
+    canvas.drawRect(hitbox, hitboxPaint);
+    canvas.drawRect(visualRect, visualPaint);
+    canvas.drawLine(
+      Offset(guideLeft, groundLine),
+      Offset(guideRight, groundLine),
+      groundPaint,
+    );
+    canvas.drawLine(
+      Offset(guideLeft, visibleBottomLine),
+      Offset(guideRight, visibleBottomLine),
+      visibleBottomPaint,
+    );
+    canvas.drawLine(
+      Offset(guideLeft, visualFeetAnchor.dy),
+      Offset(guideRight, visualFeetAnchor.dy),
+      feetPaint,
+    );
   }
 
   @override
