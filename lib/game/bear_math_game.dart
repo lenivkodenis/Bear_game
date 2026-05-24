@@ -137,6 +137,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   void closeMentorDialog() {
+    player.stopInteracting();
     overlays.remove(mentorDialogOverlay);
   }
 
@@ -202,6 +203,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     if (!_mentorDialogWasShown && player.distance(mentor) < 92) {
       _mentorDialogWasShown = true;
       player.stopMoving();
+      player.startInteracting();
       overlays.add(mentorDialogOverlay);
     }
   }
