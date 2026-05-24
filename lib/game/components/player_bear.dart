@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flame/components.dart';
+import 'package:flame/flame.dart';
 import 'package:flutter/services.dart';
 
 class PlayerBear extends PositionComponent with KeyboardHandler {
@@ -10,7 +11,8 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     required this.levelWidth,
   }) : super(size: defaultSize, anchor: Anchor.topLeft);
 
-  static final defaultSize = Vector2(46, 58);
+  static final defaultSize = Vector2(78, 92);
+  static const _bearSourceRect = Rect.fromLTWH(175, 92, 900, 1000);
 
   static const _moveSpeed = 160.0;
   static const _jumpImpulse = -360.0;
@@ -19,14 +21,14 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   final double groundY;
   final double levelWidth;
   final Vector2 _velocity = Vector2.zero();
-  Sprite? _sprite;
+  Image? _image;
 
   bool get _isOnGround => position.y >= groundY - size.y - 0.5;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    _sprite = await Sprite.load('bear_cub/bear_cub_base.png');
+    _image = await Flame.images.load('bear_cub/bear_cub_base.png');
   }
 
   @override
@@ -50,13 +52,13 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   void render(Canvas canvas) {
     super.render(canvas);
 
-    final sprite = _sprite;
-    if (sprite != null) {
-      final spriteSize = Vector2.all(size.x);
-      sprite.render(
-        canvas,
-        position: Vector2(0, size.y - spriteSize.y),
-        size: spriteSize,
+    final image = _image;
+    if (image != null) {
+      canvas.drawImageRect(
+        image,
+        _bearSourceRect,
+        Rect.fromLTWH(0, 0, size.x, size.y),
+        Paint()..filterQuality = FilterQuality.high,
       );
       return;
     }

@@ -8,34 +8,32 @@ import 'package:flutter/painting.dart';
 class SnowyBackground extends PositionComponent {
   SnowyBackground({required Vector2 size}) : super(size: size);
 
-  static const _layerAssetPaths = [
-    'locations/snowy_clearing/01_sky.png',
-    'locations/snowy_clearing/02_far_hills.png',
-    'locations/snowy_clearing/03_mid_forest.png',
-    'locations/snowy_clearing/04_ground_platform.png',
-  ];
+  static const _backgroundAssetPath =
+      'locations/snowy_clearing/preview/snowy_clearing_full_preview.png';
 
-  final List<ui.Image> _layers = [];
+  ui.Image? _background;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    _layers.addAll(await Future.wait(_layerAssetPaths.map(Flame.images.load)));
+    _background = await Flame.images.load(_backgroundAssetPath);
   }
 
   @override
   void render(Canvas canvas) {
     super.render(canvas);
 
-    final destination = size.toRect();
-    for (final layer in _layers) {
-      paintImage(
-        canvas: canvas,
-        rect: destination,
-        image: layer,
-        fit: BoxFit.cover,
-        filterQuality: FilterQuality.high,
-      );
+    final background = _background;
+    if (background == null) {
+      return;
     }
+
+    paintImage(
+      canvas: canvas,
+      rect: size.toRect(),
+      image: background,
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.high,
+    );
   }
 }

@@ -69,7 +69,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     );
     scoreNotifier.value = _progress.score;
 
-    final groundY = size.y - 88;
+    final groundY = size.y * 0.70;
 
     add(SnowyBackground(size: size));
     add(
