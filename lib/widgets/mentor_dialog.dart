@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../game/bear_math_game.dart';
+import '../models/game_difficulty.dart';
 import '../models/question_answer_result.dart';
 import '../theme/app_theme.dart';
 import 'game_card.dart';
@@ -26,6 +28,14 @@ class _MentorDialogState extends State<MentorDialog> {
   bool _showIntro = true;
   bool _isSubmitting = false;
   QuestionAnswerResult? _answerResult;
+  final TextEditingController _numericAnswerController =
+      TextEditingController();
+
+  @override
+  void dispose() {
+    _numericAnswerController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -182,16 +192,53 @@ class _MentorDialogState extends State<MentorDialog> {
         _FeedbackBox(result: result),
       ],
       const SizedBox(height: 20),
-      for (final option in question.options) ...[
-        PrimaryGameButton(
-          icon: Icons.panorama_fish_eye_rounded,
-          symbol: '•',
-          label: option.toString(),
-          secondary: true,
-          onPressed: _isSubmitting ? null : () => _submitAnswer(option),
+      if (widget.game.difficulty == GameDifficulty.expert)
+        ..._buildNumericAnswerContent()
+      else
+        for (final option in widget.game.currentAnswerOptions) ...[
+          PrimaryGameButton(
+            icon: Icons.panorama_fish_eye_rounded,
+            symbol: '•',
+            label: option.toString(),
+            secondary: true,
+            onPressed: _isSubmitting ? null : () => _submitAnswer(option),
+          ),
+          const SizedBox(height: 8),
+        ],
+    ];
+  }
+
+  List<Widget> _buildNumericAnswerContent() {
+    return [
+      TextField(
+        controller: _numericAnswerController,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.done,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        enabled: !_isSubmitting,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: AppTheme.deepBlue,
+          fontSize: 24,
+          fontWeight: FontWeight.w900,
         ),
-        const SizedBox(height: 8),
-      ],
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: AppTheme.snowWhite,
+          hintText: 'Ответ',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppTheme.smallRadius),
+          ),
+        ),
+        onSubmitted: (_) => _submitNumericAnswer(),
+      ),
+      const SizedBox(height: 12),
+      PrimaryGameButton(
+        icon: Icons.check_rounded,
+        symbol: '✓',
+        label: 'Проверить',
+        onPressed: _isSubmitting ? null : _submitNumericAnswer,
+      ),
     ];
   }
 
@@ -209,8 +256,27 @@ class _MentorDialogState extends State<MentorDialog> {
     });
   }
 
+  Future<void> _submitNumericAnswer() async {
+    setState(() => _isSubmitting = true);
+    final result = await widget.game.submitNumericAnswer(
+      _numericAnswerController.text,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _answerResult = result;
+      _isSubmitting = false;
+    });
+  }
+
   void _showNextQuestion() {
-    setState(() => _answerResult = null);
+    setState(() {
+      _answerResult = null;
+      _numericAnswerController.clear();
+    });
   }
 }
 

@@ -8,10 +8,13 @@ import 'components/platform_component.dart';
 import 'components/player_bear.dart';
 import 'components/snowy_background.dart';
 import 'components/wise_mentor.dart';
+import '../models/game_difficulty.dart';
 import '../models/level.dart';
 import '../models/player_progress.dart';
 import '../models/question.dart';
 import '../models/question_answer_result.dart';
+import '../services/answer_options_service.dart';
+import '../services/game_settings_service.dart';
 import '../services/level_service.dart';
 import '../services/progress_service.dart';
 
@@ -28,12 +31,18 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   final ValueNotifier<int> scoreNotifier = ValueNotifier<int>(0);
   final LevelService _levelService = LevelService();
   final ProgressService _progressService = ProgressService();
+  final GameSettingsService _settingsService = GameSettingsService();
+  final AnswerOptionsService _answerOptionsService = AnswerOptionsService();
 
   Level? currentLevel;
+  GameDifficulty difficulty = GameDifficulty.beginner;
   PlayerProgress _progress = PlayerProgress.initial();
   int _currentQuestionIndex = 0;
+  bool _currentQuestionHadWrongAnswer = false;
   bool _mentorDialogWasShown = false;
   bool _sceneReady = false;
+  String? _preparedOptionsQuestionKey;
+  List<int> _preparedAnswerOptions = const [];
 
   Question? get currentQuestion {
     final level = currentLevel;
@@ -48,6 +57,24 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   int get totalQuestions => currentLevel?.questions.length ?? 0;
 
+  List<int> get currentAnswerOptions {
+    final question = currentQuestion;
+    if (question == null) {
+      return const [];
+    }
+
+    final questionKey = '${currentLevel!.id}-${question.id}-${difficulty.name}';
+    if (_preparedOptionsQuestionKey != questionKey) {
+      _preparedOptionsQuestionKey = questionKey;
+      _preparedAnswerOptions = _answerOptionsService.optionsFor(
+        question,
+        difficulty,
+      );
+    }
+
+    return _preparedAnswerOptions;
+  }
+
   bool get isLevelComplete {
     final level = currentLevel;
     return level != null && _currentQuestionIndex >= level.questions.length;
@@ -58,6 +85,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     await super.onLoad();
 
     currentLevel = await _levelService.loadLevel(levelId);
+    difficulty = await _settingsService.loadDifficulty();
     _progress = await _progressService.loadProgress();
     _currentQuestionIndex = math.min(
       _progress.questionIndexForLevel(levelId),
@@ -126,7 +154,28 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     if (selectedAnswer == question.correctAnswer) {
-      return _saveCorrectAnswer(question);
+      return _saveCorrectAnswer();
+    }
+
+    return _saveWrongAnswer(question);
+  }
+
+  Future<QuestionAnswerResult> submitNumericAnswer(String input) async {
+    final question = currentQuestion;
+    if (question == null) {
+      return QuestionAnswerResult(
+        isCorrect: true,
+        message: 'Все задачи этой льдины уже решены.',
+        score: _progress.score,
+        isLevelComplete: true,
+      );
+    }
+
+    if (_answerOptionsService.isCorrectNumericInput(
+      input,
+      question.correctAnswer,
+    )) {
+      return _saveCorrectAnswer();
     }
 
     return _saveWrongAnswer(question);
@@ -136,9 +185,12 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     overlays.remove(mentorDialogOverlay);
   }
 
-  Future<QuestionAnswerResult> _saveCorrectAnswer(Question question) async {
+  Future<QuestionAnswerResult> _saveCorrectAnswer() async {
     final nextQuestionIndex = _currentQuestionIndex + 1;
-    final newScore = _progress.score + question.rewardPoints;
+    final reward = _answerOptionsService.rewardForCorrectAnswer(
+      isFirstAttempt: !_currentQuestionHadWrongAnswer,
+    );
+    final newScore = _progress.score + reward;
     final levelComplete = nextQuestionIndex >= totalQuestions;
     final questionIndexes = Map<int, int>.of(_progress.currentQuestionIndexes)
       ..[currentLevel!.id] = nextQuestionIndex;
@@ -157,30 +209,31 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
           : _progress.unlockedLocation,
     );
     _currentQuestionIndex = nextQuestionIndex;
+    _currentQuestionHadWrongAnswer = false;
+    _preparedOptionsQuestionKey = null;
     scoreNotifier.value = newScore;
 
     await _progressService.saveProgress(_progress);
 
     return QuestionAnswerResult(
       isCorrect: true,
-      message: 'Верно! Медвежонок получает ${question.rewardPoints} очков.',
+      message: 'Верно! Медвежонок получает $reward снежинок.',
       score: newScore,
       isLevelComplete: levelComplete,
     );
   }
 
   Future<QuestionAnswerResult> _saveWrongAnswer(Question question) async {
-    final newScore = math.max(0, _progress.score - question.penaltyPoints);
-    _progress = _progress.copyWith(score: newScore);
-    scoreNotifier.value = newScore;
-
-    await _progressService.saveProgress(_progress);
+    _currentQuestionHadWrongAnswer = true;
+    final hint = _answerOptionsService.hintFor(question, difficulty);
+    final message = difficulty == GameDifficulty.expert
+        ? AnswerOptionsService.expertRetryMessage
+        : 'Пока неверно. Подсказка: $hint';
 
     return QuestionAnswerResult(
       isCorrect: false,
-      message:
-          'Пока неверно. -${question.penaltyPoints} очка. Подсказка: ${question.hint}',
-      score: newScore,
+      message: message,
+      score: _progress.score,
       isLevelComplete: false,
     );
   }
