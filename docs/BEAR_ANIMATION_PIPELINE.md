@@ -33,7 +33,56 @@ Check future frames with:
 
 The checker validates folder presence, PNG names, alpha channel, canvas sizes, and matching walk-frame sizes. It does not modify images.
 
-Next implementation rule: replace the procedural walking transform only after verified `walk_01.png` through at least `walk_06.png` exist with matching canvas size, matching scale, transparent background, and a stable ground line.
+Implementation rule: procedural walking may be replaced only after verified `walk_01.png` through at least `walk_06.png` exist with matching canvas size, matching scale, transparent background, and a stable ground line.
+
+# Real walk animation connected
+
+The real bear cub walk cycle is now connected through `PlayerBear` as a looping Flame `SpriteAnimation`.
+
+Connected frames, in playback order:
+
+```text
+assets/images/characters/bear_cub/animations/walk/walk_01.png
+assets/images/characters/bear_cub/animations/walk/walk_02.png
+assets/images/characters/bear_cub/animations/walk/walk_03.png
+assets/images/characters/bear_cub/animations/walk/walk_04.png
+assets/images/characters/bear_cub/animations/walk/walk_05.png
+assets/images/characters/bear_cub/animations/walk/walk_06.png
+```
+
+Frame timing:
+
+```text
+stepTime: 0.12 seconds per frame
+fps: about 8.3 frames per second
+loop: true
+```
+
+The walk animation is active only when `BearAnimationState.walking` is selected, which happens while the bear is grounded and has horizontal velocity. When the bear stops, the walk ticker resets and the visual returns to the static idle fallback.
+
+Grounding remains owned by the existing visual alignment model. The physical hitbox, movement speed, gravity, jump impulse, collision clamp, map, levels, and gameplay mechanics are unchanged. The walk frames use one shared visual size and per-frame transparent-bottom inset values so the visible paws stay aligned to the same feet anchor while the frames advance.
+
+Direction still uses the existing `_facesLeft` flag:
+
+- moving right renders the right-facing frames as-is;
+- moving left applies horizontal flip around the same visual pivot;
+- flip does not change the hitbox or ground clamp.
+
+Fallback states:
+
+- `idle`: current static sprite with subtle breathing;
+- `jumping`: current static sprite with jump visual transform;
+- `interacting`: idle fallback;
+- `sitting`: idle fallback until a verified sit frame exists.
+
+If the walk frames cannot be loaded, `PlayerBear` keeps the static sprite visible instead of crashing the game.
+
+Remaining asset work for full animation:
+
+1. Add verified `idle` frames.
+2. Add at least one verified `jump` frame.
+3. Add a verified `sit` frame for the mentor meeting.
+4. Re-check grounding after each new animated state is connected.
 
 ## Current static sprite
 

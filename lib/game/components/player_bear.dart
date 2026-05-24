@@ -3,6 +3,8 @@ import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flame/flame.dart';
+import 'package:flame/sprite.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 const bool kBearDebugOverlay = false;
@@ -21,9 +23,24 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   static final defaultSize = Vector2(_hitboxWidth, _hitboxHeight);
   static const _bearSpritePath =
       'characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png';
+  static const _walkSpritePaths = [
+    'characters/bear_cub/animations/walk/walk_01.png',
+    'characters/bear_cub/animations/walk/walk_02.png',
+    'characters/bear_cub/animations/walk/walk_03.png',
+    'characters/bear_cub/animations/walk/walk_04.png',
+    'characters/bear_cub/animations/walk/walk_05.png',
+    'characters/bear_cub/animations/walk/walk_06.png',
+  ];
   static const visualWidth = 112.0;
   static const visualHeight = 96.0;
   static const visualSize = Size(visualWidth, visualHeight);
+  static const _walkFrameStepTime = 0.12;
+  static const _walkFrameSourceWidth = 359.0;
+  static const _walkFrameSourceHeight = 268.0;
+  static const _walkVisualHeight = 112.0;
+  static const _walkVisualWidth =
+      _walkVisualHeight * _walkFrameSourceWidth / _walkFrameSourceHeight;
+  static const _walkFrameGroundInsets = [23.0, 35.0, 30.0, 33.0, 32.0, 30.0];
   static const visualGroundInset = 1.25;
   static const feetToGroundOffset = 90.0;
   static const visualFeetAnchor = Offset(
@@ -35,21 +52,20 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     _hitboxHeight + feetToGroundOffset - visualHeight + visualGroundInset,
   );
   static const idleBreathingAmplitude = 0.01;
-  static const walkBobAmplitude = 0.35;
-  static const walkTiltAmplitude = math.pi / 72;
   static const jumpTiltAmplitude = math.pi / 90;
 
   static const _moveSpeed = 160.0;
   static const _jumpImpulse = -360.0;
   static const _gravity = 820.0;
-  static const _walkCycleSpeed = 10.0;
   static const _idleCycleSpeed = 2.4;
 
   final double groundY;
   final double levelWidth;
   final Vector2 _velocity = Vector2.zero();
   Image? _image;
+  SpriteAnimationTicker? _walkTicker;
   double _animationTime = 0;
+  BearAnimationState? _previousAnimationState;
   bool _facesLeft = false;
   bool _isInteracting = false;
   bool _isSitting = false;
@@ -78,6 +94,22 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   Future<void> onLoad() async {
     await super.onLoad();
     _image = await Flame.images.load(_bearSpritePath);
+    try {
+      final walkSprites = <Sprite>[];
+      for (final path in _walkSpritePaths) {
+        walkSprites.add(Sprite(await Flame.images.load(path)));
+      }
+      final walkAnimation = SpriteAnimation.spriteList(
+        walkSprites,
+        stepTime: _walkFrameStepTime,
+        loop: true,
+      );
+      _walkTicker = SpriteAnimationTicker(walkAnimation);
+    } catch (error) {
+      _walkTicker = null;
+      // Keep the static bear visible if any walk frame is missing or invalid.
+      debugPrint('Failed to load bear walk animation: $error');
+    }
   }
 
   @override
@@ -96,19 +128,29 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
 
     final maxX = levelWidth - size.x;
     position.x = position.x.clamp(0, maxX).toDouble();
+
+    final state = _animationState;
+    if (state == BearAnimationState.walking) {
+      _walkTicker?.update(dt);
+    } else if (_previousAnimationState == BearAnimationState.walking) {
+      _walkTicker?.reset();
+    }
+    _previousAnimationState = state;
   }
 
   @override
   void render(Canvas canvas) {
     super.render(canvas);
 
+    final state = _animationState;
     final image = _image;
+    final walkTicker = _walkTicker;
     if (image != null) {
-      final transform = _visualTransform();
+      final transform = _visualTransform(state);
       final destinationRect = transform.destinationRect;
       final pivot = Offset(
         destinationRect.left + destinationRect.width / 2,
-        destinationRect.bottom - visualGroundInset,
+        _visualPivotY(state, destinationRect),
       );
 
       canvas.save();
@@ -116,12 +158,21 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
       canvas.rotate(transform.rotation);
       canvas.scale(transform.scaleX, transform.scaleY);
       canvas.translate(-pivot.dx, -pivot.dy);
-      canvas.drawImageRect(
-        image,
-        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-        destinationRect,
-        Paint()..filterQuality = FilterQuality.high,
-      );
+      final paint = Paint()..filterQuality = FilterQuality.high;
+      if (state == BearAnimationState.walking && walkTicker != null) {
+        walkTicker.getSprite().renderRect(
+          canvas,
+          destinationRect,
+          overridePaint: paint,
+        );
+      } else {
+        canvas.drawImageRect(
+          image,
+          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+          destinationRect,
+          paint,
+        );
+      }
       canvas.restore();
 
       if (kBearDebugOverlay) {
@@ -245,24 +296,19 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     }
   }
 
-  _BearVisualTransform _visualTransform() {
+  _BearVisualTransform _visualTransform(BearAnimationState state) {
     final direction = _facesLeft ? -1.0 : 1.0;
-    final state = _animationState;
     final baseRect = visualOffset & visualSize;
 
     switch (state) {
       case BearAnimationState.walking:
-        final cycle = _animationTime * _walkCycleSpeed;
-        final step = math.sin(cycle);
-        final bob = -step.abs() * walkBobAmplitude;
-        final stretch = math.sin(cycle * 2);
         return _BearVisualTransform(
-          destinationRect: baseRect.translate(0, bob),
-          scaleX: direction * (1.0 + stretch * 0.006),
-          scaleY: 1.0 - stretch * 0.012,
-          rotation:
-              direction *
-              (walkTiltAmplitude * 0.5 + step * walkTiltAmplitude * 0.5),
+          destinationRect: _walkTicker == null
+              ? baseRect
+              : _walkDestinationRect(),
+          scaleX: direction,
+          scaleY: 1.0,
+          rotation: 0,
         );
       case BearAnimationState.jumping:
         final rising = _velocity.y < 0;
@@ -284,6 +330,40 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
           rotation: 0,
         );
     }
+  }
+
+  Rect _walkDestinationRect() {
+    final frameIndex = _walkTicker?.currentIndex ?? 0;
+    final safeFrameIndex = frameIndex.clamp(
+      0,
+      _walkFrameGroundInsets.length - 1,
+    );
+    final visualScale = _walkVisualHeight / _walkFrameSourceHeight;
+    final frameGroundInset =
+        _walkFrameGroundInsets[safeFrameIndex] * visualScale;
+    final left = _hitboxWidth / 2 - _walkVisualWidth / 2;
+    final bottom = visualFeetAnchor.dy + frameGroundInset;
+
+    return Rect.fromLTWH(
+      left,
+      bottom - _walkVisualHeight,
+      _walkVisualWidth,
+      _walkVisualHeight,
+    );
+  }
+
+  double _visualPivotY(BearAnimationState state, Rect destinationRect) {
+    if (state == BearAnimationState.walking && _walkTicker != null) {
+      final frameIndex = _walkTicker!.currentIndex.clamp(
+        0,
+        _walkFrameGroundInsets.length - 1,
+      );
+      final visualScale = _walkVisualHeight / _walkFrameSourceHeight;
+      return destinationRect.bottom -
+          _walkFrameGroundInsets[frameIndex] * visualScale;
+    }
+
+    return destinationRect.bottom - visualGroundInset;
   }
 
   void _renderDebugOverlay(Canvas canvas, Rect visualRect) {

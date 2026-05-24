@@ -25,6 +25,7 @@ flutter:
     - assets/images/map/progression_map.png
     - assets/images/bear_cub/bear_cub_base.png
     - assets/images/characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png
+    - assets/images/characters/bear_cub/animations/walk/
     - assets/images/locations/snowy_clearing/01_sky.png
     - assets/images/locations/snowy_clearing/02_far_hills.png
     - assets/images/locations/snowy_clearing/03_mid_forest.png
