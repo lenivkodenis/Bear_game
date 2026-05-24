@@ -2,6 +2,39 @@
 
 Date: 2026-05-24
 
+# Next step: real sprite frames
+
+The current procedural animation on one PNG is temporary. It can make the static sprite breathe, tilt, bob, and squash/stretch, but it cannot create real walking: paws, shoulders, body weight, and snow contact do not change as independent drawn poses.
+
+Real walking requires real `walk` frames. Do not try to ship final walking by deforming one PNG, generating fake limbs from one PNG, or increasing procedural tilt/scale.
+
+Prepared folders:
+
+```text
+assets/images/characters/bear_cub/animations/idle/
+assets/images/characters/bear_cub/animations/walk/
+assets/images/characters/bear_cub/animations/jump/
+assets/images/characters/bear_cub/animations/sit/
+```
+
+Until real frames exist, these folders may contain only `.gitkeep`.
+
+Frame requirements are documented in:
+
+```text
+docs/BEAR_SPRITE_ANIMATION_REQUIREMENTS.md
+```
+
+Check future frames with:
+
+```text
+.venv-tools/bin/python tools/check_bear_animation_frames.py
+```
+
+The checker validates folder presence, PNG names, alpha channel, canvas sizes, and matching walk-frame sizes. It does not modify images.
+
+Next implementation rule: replace the procedural walking transform only after verified `walk_01.png` through at least `walk_06.png` exist with matching canvas size, matching scale, transparent background, and a stable ground line.
+
 ## Current static sprite
 
 The first level currently uses one cleaned RGBA PNG:
