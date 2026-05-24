@@ -5,6 +5,7 @@ import '../models/player_progress.dart';
 import '../services/game_economy.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/family_reward_status_card.dart';
 import '../widgets/game_card.dart';
 import '../widgets/primary_game_button.dart';
 import '../widgets/score_badge.dart';
@@ -125,16 +126,16 @@ class _LevelCompleteScreenState extends State<LevelCompleteScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
+                      FamilyRewardStatusCard(
+                        snowflakes: score,
+                        onOpenMap: _openMap,
+                      ),
+                      const SizedBox(height: 24),
                       PrimaryGameButton(
                         icon: Icons.map_rounded,
                         symbol: '⌂',
                         label: 'К карте',
-                        onPressed: () {
-                          Navigator.of(context).pushNamedAndRemoveUntil(
-                            LocationMapScreen.routeName,
-                            (route) => route.isFirst,
-                          );
-                        },
+                        onPressed: _openMap,
                       ),
                     ],
                   );
@@ -144,6 +145,13 @@ class _LevelCompleteScreenState extends State<LevelCompleteScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _openMap() {
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      LocationMapScreen.routeName,
+      (route) => route.isFirst,
     );
   }
 }
