@@ -1,117 +1,89 @@
 # Level Geometry Guide
 
-Файл `assets/data/level_geometry.json` описывает упрощённую физическую
-геометрию уровней. Он не должен повторять фон пиксель в пиксель: фон остаётся
-артом, а геометрия задаёт понятный игровой маршрут.
+## Temporary Stable Baseline
 
-## Coordinate System
+Complex geometry is temporarily disabled. All 10 levels now use one flat,
+full-width ground collider, with no platforms, no obstacles, no gaps, and no
+multi-level routes.
 
-Геометрия задана в дизайн-координатах `800x600` и масштабируется под текущий
-размер сцены. `playerSpawn` и `mentorPosition` задают нижнюю точку контакта с
-поверхностью: runtime ставит hitbox медвежонка и мудреца так, чтобы их нижний
-край стоял на указанной `y`.
+The goal of this baseline is gameplay stability:
+
+- each level keeps its own `background.png`;
+- the bear spawns on the left side;
+- the bear stands on one horizontal ground line;
+- the bear can walk right and jump using the existing physics;
+- the mentor stands on the same ground line on the right side;
+- the mentor trigger can open the dialog and questions.
+
+Do not add complex geometry back to all 10 levels at once. Future obstacles and
+platforms should be added one level at a time, with manual playtesting after
+each level.
 
 ## JSON Shape
 
+`assets/data/level_geometry.json` uses design coordinates for an `800x600`
+world. Runtime scales the flat baseline to the current game size.
+
+Each level has:
+
 ```json
 {
-  "world": { "width": 800, "height": 600 },
-  "levels": [
-    {
-      "levelId": 1,
-      "backgroundAsset": "assets/images/levels/level_01_ice_floe/background.png",
-      "playerSpawn": { "x": 72, "y": 420 },
-      "mentorPosition": { "x": 670, "y": 420 },
-      "groundColliders": [],
-      "platformColliders": [],
-      "obstacleColliders": [],
-      "notes": "Route notes for validation and future tuning."
-    }
-  ]
+  "levelId": 1,
+  "backgroundAsset": "assets/images/levels/level_01_ice_floe/background.png",
+  "playerSpawn": { "x": 72, "y": 420 },
+  "mentorPosition": { "x": 688, "y": 420 },
+  "groundColliders": [
+    { "id": "main_ground", "x": 0, "y": 420, "width": 800, "height": 180 }
+  ],
+  "platformColliders": [],
+  "obstacleColliders": [],
+  "notes": "Temporary stable flat baseline geometry. Obstacles and platforms will be added later per level."
 }
 ```
 
-## Ground Colliders
+## Ground
 
-`groundColliders` are broad walkable rectangles. Use them for the main snow,
-ice, shore, cave floor, or mountain shelf. A flat safe level usually needs one
-ground collider from the left edge to the right edge.
+Baseline mode requires exactly one `main_ground` collider per level. It must
+start at `x: 0`, span the full world width, and use the same `y` value as
+`playerSpawn` and `mentorPosition`.
 
-Each collider uses top-left `x`, `y`, plus `width` and `height`.
+The current baseline `y` is `420`, matching the previous stable ground line
+(`70%` of a `600` px scene).
 
-## Platform Colliders
+## Platforms And Obstacles
 
-`platformColliders` are extra walkable steps or shelves. Keep them wide enough
-for landing, avoid tall climbs, and keep gaps short. Level 5 uses platforms for
-the ice-cave route: left start, lower center, small step, upper step, and final
-right platform.
+Baseline mode requires:
 
-## Obstacle Colliders
+- `platformColliders: []`
+- `obstacleColliders: []`
 
-`obstacleColliders` are simple solid rectangles for low logs, rocks, ice ridges,
-crystals, snowdrifts, and similar jump targets. They should stay low and narrow:
-the current validator allows obstacle heights up to `48` design pixels.
+No steps, gaps, crystals, logs, ridges, or blocked routes should be present
+until a later per-level tuning pass.
 
-## Why Geometry Is Simplified
+## Runtime
 
-The backgrounds contain decorative snow, ice, branches, crystals, and cave
-shapes. Giving every detail a collider would make the game brittle and hard to
-tune. Instead, each level gets a simple route:
+`BearMathGame` loads the current level's geometry and uses only:
 
-`start -> 1-3 obstacles/platforms -> clear mentor area`
+- `backgroundAsset`;
+- `playerSpawn`;
+- `mentorPosition`;
+- the single `main_ground`.
 
-This keeps levels readable, safe for children, and independent from tiny art
-changes.
+The bear still uses its original simple grounding logic from `PlayerBear`.
+Hitbox, speed, gravity, jump force, visual offsets, feet anchor, and walk
+animation are unchanged.
 
-## Playability Rules
+`kLevelGeometryDebugOverlay` exists in `lib/game/level_geometry.dart` and must
+remain `false` by default. The baseline runtime does not need collider drawing.
 
-Before committing geometry changes, run:
+## Validation
+
+Run:
 
 ```bash
 python3 tools/validate_level_geometry.py
 ```
 
-The validator checks that all 10 levels exist, backgrounds exist, starts and
-mentors stand on walkable surfaces, obstacles are jumpable, platforms are wide
-enough, climbs are modest, and route notes are present.
-
-When tuning by hand, prefer safer values:
-
-- obstacle height below `48`;
-- platform width at least `96`;
-- upward step below `60`;
-- horizontal gap below `130`;
-- clean flat space before `mentorPosition`.
-
-Do not change bear physics to fit a level. Adjust the rectangles instead.
-
-## Debug Overlay
-
-Collider rendering is controlled by:
-
-```dart
-const bool kLevelGeometryDebugOverlay = false;
-```
-
-The flag lives in `lib/game/level_geometry.dart`. Set it to `true` locally to
-draw:
-
-- blue ground colliders;
-- green platform colliders;
-- red obstacle colliders;
-- yellow player spawn marker;
-- purple mentor marker.
-
-Keep the flag `false` in committed gameplay builds.
-
-## Adding Or Editing A Level
-
-1. Keep the level's `backgroundAsset` pointed at its own
-   `assets/images/levels/level_XX_.../background.png`.
-2. Place `playerSpawn` on the first walkable surface.
-3. Place `mentorPosition` on a clean final surface near the right side.
-4. Add one broad `groundCollider` for simple levels.
-5. Add up to three low `obstacleColliders`.
-6. Add `platformColliders` only when the route needs steps or shelves.
-7. Update `notes` with the intended route.
-8. Run the validator, `flutter test`, and `flutter analyze`.
+The validator checks all 10 levels, per-level backgrounds, one main ground,
+empty platforms, empty obstacles, sane coordinates, mentor to the right of the
+spawn, and both contact points on the main ground.

@@ -54,8 +54,6 @@ class LevelGeometryWorld {
 
   final double width;
   final double height;
-
-  Vector2 get size => Vector2(width, height);
 }
 
 class LevelGeometryPoint {
@@ -112,7 +110,6 @@ class LevelGeometryCollider {
   final double width;
   final double height;
 
-  Rect get rect => Rect.fromLTWH(x, y, width, height);
   Vector2 get position => Vector2(x, y);
   Vector2 get size => Vector2(width, height);
 
@@ -202,18 +199,7 @@ class LevelGeometry {
   final List<LevelGeometryCollider> obstacleColliders;
   final String notes;
 
-  Iterable<LevelGeometryCollider> get walkableColliders sync* {
-    yield* groundColliders;
-    yield* platformColliders;
-  }
-
-  Iterable<LevelGeometryCollider> get solidColliders sync* {
-    yield* groundColliders;
-    yield* platformColliders;
-    yield* obstacleColliders;
-  }
-
-  double get primaryGroundY => groundColliders.first.y;
+  LevelGeometryCollider get mainGround => groundColliders.first;
 
   LevelGeometry scaledTo(Vector2 targetSize) {
     final scaleX = targetSize.x / world.width;
@@ -230,16 +216,8 @@ class LevelGeometry {
         scaleX: scaleX,
         scaleY: scaleY,
       ),
-      platformColliders: _scaleColliders(
-        platformColliders,
-        scaleX: scaleX,
-        scaleY: scaleY,
-      ),
-      obstacleColliders: _scaleColliders(
-        obstacleColliders,
-        scaleX: scaleX,
-        scaleY: scaleY,
-      ),
+      platformColliders: const <LevelGeometryCollider>[],
+      obstacleColliders: const <LevelGeometryCollider>[],
       notes: notes,
     );
   }

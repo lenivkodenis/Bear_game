@@ -25,9 +25,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     required super.position,
     required this.groundY,
     required this.levelWidth,
-    List<Rect> solidColliders = const <Rect>[],
-  }) : _solidColliders = List<Rect>.unmodifiable(solidColliders),
-       super(size: defaultSize, anchor: Anchor.topLeft);
+  }) : super(size: defaultSize, anchor: Anchor.topLeft);
 
   static const _hitboxWidth = 78.0;
   static const _hitboxHeight = 92.0;
@@ -67,7 +65,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
 
   final double groundY;
   final double levelWidth;
-  final List<Rect> _solidColliders;
   final Vector2 _velocity = Vector2.zero();
   Image? _image;
   Image? _jumpImage;
@@ -78,15 +75,8 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   bool _facesLeft = false;
   bool _isInteracting = false;
   bool _isSitting = false;
-  bool _isGrounded = false;
 
-  bool get _isOnGround {
-    if (_solidColliders.isEmpty) {
-      return position.y >= groundY - size.y - 0.5;
-    }
-
-    return _isGrounded || _hasSupportBelow();
-  }
+  bool get _isOnGround => position.y >= groundY - size.y - 0.5;
 
   BearAnimationState get animationState => _animationState;
 
@@ -143,11 +133,12 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
 
     _animationTime += dt;
     _velocity.y += _gravity * dt;
+    position += _velocity * dt;
 
-    if (_solidColliders.isEmpty) {
-      _moveWithFallbackGround(dt);
-    } else {
-      _moveWithSolidColliders(dt);
+    final groundTop = groundY - size.y;
+    if (position.y > groundTop) {
+      position.y = groundTop;
+      _velocity.y = 0;
     }
 
     final maxX = levelWidth - size.x;
@@ -304,7 +295,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
 
     if (_isOnGround) {
       _velocity.y = _jumpImpulse;
-      _isGrounded = false;
       _walkTicker?.reset();
       _isInteracting = false;
       _isSitting = false;
@@ -357,88 +347,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
       debugPrint('Failed to load bear $state image: $error');
       return null;
     }
-  }
-
-  Rect get _hitboxRect => Rect.fromLTWH(position.x, position.y, size.x, size.y);
-
-  void _moveWithFallbackGround(double dt) {
-    position += _velocity * dt;
-
-    final groundTop = groundY - size.y;
-    if (position.y > groundTop) {
-      position.y = groundTop;
-      _velocity.y = 0;
-    }
-  }
-
-  void _moveWithSolidColliders(double dt) {
-    _isGrounded = false;
-
-    final horizontalDelta = _velocity.x * dt;
-    if (horizontalDelta != 0) {
-      position.x += horizontalDelta;
-      _resolveHorizontalCollisions(horizontalDelta);
-    }
-
-    final verticalDelta = _velocity.y * dt;
-    position.y += verticalDelta;
-    _resolveVerticalCollisions(verticalDelta);
-    _isGrounded = _isGrounded || _hasSupportBelow();
-  }
-
-  void _resolveHorizontalCollisions(double horizontalDelta) {
-    for (final collider in _solidColliders) {
-      if (!_hitboxRect.overlaps(collider)) {
-        continue;
-      }
-
-      if (horizontalDelta > 0) {
-        position.x = collider.left - size.x;
-      } else {
-        position.x = collider.right;
-      }
-      _velocity.x = 0;
-    }
-  }
-
-  void _resolveVerticalCollisions(double verticalDelta) {
-    if (verticalDelta == 0) {
-      return;
-    }
-
-    for (final collider in _solidColliders) {
-      if (!_hitboxRect.overlaps(collider)) {
-        continue;
-      }
-
-      if (verticalDelta > 0) {
-        position.y = collider.top - size.y;
-        _velocity.y = 0;
-        _isGrounded = true;
-      } else {
-        position.y = collider.bottom;
-        _velocity.y = 0;
-      }
-    }
-  }
-
-  bool _hasSupportBelow() {
-    const supportTolerance = 1.0;
-    final hitbox = _hitboxRect;
-    final feetY = hitbox.bottom;
-
-    for (final collider in _solidColliders) {
-      final hasHorizontalOverlap =
-          hitbox.right > collider.left + supportTolerance &&
-          hitbox.left < collider.right - supportTolerance;
-      final isStandingOnTop = (feetY - collider.top).abs() <= supportTolerance;
-
-      if (hasHorizontalOverlap && isStandingOnTop) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   Image? _imageForState(BearAnimationState state) {

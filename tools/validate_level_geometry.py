@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Basic safety checks for playable level geometry."""
+"""Validate the temporary flat-baseline level geometry."""
 
 from __future__ import annotations
 
@@ -8,16 +8,6 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GEOMETRY_PATH = REPO_ROOT / "assets/data/level_geometry.json"
-
-PLAYER_HITBOX_WIDTH = 78
-PLAYER_HITBOX_HEIGHT = 92
-MENTOR_WIDTH = 56
-MENTOR_HEIGHT = 64
-
-MAX_SAFE_OBSTACLE_HEIGHT = 48
-MAX_SAFE_PLATFORM_CLIMB = 60
-MAX_SAFE_PLATFORM_GAP = 130
-MIN_LANDING_WIDTH = 96
 
 EXPECTED_BACKGROUNDS = {
     1: "assets/images/levels/level_01_ice_floe/background.png",
@@ -60,7 +50,7 @@ def main() -> None:
     if missing:
         fail(f"Missing geometry for levels: {sorted(missing)}.")
 
-    print("level_geometry.json OK: 10 playable routes passed basic checks.")
+    print("level_geometry.json OK: 10 flat baseline levels are stable.")
 
 
 def validate_level(
@@ -76,119 +66,58 @@ def validate_level(
     if not (REPO_ROOT / background).exists():
         fail(f"{context}: background asset does not exist: {background}.")
 
-    notes = required_string(level, "notes", context)
-    if len(notes) < 16:
-        fail(f"{context}: route notes are too short.")
-
     player_spawn = required_object(level, "playerSpawn", context)
     mentor_position = required_object(level, "mentorPosition", context)
-    ground = read_colliders(level, "groundColliders", context)
+    grounds = read_colliders(level, "groundColliders", context)
     platforms = read_colliders(level, "platformColliders", context)
     obstacles = read_colliders(level, "obstacleColliders", context)
-    walkables = ground + platforms
+    notes = required_string(level, "notes", context)
 
-    if not ground:
-        fail(f"{context}: at least one ground collider is required.")
-    if not platforms and not obstacles:
-        fail(f"{context}: at least one obstacle or platform is required.")
-    if level_id == 5 and len(walkables) < 5:
-        fail(f"{context}: ice cave must have at least five walkable surfaces.")
+    if "flat baseline" not in notes:
+        fail(f"{context}: notes must identify the temporary flat baseline.")
+    if len(grounds) != 1:
+        fail(f"{context}: baseline requires exactly one main ground collider.")
+    if platforms:
+        fail(f"{context}: baseline platformColliders must be empty.")
+    if obstacles:
+        fail(f"{context}: baseline obstacleColliders must be empty.")
 
-    for collider in walkables + obstacles:
-        validate_collider_bounds(collider, context, world_width, world_height)
+    ground = grounds[0]
+    if ground["id"] != "main_ground":
+        fail(f"{context}: baseline ground id must be main_ground.")
+    validate_collider_bounds(ground, context, world_width, world_height)
+    if ground["x"] != 0 or ground["width"] != world_width:
+        fail(f"{context}: main ground must span the full world width.")
 
-    assert_supported_point(
-        player_spawn,
-        PLAYER_HITBOX_WIDTH,
-        walkables,
-        f"{context}: playerSpawn",
-    )
-    assert_supported_point(
-        mentor_position,
-        MENTOR_WIDTH,
-        walkables,
-        f"{context}: mentorPosition",
-    )
+    validate_point(player_spawn, context, "playerSpawn", world_width, world_height)
+    validate_point(mentor_position, context, "mentorPosition", world_width, world_height)
 
-    for obstacle in obstacles:
-        if obstacle["height"] > MAX_SAFE_OBSTACLE_HEIGHT:
-            fail(
-                f"{context}: obstacle {obstacle['id']} is too tall "
-                f"({obstacle['height']} > {MAX_SAFE_OBSTACLE_HEIGHT})."
-            )
-        assert_obstacle_sits_on_surface(obstacle, walkables, context)
+    player_x = required_number(player_spawn, "x", f"{context}.playerSpawn")
+    player_y = required_number(player_spawn, "y", f"{context}.playerSpawn")
+    mentor_x = required_number(mentor_position, "x", f"{context}.mentorPosition")
+    mentor_y = required_number(mentor_position, "y", f"{context}.mentorPosition")
 
-    validate_platform_route(walkables, context)
+    if mentor_x <= player_x:
+        fail(f"{context}: mentorPosition.x must be greater than playerSpawn.x.")
+    if abs(player_y - ground["y"]) > 1:
+        fail(f"{context}: playerSpawn must sit on main ground.")
+    if abs(mentor_y - ground["y"]) > 1:
+        fail(f"{context}: mentorPosition must sit on main ground.")
 
 
-def validate_platform_route(
-    walkables: list[dict[str, float | str]],
-    context: str,
-) -> None:
-    ordered = sorted(walkables, key=lambda collider: collider["x"])
-
-    for index, platform in enumerate(ordered):
-        if platform["width"] < MIN_LANDING_WIDTH:
-            fail(
-                f"{context}: walkable surface {platform['id']} is too narrow "
-                f"({platform['width']} < {MIN_LANDING_WIDTH})."
-            )
-
-        if index == 0:
-            continue
-
-        previous = ordered[index - 1]
-        upward_climb = previous["y"] - platform["y"]
-        if upward_climb > MAX_SAFE_PLATFORM_CLIMB:
-            fail(
-                f"{context}: route climbs too high from {previous['id']} "
-                f"to {platform['id']} ({upward_climb})."
-            )
-
-        horizontal_gap = platform["x"] - (previous["x"] + previous["width"])
-        if horizontal_gap > MAX_SAFE_PLATFORM_GAP:
-            fail(
-                f"{context}: route gap is too wide from {previous['id']} "
-                f"to {platform['id']} ({horizontal_gap})."
-            )
-
-
-def assert_supported_point(
+def validate_point(
     point: dict[str, object],
-    body_width: float,
-    walkables: list[dict[str, float | str]],
     context: str,
+    key: str,
+    world_width: float,
+    world_height: float,
 ) -> None:
-    x = required_number(point, "x", context)
-    y = required_number(point, "y", context)
-    body_center_x = x + body_width / 2
-
-    for surface in walkables:
-        if (
-            surface["x"] <= body_center_x <= surface["x"] + surface["width"]
-            and abs(y - surface["y"]) <= 1
-        ):
-            return
-
-    fail(f"{context}: point is not on a walkable surface.")
-
-
-def assert_obstacle_sits_on_surface(
-    obstacle: dict[str, float | str],
-    walkables: list[dict[str, float | str]],
-    context: str,
-) -> None:
-    obstacle_center_x = obstacle["x"] + obstacle["width"] / 2
-    obstacle_bottom = obstacle["y"] + obstacle["height"]
-
-    for surface in walkables:
-        if (
-            surface["x"] <= obstacle_center_x <= surface["x"] + surface["width"]
-            and abs(obstacle_bottom - surface["y"]) <= 1
-        ):
-            return
-
-    fail(f"{context}: obstacle {obstacle['id']} is not sitting on a surface.")
+    x = required_number(point, "x", f"{context}.{key}")
+    y = required_number(point, "y", f"{context}.{key}")
+    if x < 0 or x > world_width:
+        fail(f"{context}: {key}.x is outside the world.")
+    if y < 0 or y > world_height:
+        fail(f"{context}: {key}.y is outside the world.")
 
 
 def validate_collider_bounds(

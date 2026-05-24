@@ -76,10 +76,13 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     levelGeometry = (await _levelGeometryService.loadLevelGeometry(
       currentLevel!.id,
     )).scaledTo(size);
-    final groundY = levelGeometry.primaryGroundY;
+    final mainGround = levelGeometry.mainGround;
+    final groundY = mainGround.y;
 
     add(SnowyBackground(size: size, assetPath: levelGeometry.backgroundAsset));
-    _addLevelGeometryComponents(levelGeometry);
+    add(
+      PlatformComponent(position: mainGround.position, size: mainGround.size),
+    );
 
     final playerSpawn = levelGeometry.playerSpawn.toVector2();
     player = PlayerBear(
@@ -89,9 +92,6 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       ),
       groundY: groundY,
       levelWidth: size.x,
-      solidColliders: levelGeometry.solidColliders
-          .map((collider) => collider.rect)
-          .toList(growable: false),
     );
     final mentorSpawn = levelGeometry.mentorPosition.toVector2();
     mentor = WiseMentor(
@@ -221,62 +221,5 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       player.startInteracting();
       overlays.add(mentorDialogOverlay);
     }
-  }
-
-  void _addLevelGeometryComponents(LevelGeometry geometry) {
-    for (final collider in geometry.groundColliders) {
-      add(
-        PlatformComponent(
-          id: collider.id,
-          position: collider.position,
-          size: collider.size,
-          debugKind: LevelGeometryDebugKind.ground,
-          debugOverlay: kLevelGeometryDebugOverlay,
-        ),
-      );
-    }
-    for (final collider in geometry.platformColliders) {
-      add(
-        PlatformComponent(
-          id: collider.id,
-          position: collider.position,
-          size: collider.size,
-          debugKind: LevelGeometryDebugKind.platform,
-          debugOverlay: kLevelGeometryDebugOverlay,
-        ),
-      );
-    }
-    for (final collider in geometry.obstacleColliders) {
-      add(
-        PlatformComponent(
-          id: collider.id,
-          position: collider.position,
-          size: collider.size,
-          debugKind: LevelGeometryDebugKind.obstacle,
-          debugOverlay: kLevelGeometryDebugOverlay,
-        ),
-      );
-    }
-
-    _addDebugMarker(
-      geometry.playerSpawn.toVector2(),
-      LevelGeometryDebugKind.playerSpawn,
-    );
-    _addDebugMarker(
-      geometry.mentorPosition.toVector2(),
-      LevelGeometryDebugKind.mentor,
-    );
-  }
-
-  void _addDebugMarker(Vector2 point, LevelGeometryDebugKind debugKind) {
-    const markerSize = 14.0;
-    add(
-      PlatformComponent(
-        position: Vector2(point.x - markerSize / 2, point.y - markerSize / 2),
-        size: Vector2.all(markerSize),
-        debugKind: debugKind,
-        debugOverlay: kLevelGeometryDebugOverlay,
-      ),
-    );
   }
 }
