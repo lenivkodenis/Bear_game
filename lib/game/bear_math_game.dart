@@ -8,7 +8,7 @@ import 'components/platform_component.dart';
 import 'components/player_bear.dart';
 import 'components/snowy_background.dart';
 import 'components/wise_mentor.dart';
-import 'level_background_assets.dart';
+import 'level_geometry.dart';
 import '../models/level.dart';
 import '../models/player_progress.dart';
 import '../models/question.dart';
@@ -25,9 +25,11 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   final int levelId;
   late final PlayerBear player;
   late final WiseMentor mentor;
+  late final LevelGeometry levelGeometry;
 
   final ValueNotifier<int> scoreNotifier = ValueNotifier<int>(0);
   final LevelService _levelService = LevelService();
+  final LevelGeometryService _levelGeometryService = LevelGeometryService();
   final ProgressService _progressService = ProgressService();
 
   Level? currentLevel;
@@ -71,28 +73,32 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     );
     scoreNotifier.value = _progress.score;
 
-    final groundY = size.y * 0.70;
+    levelGeometry = (await _levelGeometryService.loadLevelGeometry(
+      currentLevel!.id,
+    )).scaledTo(size);
+    final groundY = levelGeometry.primaryGroundY;
 
-    add(
-      SnowyBackground(
-        size: size,
-        assetPath: LevelBackgroundAssets.forLevelId(currentLevel!.id),
-      ),
-    );
-    add(
-      PlatformComponent(
-        position: Vector2(0, groundY),
-        size: Vector2(size.x, 44),
-      ),
-    );
+    add(SnowyBackground(size: size, assetPath: levelGeometry.backgroundAsset));
+    _addLevelGeometryComponents(levelGeometry);
 
+    final playerSpawn = levelGeometry.playerSpawn.toVector2();
     player = PlayerBear(
-      position: Vector2(72, groundY - PlayerBear.defaultSize.y),
+      position: Vector2(
+        playerSpawn.x,
+        playerSpawn.y - PlayerBear.defaultSize.y,
+      ),
       groundY: groundY,
       levelWidth: size.x,
+      solidColliders: levelGeometry.solidColliders
+          .map((collider) => collider.rect)
+          .toList(growable: false),
     );
+    final mentorSpawn = levelGeometry.mentorPosition.toVector2();
     mentor = WiseMentor(
-      position: Vector2(size.x - 112, groundY - WiseMentor.defaultSize.y),
+      position: Vector2(
+        mentorSpawn.x,
+        mentorSpawn.y - WiseMentor.defaultSize.y,
+      ),
     );
 
     add(player);
@@ -215,5 +221,62 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       player.startInteracting();
       overlays.add(mentorDialogOverlay);
     }
+  }
+
+  void _addLevelGeometryComponents(LevelGeometry geometry) {
+    for (final collider in geometry.groundColliders) {
+      add(
+        PlatformComponent(
+          id: collider.id,
+          position: collider.position,
+          size: collider.size,
+          debugKind: LevelGeometryDebugKind.ground,
+          debugOverlay: kLevelGeometryDebugOverlay,
+        ),
+      );
+    }
+    for (final collider in geometry.platformColliders) {
+      add(
+        PlatformComponent(
+          id: collider.id,
+          position: collider.position,
+          size: collider.size,
+          debugKind: LevelGeometryDebugKind.platform,
+          debugOverlay: kLevelGeometryDebugOverlay,
+        ),
+      );
+    }
+    for (final collider in geometry.obstacleColliders) {
+      add(
+        PlatformComponent(
+          id: collider.id,
+          position: collider.position,
+          size: collider.size,
+          debugKind: LevelGeometryDebugKind.obstacle,
+          debugOverlay: kLevelGeometryDebugOverlay,
+        ),
+      );
+    }
+
+    _addDebugMarker(
+      geometry.playerSpawn.toVector2(),
+      LevelGeometryDebugKind.playerSpawn,
+    );
+    _addDebugMarker(
+      geometry.mentorPosition.toVector2(),
+      LevelGeometryDebugKind.mentor,
+    );
+  }
+
+  void _addDebugMarker(Vector2 point, LevelGeometryDebugKind debugKind) {
+    const markerSize = 14.0;
+    add(
+      PlatformComponent(
+        position: Vector2(point.x - markerSize / 2, point.y - markerSize / 2),
+        size: Vector2.all(markerSize),
+        debugKind: debugKind,
+        debugOverlay: kLevelGeometryDebugOverlay,
+      ),
+    );
   }
 }

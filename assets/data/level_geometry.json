@@ -1,0 +1,164 @@
+{
+  "world": {
+    "width": 800,
+    "height": 600
+  },
+  "levels": [
+    {
+      "levelId": 1,
+      "backgroundAsset": "assets/images/levels/level_01_ice_floe/background.png",
+      "playerSpawn": { "x": 72, "y": 420 },
+      "mentorPosition": { "x": 670, "y": 420 },
+      "groundColliders": [
+        { "id": "main_ice_surface", "x": 0, "y": 420, "width": 800, "height": 180 }
+      ],
+      "platformColliders": [],
+      "obstacleColliders": [
+        { "id": "low_ice_lip", "x": 245, "y": 388, "width": 58, "height": 32 },
+        { "id": "small_ice_ridge", "x": 470, "y": 392, "width": 54, "height": 28 }
+      ],
+      "notes": "Flat beginner route: start, low ice lip, small ice ridge, clean final ice near the mentor."
+    },
+    {
+      "levelId": 2,
+      "backgroundAsset": "assets/images/levels/level_02_icy_river/background.png",
+      "playerSpawn": { "x": 72, "y": 422 },
+      "mentorPosition": { "x": 670, "y": 422 },
+      "groundColliders": [
+        { "id": "snowy_riverbank", "x": 0, "y": 422, "width": 800, "height": 178 }
+      ],
+      "platformColliders": [],
+      "obstacleColliders": [
+        { "id": "fallen_branch_log", "x": 235, "y": 390, "width": 70, "height": 32 },
+        { "id": "low_river_ice_block", "x": 500, "y": 394, "width": 56, "height": 28 }
+      ],
+      "notes": "Safe frozen riverbank with one low log and one small ice block before the clear mentor area."
+    },
+    {
+      "levelId": 3,
+      "backgroundAsset": "assets/images/levels/level_03_snowy_shore/background.png",
+      "playerSpawn": { "x": 72, "y": 424 },
+      "mentorPosition": { "x": 670, "y": 424 },
+      "groundColliders": [
+        { "id": "snowy_shore_path", "x": 0, "y": 424, "width": 800, "height": 176 }
+      ],
+      "platformColliders": [],
+      "obstacleColliders": [
+        { "id": "shore_driftwood", "x": 250, "y": 394, "width": 72, "height": 30 },
+        { "id": "snowy_stone_mound", "x": 490, "y": 386, "width": 66, "height": 38 }
+      ],
+      "notes": "Open snowy shore route with two modest jumps over driftwood and a snow-covered stone mound."
+    },
+    {
+      "levelId": 4,
+      "backgroundAsset": "assets/images/levels/level_04_northern_forest/background.png",
+      "playerSpawn": { "x": 72, "y": 426 },
+      "mentorPosition": { "x": 670, "y": 426 },
+      "groundColliders": [
+        { "id": "forest_snow_floor", "x": 0, "y": 426, "width": 800, "height": 174 }
+      ],
+      "platformColliders": [],
+      "obstacleColliders": [
+        { "id": "fallen_forest_log", "x": 230, "y": 392, "width": 82, "height": 34 },
+        { "id": "small_tree_stump", "x": 470, "y": 386, "width": 48, "height": 40 },
+        { "id": "soft_snow_bump", "x": 585, "y": 402, "width": 52, "height": 24 }
+      ],
+      "notes": "Northern forest route over a fallen log, a small stump, and a soft snow bump."
+    },
+    {
+      "levelId": 5,
+      "backgroundAsset": "assets/images/levels/level_05_ice_cave/background.png",
+      "playerSpawn": { "x": 72, "y": 430 },
+      "mentorPosition": { "x": 670, "y": 402 },
+      "groundColliders": [
+        { "id": "start_left_ice_platform", "x": 0, "y": 430, "width": 190, "height": 170 },
+        { "id": "lower_central_ice_platform", "x": 175, "y": 430, "width": 260, "height": 170 },
+        { "id": "final_right_ice_platform", "x": 610, "y": 402, "width": 190, "height": 198 }
+      ],
+      "platformColliders": [
+        { "id": "small_intermediate_ice_step", "x": 425, "y": 402, "width": 125, "height": 28 },
+        { "id": "upper_right_ice_step", "x": 520, "y": 374, "width": 145, "height": 28 }
+      ],
+      "obstacleColliders": [
+        { "id": "low_cave_crystal", "x": 305, "y": 398, "width": 42, "height": 32 }
+      ],
+      "notes": "Five-surface cave route: left start, lower central platform, small step, upper step, final right platform."
+    },
+    {
+      "levelId": 6,
+      "backgroundAsset": "assets/images/levels/level_06_snowy_valley/background.png",
+      "playerSpawn": { "x": 72, "y": 422 },
+      "mentorPosition": { "x": 670, "y": 422 },
+      "groundColliders": [
+        { "id": "wide_valley_snowfield", "x": 0, "y": 422, "width": 800, "height": 178 }
+      ],
+      "platformColliders": [],
+      "obstacleColliders": [
+        { "id": "rounded_snow_hill", "x": 300, "y": 386, "width": 72, "height": 36 },
+        { "id": "low_ice_lip", "x": 540, "y": 396, "width": 58, "height": 26 }
+      ],
+      "notes": "Spacious valley with a rounded snow hill and one very low ice lip before a wide finish."
+    },
+    {
+      "levelId": 7,
+      "backgroundAsset": "assets/images/levels/level_07_mountain_pass/background.png",
+      "playerSpawn": { "x": 72, "y": 430 },
+      "mentorPosition": { "x": 670, "y": 420 },
+      "groundColliders": [
+        { "id": "left_mountain_shelf", "x": 0, "y": 430, "width": 255, "height": 170 },
+        { "id": "safe_bridge_shelf", "x": 250, "y": 430, "width": 190, "height": 170 },
+        { "id": "right_mountain_pass", "x": 435, "y": 420, "width": 365, "height": 180 }
+      ],
+      "platformColliders": [],
+      "obstacleColliders": [
+        { "id": "low_pass_rock", "x": 530, "y": 384, "width": 58, "height": 36 }
+      ],
+      "notes": "Safe mountain pass using three broad shelves and one low rock, with no dangerous physical chasm."
+    },
+    {
+      "levelId": 8,
+      "backgroundAsset": "assets/images/levels/level_08_polar_night/background.png",
+      "playerSpawn": { "x": 72, "y": 426 },
+      "mentorPosition": { "x": 670, "y": 426 },
+      "groundColliders": [
+        { "id": "polar_night_snow_path", "x": 0, "y": 426, "width": 800, "height": 174 }
+      ],
+      "platformColliders": [],
+      "obstacleColliders": [
+        { "id": "soft_night_snowdrift", "x": 290, "y": 392, "width": 72, "height": 34 },
+        { "id": "low_ice_boulder", "x": 520, "y": 388, "width": 54, "height": 38 }
+      ],
+      "notes": "Calm polar-night walk with one snowdrift and one low ice boulder on flat snow."
+    },
+    {
+      "levelId": 9,
+      "backgroundAsset": "assets/images/levels/level_09_northern_lights/background.png",
+      "playerSpawn": { "x": 72, "y": 424 },
+      "mentorPosition": { "x": 670, "y": 424 },
+      "groundColliders": [
+        { "id": "aurora_ice_field", "x": 0, "y": 424, "width": 800, "height": 176 }
+      ],
+      "platformColliders": [],
+      "obstacleColliders": [
+        { "id": "low_glowing_crystal", "x": 300, "y": 382, "width": 44, "height": 42 },
+        { "id": "small_aurora_ice_block", "x": 520, "y": 394, "width": 60, "height": 30 }
+      ],
+      "notes": "Northern-lights route with a low crystal and a small ice block, both safely jumpable."
+    },
+    {
+      "levelId": 10,
+      "backgroundAsset": "assets/images/levels/level_10_northern_ocean/background.png",
+      "playerSpawn": { "x": 72, "y": 420 },
+      "mentorPosition": { "x": 670, "y": 420 },
+      "groundColliders": [
+        { "id": "northern_ocean_ice_floe", "x": 0, "y": 420, "width": 800, "height": 180 }
+      ],
+      "platformColliders": [],
+      "obstacleColliders": [
+        { "id": "low_ocean_ice_ridge", "x": 280, "y": 386, "width": 76, "height": 34 },
+        { "id": "small_final_ice_block", "x": 540, "y": 392, "width": 58, "height": 28 }
+      ],
+      "notes": "Final ocean floe route with two low ice features and a broad clean approach to the mentor."
+    }
+  ]
+}
