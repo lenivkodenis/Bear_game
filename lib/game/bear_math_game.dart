@@ -8,6 +8,7 @@ import 'components/platform_component.dart';
 import 'components/player_bear.dart';
 import 'components/snowy_background.dart';
 import 'components/wise_mentor.dart';
+import 'level_background_assets.dart';
 import '../models/level.dart';
 import '../models/player_progress.dart';
 import '../models/question.dart';
@@ -72,7 +73,12 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
     final groundY = size.y * 0.70;
 
-    add(SnowyBackground(size: size));
+    add(
+      SnowyBackground(
+        size: size,
+        assetPath: LevelBackgroundAssets.forLevelId(currentLevel!.id),
+      ),
+    );
     add(
       PlatformComponent(
         position: Vector2(0, groundY),

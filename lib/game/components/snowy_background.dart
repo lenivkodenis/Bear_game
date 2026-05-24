@@ -3,20 +3,39 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flame/flame.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/painting.dart';
+
+import '../level_background_assets.dart';
 
 class SnowyBackground extends PositionComponent {
-  SnowyBackground({required Vector2 size}) : super(size: size);
+  SnowyBackground({required Vector2 size, required this.assetPath})
+    : super(size: size);
 
-  static const _backgroundAssetPath =
-      'locations/snowy_clearing/preview/snowy_clearing_full_preview.png';
-
+  final String assetPath;
   ui.Image? _background;
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    _background = await Flame.images.load(_backgroundAssetPath);
+    _background = await _loadBackground(assetPath);
+  }
+
+  Future<ui.Image> _loadBackground(String path) async {
+    try {
+      return await Flame.images.load(LevelBackgroundAssets.flameImageKey(path));
+    } catch (error, stackTrace) {
+      debugPrint('Unable to load level background "$path": $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (path == LevelBackgroundAssets.fallbackAssetPath) {
+        rethrow;
+      }
+
+      return Flame.images.load(
+        LevelBackgroundAssets.flameImageKey(
+          LevelBackgroundAssets.fallbackAssetPath,
+        ),
+      );
+    }
   }
 
   @override
