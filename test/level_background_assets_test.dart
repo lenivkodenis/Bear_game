@@ -5,20 +5,38 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('LevelBackgroundAssets', () {
-    test('maps level ids 1 through 10 to production backgrounds', () {
-      expect(
-        LevelBackgroundAssets.byLevelId.keys,
-        containsAll(<int>[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
-      );
-      expect(LevelBackgroundAssets.byLevelId, hasLength(10));
+    test(
+      'tracks audited baked-in-bear backgrounds for levels 1 through 10',
+      () {
+        expect(
+          LevelBackgroundAssets.auditedBackgroundsWithBakedInBearByLevelId.keys,
+          containsAll(<int>[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),
+        );
+        expect(
+          LevelBackgroundAssets.auditedBackgroundsWithBakedInBearByLevelId,
+          hasLength(10),
+        );
+
+        for (var levelId = 1; levelId <= 10; levelId += 1) {
+          final path = LevelBackgroundAssets
+              .auditedBackgroundsWithBakedInBearByLevelId[levelId]!;
+
+          expect(path, isNotEmpty);
+          expect(path, startsWith('assets/images/levels/'));
+          expect(path, endsWith('/background.png'));
+          expect(File(path).existsSync(), isTrue, reason: path);
+        }
+      },
+    );
+
+    test('uses fallback for levels without clean background replacements', () {
+      expect(LevelBackgroundAssets.cleanBackgroundsByLevelId, isEmpty);
 
       for (var levelId = 1; levelId <= 10; levelId += 1) {
-        final path = LevelBackgroundAssets.forLevelId(levelId);
-
-        expect(path, isNotEmpty);
-        expect(path, startsWith('assets/images/levels/'));
-        expect(path, endsWith('/background.png'));
-        expect(File(path).existsSync(), isTrue, reason: path);
+        expect(
+          LevelBackgroundAssets.forLevelId(levelId),
+          LevelBackgroundAssets.fallbackAssetPath,
+        );
       }
     });
 
