@@ -56,6 +56,8 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
 
   bool get _isOnGround => position.y >= groundY - size.y - 0.5;
 
+  BearAnimationState get animationState => _animationState;
+
   BearAnimationState get _animationState {
     if (_isSitting) {
       return BearAnimationState.sitting;
@@ -212,22 +214,35 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   }
 
   void startInteracting() {
-    _isInteracting = true;
-    _isSitting = false;
+    setInteracting(true);
   }
 
   void stopInteracting() {
-    _isInteracting = false;
+    setInteracting(false);
+  }
+
+  void setInteracting(bool value) {
+    _isInteracting = value;
+    if (value) {
+      _isSitting = false;
+      stopMoving();
+    }
   }
 
   void startSitting() {
-    _isSitting = true;
-    _isInteracting = false;
-    stopMoving();
+    setSitting(true);
   }
 
   void stopSitting() {
-    _isSitting = false;
+    setSitting(false);
+  }
+
+  void setSitting(bool value) {
+    _isSitting = value;
+    if (value) {
+      _isInteracting = false;
+      stopMoving();
+    }
   }
 
   _BearVisualTransform _visualTransform() {

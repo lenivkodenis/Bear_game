@@ -68,3 +68,62 @@ A future sprite-sheet stage should:
 3. Use per-state visual anchors rather than image bounds for collision.
 4. Replace the procedural walking/idle/jump transforms only after real frames are verified in the scene.
 5. Keep debug overlay support while tuning frame pivots and contact points.
+
+# Animation State Machine
+
+## Available bear assets
+
+Current files under `assets/images/characters/bear_cub/` are single-frame sources and processed PNGs, not animation sequences.
+
+- Idle candidates: `bear_cub_base_2_clean_v2_conservative.png` for front idle, and the current side-view `bear_cub_base_5_clean_v2_conservative.png` as the gameplay idle fallback.
+- Walk candidates: `bear_cub_base_1_clean.png`, `bear_cub_base_3_clean.png`, and `bear_cub_base_5_clean_v2_conservative.png` are side-view or walking-like single poses, but they do not form a consistent walk cycle.
+- Jump candidates: no dedicated jump PNG exists yet.
+- Sit candidates: `bear_cub_base_6_clean.png` is the closest sitting pose, but it is not yet cleaned/verified enough for gameplay.
+- Side-view candidates: `bear_cub_base_1_clean.png`, `bear_cub_base_3_clean.png`, `bear_cub_base_5_clean.png`, `bear_cub_base_5_clean_v2_conservative.png`.
+- Front-view candidates: `bear_cub_base_2_clean.png`, `bear_cub_base_2_clean_v2_conservative.png`.
+
+## Active states
+
+`PlayerBear` exposes `BearAnimationState` with:
+
+- `idle`
+- `walking`
+- `jumping`
+- `interacting`
+- `sitting`
+
+The current selector is:
+
+- `sitting` when explicitly requested by future scene code;
+- `interacting` when the mentor interaction starts;
+- `jumping` while the bear is airborne;
+- `walking` while horizontal velocity is active;
+- `idle` otherwise.
+
+## Current fallback behavior
+
+All states currently render the same verified side-view static sprite:
+
+```text
+assets/images/characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png
+```
+
+State-specific motion is procedural:
+
+- `idle`: subtle scale breathing only; no vertical bob, so the feet stay planted.
+- `walking`: tiny bob, tilt, and squash/stretch around the grounded contact point.
+- `jumping`: no walk bob; slight tilt/stretch while rising and mild compression while falling.
+- `interacting`: calm idle fallback after the bear reaches the mentor.
+- `sitting`: future state, currently calm idle fallback until a verified sit PNG exists.
+
+## Future frame requirements
+
+A true walk sequence needs multiple side-view PNG frames with:
+
+- consistent RGBA transparency;
+- matching canvas size;
+- matching scale and direction;
+- stable bottom-center feet anchor;
+- frame names or manifest entries that map cleanly to `BearAnimationState.walking`.
+
+A true sit animation needs at least one verified side-view sitting PNG with the same visual anchor policy. Dedicated jump and idle frames should follow the same frame manifest and grounding rules.
