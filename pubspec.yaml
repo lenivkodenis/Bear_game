@@ -23,6 +23,11 @@ flutter:
   assets:
     - public/assets/main_screen/main_screen_bear_bg.png
     - assets/images/map/progression_map.png
+    - assets/images/bear_cub/bear_cub_base.png
+    - assets/images/locations/snowy_clearing/01_sky.png
+    - assets/images/locations/snowy_clearing/02_far_hills.png
+    - assets/images/locations/snowy_clearing/03_mid_forest.png
+    - assets/images/locations/snowy_clearing/04_ground_platform.png
     - assets/images/
     - assets/audio/
     - assets/data/

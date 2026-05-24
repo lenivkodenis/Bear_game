@@ -19,8 +19,15 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   final double groundY;
   final double levelWidth;
   final Vector2 _velocity = Vector2.zero();
+  Sprite? _sprite;
 
   bool get _isOnGround => position.y >= groundY - size.y - 0.5;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    _sprite = await Sprite.load('bear_cub/bear_cub_base.png');
+  }
 
   @override
   void update(double dt) {
@@ -42,6 +49,17 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   @override
   void render(Canvas canvas) {
     super.render(canvas);
+
+    final sprite = _sprite;
+    if (sprite != null) {
+      final spriteSize = Vector2.all(size.x);
+      sprite.render(
+        canvas,
+        position: Vector2(0, size.y - spriteSize.y),
+        size: spriteSize,
+      );
+      return;
+    }
 
     final furPaint = Paint()..color = const Color(0xFFF8FBFF);
     final outlinePaint = Paint()
