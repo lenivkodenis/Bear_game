@@ -82,3 +82,55 @@ docs/bear_asset_processing_preview.png
 3. После ручной проверки подключить processed static sprite медвежонка к первому уровню.
 4. Сохранить текущий hitbox и движение.
 5. Не делать анимацию до проверки static sprite в сцене.
+
+# Refinement v2
+
+Дата refinement: 2026-05-24
+
+Для улучшения двух лучших кандидатов создано локальное Python-окружение `.venv-tools` и установлен Pillow. Это окружение используется только для tools-скриптов обработки ассетов и не является зависимостью Flutter-игры.
+
+Улучшались файлы:
+
+- `assets/images/characters/bear_cub/source/bear_cub_base_2.png` -> `assets/images/characters/bear_cub/processed/bear_cub_base_2_clean_v2_conservative.png`
+- `assets/images/characters/bear_cub/source/bear_cub_base_5.png` -> `assets/images/characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png`
+
+Предыдущие processed-файлы `bear_cub_base_2_clean.png` и `bear_cub_base_5_clean.png` не перезаписывались.
+
+## Метод v2
+
+Скрипт `tools/refine_bear_assets.py` использует Pillow и более осторожный алгоритм:
+
+- определяет светлые нейтральные цвета checkerboard-фона по краям изображения;
+- делает flood-fill только от внешних границ;
+- удаляет только похожие на фон пиксели, связанные с краем;
+- оставляет крупнейшую foreground-компоненту, чтобы убрать случайные островки подложки;
+- слегка сглаживает alpha-контур, не размывая RGB-изображение медвежонка;
+- обрезает canvas по alpha с margin `12px`;
+- сохраняет результат как PNG RGBA.
+
+## Результаты v2
+
+| Файл | Размер | Alpha | Качество | Можно использовать для static sprite | Нужна ручная доработка |
+| --- | --- | --- | --- | --- | --- |
+| `assets/images/characters/bear_cub/processed/bear_cub_base_2_clean_v2_conservative.png` | 638x1011 | да | Значительно лучше предыдущего clean: крупные повреждения шерсти убраны, контур сохранен осторожно. | да, как кандидат для front idle после визуальной QA | возможно |
+| `assets/images/characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png` | 1128x922 | да | Лучший текущий side-view кандидат: шерсть сохранена заметно лучше, фон удален и canvas обрезан. | да, лучший кандидат для gameplay side-view после визуальной QA | возможно |
+
+Preview refinement:
+
+```text
+docs/bear_asset_refinement_preview.png
+```
+
+Лучший вариант для gameplay side-view:
+
+```text
+assets/images/characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png
+```
+
+Лучший вариант для front idle:
+
+```text
+assets/images/characters/bear_cub/processed/bear_cub_base_2_clean_v2_conservative.png
+```
+
+Перед подключением к игре нужен отдельный маленький этап визуальной проверки в сцене: проверить масштаб, anchor, hitbox и отсутствие светлого ореола на фоне уровня. Анимацию до проверки static sprite не делать.

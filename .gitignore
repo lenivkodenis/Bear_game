@@ -7,6 +7,9 @@ build/
 coverage/
 pubspec.lock
 
+# Local asset-processing tools
+.venv-tools/
+
 # IDE
 .idea/
 .vscode/
