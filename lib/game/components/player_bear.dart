@@ -34,13 +34,13 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   static const visualWidth = 112.0;
   static const visualHeight = 96.0;
   static const visualSize = Size(visualWidth, visualHeight);
-  static const _walkFrameStepTime = 0.12;
+  static const _walkFrameStepTime = 0.14;
   static const _walkFrameSourceWidth = 359.0;
   static const _walkFrameSourceHeight = 268.0;
   static const _walkVisualHeight = 112.0;
   static const _walkVisualWidth =
       _walkVisualHeight * _walkFrameSourceWidth / _walkFrameSourceHeight;
-  static const _walkFrameGroundInsets = [23.0, 35.0, 30.0, 33.0, 32.0, 30.0];
+  static const _walkVisualGroundInset = 10.0;
   static const visualGroundInset = 1.25;
   static const feetToGroundOffset = 90.0;
   static const visualFeetAnchor = Offset(
@@ -81,7 +81,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     if (_isInteracting) {
       return BearAnimationState.interacting;
     }
-    if (!_isOnGround) {
+    if (!_isOnGround || _velocity.y.abs() > 0.5) {
       return BearAnimationState.jumping;
     }
     if (_velocity.x.abs() > 0.5) {
@@ -259,6 +259,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   void jump() {
     if (_isOnGround) {
       _velocity.y = _jumpImpulse;
+      _walkTicker?.reset();
       _isInteracting = false;
       _isSitting = false;
     }
@@ -333,16 +334,8 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   }
 
   Rect _walkDestinationRect() {
-    final frameIndex = _walkTicker?.currentIndex ?? 0;
-    final safeFrameIndex = frameIndex.clamp(
-      0,
-      _walkFrameGroundInsets.length - 1,
-    );
-    final visualScale = _walkVisualHeight / _walkFrameSourceHeight;
-    final frameGroundInset =
-        _walkFrameGroundInsets[safeFrameIndex] * visualScale;
     final left = _hitboxWidth / 2 - _walkVisualWidth / 2;
-    final bottom = visualFeetAnchor.dy + frameGroundInset;
+    final bottom = visualFeetAnchor.dy + _walkVisualGroundInset;
 
     return Rect.fromLTWH(
       left,
@@ -354,13 +347,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
 
   double _visualPivotY(BearAnimationState state, Rect destinationRect) {
     if (state == BearAnimationState.walking && _walkTicker != null) {
-      final frameIndex = _walkTicker!.currentIndex.clamp(
-        0,
-        _walkFrameGroundInsets.length - 1,
-      );
-      final visualScale = _walkVisualHeight / _walkFrameSourceHeight;
-      return destinationRect.bottom -
-          _walkFrameGroundInsets[frameIndex] * visualScale;
+      return destinationRect.bottom - _walkVisualGroundInset;
     }
 
     return destinationRect.bottom - visualGroundInset;

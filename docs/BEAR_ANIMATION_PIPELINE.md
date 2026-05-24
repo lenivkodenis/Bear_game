@@ -53,14 +53,16 @@ assets/images/characters/bear_cub/animations/walk/walk_06.png
 Frame timing:
 
 ```text
-stepTime: 0.12 seconds per frame
-fps: about 8.3 frames per second
+stepTime: 0.14 seconds per frame
+fps: about 7.1 frames per second
 loop: true
 ```
 
-The walk animation is active only when `BearAnimationState.walking` is selected, which happens while the bear is grounded and has horizontal velocity. When the bear stops, the walk ticker resets and the visual returns to the static idle fallback.
+The walk animation is active only when `BearAnimationState.walking` is selected, which happens while the bear is grounded, has no vertical velocity, and has horizontal velocity. When the bear stops or jumps, the walk ticker resets and the visual returns to the static fallback for the active state.
 
-Grounding remains owned by the existing visual alignment model. The physical hitbox, movement speed, gravity, jump impulse, collision clamp, map, levels, and gameplay mechanics are unchanged. The walk frames use one shared visual size and per-frame transparent-bottom inset values so the visible paws stay aligned to the same feet anchor while the frames advance.
+Grounding remains owned by the existing visual alignment model. The physical hitbox, movement speed, gravity, jump impulse, collision clamp, map, levels, and gameplay mechanics are unchanged. The walk frames use one shared visual size and one shared visual ground inset so the generated frame layout keeps its intended body motion instead of being shifted per frame.
+
+Jumping has priority over walking whenever the bear is off the ground or has vertical velocity. There is no dedicated jump frame yet, so jumping uses the static side-view sprite fallback.
 
 Direction still uses the existing `_facesLeft` flag:
 
