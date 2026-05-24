@@ -24,12 +24,12 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   static const _bearSpritePath =
       'characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png';
   static const _walkSpritePaths = [
-    'characters/bear_cub/animations/walk_normalized/walk_01_normalized.png',
-    'characters/bear_cub/animations/walk_normalized/walk_02_normalized.png',
-    'characters/bear_cub/animations/walk_normalized/walk_03_normalized.png',
-    'characters/bear_cub/animations/walk_normalized/walk_04_normalized.png',
-    'characters/bear_cub/animations/walk_normalized/walk_05_normalized.png',
-    'characters/bear_cub/animations/walk_normalized/walk_06_normalized.png',
+    'characters/bear_cub/animations/walk/walk_01.png',
+    'characters/bear_cub/animations/walk/walk_02.png',
+    'characters/bear_cub/animations/walk/walk_03.png',
+    'characters/bear_cub/animations/walk/walk_04.png',
+    'characters/bear_cub/animations/walk/walk_05.png',
+    'characters/bear_cub/animations/walk/walk_06.png',
   ];
   static const visualWidth = 112.0;
   static const visualHeight = 96.0;
