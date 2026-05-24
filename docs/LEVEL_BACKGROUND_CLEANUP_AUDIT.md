@@ -2,63 +2,46 @@
 
 Date: 2026-05-24
 
-All 10 current production `background.png` files contain a baked-in player bear
-cub. They are not clean environment-only production backgrounds yet. No automatic
-retouching, clone/heal, or inpainting was performed.
+All 10 production `background.png` files have been replaced with verified clean
+environment-only backgrounds. The active production backgrounds contain no
+player bear cub, mentor sprite, animals, UI, captions, or text.
 
-| Level | Name | Background | Has baked-in bear | Has mentor | Has UI/text | Status | Action |
-|---|---|---|---|---|---|---|---|
-| 1 | Льдина | `assets/images/levels/level_01_ice_floe/background.png` | yes | no | no | has_baked_in_bear | Copied current file to `source_with_bear/background_with_bear.png`; needs clean replacement in `clean_source/`. |
-| 2 | Ледяная река | `assets/images/levels/level_02_icy_river/background.png` | yes | no | no | has_baked_in_bear | Copied current file to `source_with_bear/background_with_bear.png`; needs clean replacement in `clean_source/`. |
-| 3 | Заснеженный берег | `assets/images/levels/level_03_snowy_shore/background.png` | yes | no | no | has_baked_in_bear | Copied current file to `source_with_bear/background_with_bear.png`; needs clean replacement in `clean_source/`. Contains a seal-like non-player animal, but not the canonical mentor. |
-| 4 | Северный лес | `assets/images/levels/level_04_northern_forest/background.png` | yes | no | no | has_baked_in_bear | Copied current file to `source_with_bear/background_with_bear.png`; needs clean replacement in `clean_source/`. |
-| 5 | Ледяная пещера | `assets/images/levels/level_05_ice_cave/background.png` | yes | no | no | has_baked_in_bear | Copied current file to `source_with_bear/background_with_bear.png`; needs clean replacement in `clean_source/`. |
-| 6 | Снежная долина | `assets/images/levels/level_06_snowy_valley/background.png` | yes | no | no | has_baked_in_bear | Copied current file to `source_with_bear/background_with_bear.png`; needs clean replacement in `clean_source/`. |
-| 7 | Горный перевал | `assets/images/levels/level_07_mountain_pass/background.png` | yes | no | no | has_baked_in_bear | Copied current file to `source_with_bear/background_with_bear.png`; needs clean replacement in `clean_source/`. |
-| 8 | Полярная ночь | `assets/images/levels/level_08_polar_night/background.png` | yes | no | no | has_baked_in_bear | Copied current file to `source_with_bear/background_with_bear.png`; needs clean replacement in `clean_source/`. |
-| 9 | Северное сияние | `assets/images/levels/level_09_northern_lights/background.png` | yes | no | no | has_baked_in_bear | Copied current file to `source_with_bear/background_with_bear.png`; needs clean replacement in `clean_source/`. |
-| 10 | Северный океан | `assets/images/levels/level_10_northern_ocean/background.png` | yes | no | no | has_baked_in_bear | Copied current file to `source_with_bear/background_with_bear.png`; needs clean replacement in `clean_source/`. |
+The older production backgrounds with the baked-in player bear cub are retained
+only in `source_with_bear/background_with_bear.png` as audit/history backups.
+They are no longer active production assets and are not referenced by the game
+runtime.
 
-## Clean Background Status
+| Level | Name | Production background | Clean source added | Has baked-in bear | Has mentor | Has animals | Has UI/text | Status |
+|---|---|---|---|---|---|---|---|---|
+| 1 | Льдина | `assets/images/levels/level_01_ice_floe/background.png` | `assets/images/levels/level_01_ice_floe/clean_source/background_clean.png` | no | no | no | no | clean_active |
+| 2 | Ледяная река | `assets/images/levels/level_02_icy_river/background.png` | `assets/images/levels/level_02_icy_river/clean_source/background_clean.png` | no | no | no | no | clean_active |
+| 3 | Заснеженный берег | `assets/images/levels/level_03_snowy_shore/background.png` | `assets/images/levels/level_03_snowy_shore/clean_source/background_clean.png` | no | no | no | no | clean_active |
+| 4 | Северный лес | `assets/images/levels/level_04_northern_forest/background.png` | `assets/images/levels/level_04_northern_forest/clean_source/background_clean.png` | no | no | no | no | clean_active |
+| 5 | Ледяная пещера | `assets/images/levels/level_05_ice_cave/background.png` | `assets/images/levels/level_05_ice_cave/clean_source/background_clean.png` | no | no | no | no | clean_active |
+| 6 | Снежная долина | `assets/images/levels/level_06_snowy_valley/background.png` | `assets/images/levels/level_06_snowy_valley/clean_source/background_clean.png` | no | no | no | no | clean_active |
+| 7 | Горный перевал | `assets/images/levels/level_07_mountain_pass/background.png` | `assets/images/levels/level_07_mountain_pass/clean_source/background_clean.png` | no | no | no | no | clean_active |
+| 8 | Полярная ночь | `assets/images/levels/level_08_polar_night/background.png` | `assets/images/levels/level_08_polar_night/clean_source/background_clean.png` | no | no | no | no | clean_active |
+| 9 | Северное сияние | `assets/images/levels/level_09_northern_lights/background.png` | `assets/images/levels/level_09_northern_lights/clean_source/background_clean.png` | no | no | no | no | clean_active |
+| 10 | Северный океан | `assets/images/levels/level_10_northern_ocean/background.png` | `assets/images/levels/level_10_northern_ocean/clean_source/background_clean.png` | no | no | no | no | clean_active |
 
-No clean production replacements were found in the level folders. The current
-`background.png` files temporarily remain in place only because no verified
-clean replacements exist yet.
+## Replacement Sources
 
-Each level now has:
+| Level | Requested clean source image | Stored clean source |
+|---|---|---|
+| 1 | холодный_арктический_пейзаж_с_айсбергами.png | `assets/images/levels/level_01_ice_floe/clean_source/background_clean.png` |
+| 2 | зимний_пейзаж_с_ледяной_рекой.png | `assets/images/levels/level_02_icy_river/clean_source/background_clean.png` |
+| 3 | снежный_пейзаж_с_ледяным_озером.png | `assets/images/levels/level_03_snowy_shore/clean_source/background_clean.png` |
+| 4 | зимний_лес_с_падающим_снегом.png | `assets/images/levels/level_04_northern_forest/clean_source/background_clean.png` |
+| 5 | ледяная_пещера_с_кристаллами.png | `assets/images/levels/level_05_ice_cave/clean_source/background_clean.png` |
+| 6 | зимний_альпийский_пейзаж_в_ярких_тонах.png | `assets/images/levels/level_06_snowy_valley/clean_source/background_clean.png` |
+| 7 | заснеженные_альпийские_вершины_и_мост.png | `assets/images/levels/level_07_mountain_pass/clean_source/background_clean.png` |
+| 8 | арктическая_ночь_с_иглу_и_северным_сиянием.png | `assets/images/levels/level_08_polar_night/clean_source/background_clean.png` |
+| 9 | зимняя_фантазия_с_магическими_рунами.png | `assets/images/levels/level_09_northern_lights/clean_source/background_clean.png` |
+| 10 | зимний_пейзаж_с_северным_сиянием.png | `assets/images/levels/level_10_northern_ocean/clean_source/background_clean.png` |
 
-- `source_with_bear/background_with_bear.png` for the audited baked-in-bear file;
-- `clean_source/` prepared for the future clean environment-only source.
+## Runtime Check
 
-## Automatic Cleanup Attempt
-
-Automatic cleanup was not applied. The built-in image editing workflow did not
-reliably bind to each specific local background file, and the local environment
-does not have a production-quality content-aware inpainting tool available.
-Because rough clone/heal/inpaint artifacts would harm the production
-backgrounds, the current `background.png` files were left unchanged.
-
-## Replacement Needed
-
-Add clean environment-only backgrounds for all 10 levels. Each replacement must
-match the canonical location, preserve the intended ground/platform readability,
-and contain no player bear, mentor sprite, UI, captions, or text.
-
-Expected manual clean source files:
-
-| Level | Clean source file to add |
-|---|---|
-| 1 | `assets/images/levels/level_01_ice_floe/clean_source/clean_background.png` |
-| 2 | `assets/images/levels/level_02_icy_river/clean_source/clean_background.png` |
-| 3 | `assets/images/levels/level_03_snowy_shore/clean_source/clean_background.png` |
-| 4 | `assets/images/levels/level_04_northern_forest/clean_source/clean_background.png` |
-| 5 | `assets/images/levels/level_05_ice_cave/clean_source/clean_background.png` |
-| 6 | `assets/images/levels/level_06_snowy_valley/clean_source/clean_background.png` |
-| 7 | `assets/images/levels/level_07_mountain_pass/clean_source/clean_background.png` |
-| 8 | `assets/images/levels/level_08_polar_night/clean_source/clean_background.png` |
-| 9 | `assets/images/levels/level_09_northern_lights/clean_source/clean_background.png` |
-| 10 | `assets/images/levels/level_10_northern_ocean/clean_source/clean_background.png` |
-
-After a clean source is approved, copy it to the level folder as
-`background.png` and keep `source_with_bear/background_with_bear.png` as the
-backup of the rejected baked-in-bear version.
+The existing runtime mapping remains per-level:
+`lib/game/level_background_assets.dart` maps levels 1 through 10 to their own
+`assets/images/levels/<level_folder>/background.png` files. No code changes
+were made for this cleanup.
