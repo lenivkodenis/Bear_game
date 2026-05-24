@@ -25,17 +25,17 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   static const visualHeight = 96.0;
   static const visualSize = Size(visualWidth, visualHeight);
   static const visualGroundInset = 1.25;
-  static const visualSnowContactOffset = 18.0;
+  static const feetToGroundOffset = 150.0;
   static const visualFeetAnchor = Offset(
     _hitboxWidth / 2,
-    _hitboxHeight + visualSnowContactOffset,
+    _hitboxHeight + feetToGroundOffset,
   );
   static const visualOffset = Offset(
     _hitboxWidth / 2 - visualWidth / 2,
-    _hitboxHeight + visualSnowContactOffset - visualHeight + visualGroundInset,
+    _hitboxHeight + feetToGroundOffset - visualHeight + visualGroundInset,
   );
   static const idleBreathingAmplitude = 0.01;
-  static const walkBobAmplitude = 0.8;
+  static const walkBobAmplitude = 0.35;
   static const walkTiltAmplitude = math.pi / 72;
   static const jumpTiltAmplitude = math.pi / 90;
 

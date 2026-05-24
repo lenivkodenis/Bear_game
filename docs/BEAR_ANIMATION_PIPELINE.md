@@ -18,7 +18,7 @@ Grounding is handled with explicit visual alignment constants in `PlayerBear`:
 
 - `visualSize` controls the rendered sprite size.
 - `visualGroundInset` accounts for the transparent/soft bottom edge of the PNG.
-- `visualSnowContactOffset` accounts for the visual snow surface being lower than the current physics ground line.
+- `feetToGroundOffset` accounts for the visual snow surface being lower than the current physics ground line.
 - `visualFeetAnchor` is the local point where the bear's feet should touch the snow.
 - `visualOffset` is derived from that contact point so the visible bottom of the sprite aligns with the intended feet line.
 
