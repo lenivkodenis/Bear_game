@@ -149,7 +149,7 @@ class LevelGeometryDebugOverlay extends PositionComponent {
       }
       _drawLabel(
         canvas,
-        '$labelPrefix:${collider.id}',
+        '$labelPrefix: ${collider.id}',
         Offset(rect.left + 4, rect.top + 4),
         strokeColor,
       );

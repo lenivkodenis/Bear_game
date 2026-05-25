@@ -35,6 +35,12 @@ EXPECTED_GROUND_Y = {
     10: 519,
 }
 
+EXPECTED_LEVEL_ONE_PREVIEW_ID = "ice_ridge_preview_1"
+MIN_PREVIEW_HEIGHT = 35
+MAX_PREVIEW_HEIGHT = 55
+MIN_PREVIEW_WIDTH = 80
+MAX_PREVIEW_WIDTH = 130
+
 
 class GeometryError(Exception):
     pass
@@ -71,7 +77,8 @@ def main() -> None:
     assert_no_forbidden_keys(data)
 
     print(
-        "level_geometry.json OK: 10 per-level calibrated flat-baseline levels."
+        "level_geometry.json OK: 10 per-level calibrated flat-baseline "
+        "levels with one level 1 debug preview."
     )
 
 
@@ -104,8 +111,6 @@ def validate_level(
         fail(f"{context}: baseline platformColliders must be empty.")
     if obstacles:
         fail(f"{context}: baseline obstacleColliders must be empty.")
-    if calibration_obstacles:
-        fail(f"{context}: calibration obstacle previews must be removed.")
 
     ground = grounds[0]
     if ground["id"] != "main_ground":
@@ -145,10 +150,83 @@ def validate_level(
     if not same_number(mentor_y, ground["y"]):
         fail(f"{context}: mentorPosition.y must equal main_ground.y.")
 
+    validate_calibration_obstacles(
+        calibration_obstacles,
+        level_id=level_id,
+        context=context,
+        ground=ground,
+        player_x=player_x,
+        player_y=player_y,
+        mentor_x=mentor_x,
+        mentor_y=mentor_y,
+        world_width=world_width,
+        world_height=world_height,
+    )
+
     # TODO(obstacle-rollout): Before adding obstacles again, validate that each
     # obstacle bottom equals ground top, height is below safe jump height, and
     # the obstacle overlaps neither playerSpawn nor mentorPosition.
     return ground["y"]
+
+
+def validate_calibration_obstacles(
+    calibration_obstacles: list[dict[str, float | str]],
+    *,
+    level_id: int,
+    context: str,
+    ground: dict[str, float | str],
+    player_x: float,
+    player_y: float,
+    mentor_x: float,
+    mentor_y: float,
+    world_width: float,
+    world_height: float,
+) -> None:
+    if level_id != 1:
+        if calibration_obstacles:
+            fail(
+                f"{context}: calibration obstacle previews are allowed "
+                "only on level 1."
+            )
+        return
+
+    if len(calibration_obstacles) != 1:
+        fail(f"{context}: level 1 must contain exactly one calibration preview.")
+
+    preview = calibration_obstacles[0]
+    preview_context = f"{context} calibration preview"
+    if preview["id"] != EXPECTED_LEVEL_ONE_PREVIEW_ID:
+        fail(f"{preview_context}: unexpected preview id {preview['id']!r}.")
+    if preview["notes"] != "Preview only. Not used for collision.":
+        fail(f"{preview_context}: notes must mark the preview as non-collision.")
+
+    validate_collider_bounds(preview, preview_context, world_width, world_height)
+    if not (MIN_PREVIEW_WIDTH <= preview["width"] <= MAX_PREVIEW_WIDTH):
+        fail(
+            f"{preview_context}: width must be "
+            f"{MIN_PREVIEW_WIDTH}-{MAX_PREVIEW_WIDTH}."
+        )
+    if not (MIN_PREVIEW_HEIGHT <= preview["height"] <= MAX_PREVIEW_HEIGHT):
+        fail(
+            f"{preview_context}: height must be "
+            f"{MIN_PREVIEW_HEIGHT}-{MAX_PREVIEW_HEIGHT}."
+        )
+
+    expected_y = float(ground["y"]) - float(preview["height"])
+    if not same_number(float(preview["y"]), expected_y):
+        fail(f"{preview_context}: y must equal main_ground.y - height.")
+
+    preview_left = float(preview["x"])
+    preview_right = preview_left + float(preview["width"])
+    if preview_left <= player_x or preview_right >= mentor_x:
+        fail(
+            f"{preview_context}: preview must be between playerSpawn "
+            "and mentorPosition."
+        )
+    if point_intersects_rect(player_x, player_y, preview):
+        fail(f"{preview_context}: preview must not intersect playerSpawn.")
+    if point_intersects_rect(mentor_x, mentor_y, preview):
+        fail(f"{preview_context}: preview must not intersect mentorPosition.")
 
 
 def validate_point(
@@ -283,6 +361,17 @@ def required_number(data: dict[str, object], key: str, context: str) -> float:
 
 def same_number(left: float, right: float) -> bool:
     return abs(left - right) < 0.001
+
+
+def point_intersects_rect(
+    point_x: float,
+    point_y: float,
+    rect: dict[str, float | str],
+) -> bool:
+    return (
+        float(rect["x"]) <= point_x <= float(rect["x"]) + float(rect["width"])
+        and float(rect["y"]) <= point_y <= float(rect["y"]) + float(rect["height"])
+    )
 
 
 def as_object(value: object, context: str) -> dict[str, object]:

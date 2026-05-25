@@ -102,6 +102,7 @@ Calibration obstacle previews use the same top-left math, but they are not
 gameplay colliders:
 
 ```text
+previewObstacle.y = groundTopY - previewObstacle.height
 preview.y = groundTopY - preview.height
 previewBottomY = preview.y + preview.height
 previewBottomY must equal groundTopY
