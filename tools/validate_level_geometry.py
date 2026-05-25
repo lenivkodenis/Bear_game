@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the production per-level flat-baseline level geometry."""
+"""Validate production per-level geometry and the first active obstacle."""
 
 from __future__ import annotations
 

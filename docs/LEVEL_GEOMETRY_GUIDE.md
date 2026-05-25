@@ -70,6 +70,24 @@ baseline with `obstacleColliders: []` and `platformColliders: []`.
 Do not add another obstacle until this first active obstacle is manually checked
 in normal and debug modes.
 
+# Obstacle collision stabilization
+
+The production snowdrift visual is temporarily disabled. The active level 1
+obstacle remains in `obstacleColliders`, but ordinary gameplay does not draw a
+custom obstacle shape until side collision is manually verified.
+
+With `debugGeometry=1`, the obstacle is still visible as a debug rectangle with
+the `obstacle: ice_ridge_1` label. Use that overlay to compare the active
+collider with the player hitbox, visual feet, and ground line.
+
+The obstacle is not a platform. It blocks horizontal movement only while the
+player hitbox is not above the obstacle top. The resolver must not change
+`player.y`, must not land the player on top of the obstacle, and must not alter
+ground, jump force, gravity, speed, or hitbox values.
+
+The visual obstacle can return in a separate step after the collider behavior is
+confirmed in normal and debug modes.
+
 # Obstacle preview after ground calibration
 
 Ground `groundY` values are now calibrated for all levels and persisted in
@@ -307,10 +325,10 @@ active obstacle until it passes manual verification.
 - level 1 `obstacleColliders`.
 
 When `debugGeometry=1` is present in the URL, the runtime also draws geometry
-guides for ground, future platform and obstacle preview colliders, spawn
-points, mentor points, player hitbox, player feet line, visual sprite bounds,
-and visual feet line. This overlay is visual only and must not affect movement,
-collision, physics, or routes.
+guides for ground, active obstacle colliders, future platform and obstacle
+preview colliders, spawn points, mentor points, player hitbox, player feet line,
+visual sprite bounds, and visual feet line. This overlay is visual only and must
+not affect movement, collision, physics, or routes.
 
 The bear still uses its original simple grounding logic from `PlayerBear`.
 Hitbox, speed, gravity, jump force, and walk animation are unchanged. The visual

@@ -7,13 +7,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show KeyEventResult;
 
-import 'components/ice_ridge_obstacle.dart';
 import 'components/level_geometry_debug_overlay.dart';
 import 'components/platform_component.dart';
 import 'components/player_bear.dart';
 import 'components/snowy_background.dart';
 import 'components/wise_mentor.dart';
 import 'level_geometry.dart';
+import 'obstacle_collision.dart';
 import '../models/level.dart';
 import '../models/player_progress.dart';
 import '../models/question.dart';
@@ -122,9 +122,6 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       size: mainGround.size,
     );
     add(_mainGroundComponent);
-    for (final obstacle in levelGeometry.obstacleColliders) {
-      add(IceRidgeObstacle(position: obstacle.position, size: obstacle.size));
-    }
 
     final playerSpawn = levelGeometry.playerSpawn.toVector2();
     player = PlayerBear(
@@ -674,34 +671,22 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       return;
     }
 
-    final currentRect = _playerRect;
-
-    for (final obstacle in levelGeometry.obstacleColliders) {
-      final obstacleRect = Rect.fromLTWH(
-        obstacle.x,
-        obstacle.y,
-        obstacle.width,
-        obstacle.height,
-      );
-      if (!currentRect.overlaps(obstacleRect)) {
-        continue;
-      }
-
-      final crossedFromLeft =
-          previousPlayerRect.right <= obstacleRect.left &&
-          currentRect.right > obstacleRect.left;
-      final crossedFromRight =
-          previousPlayerRect.left >= obstacleRect.right &&
-          currentRect.left < obstacleRect.right;
-      if (!crossedFromLeft && !crossedFromRight) {
-        continue;
-      }
-
-      final resolvedX = crossedFromLeft
-          ? obstacleRect.left - player.size.x
-          : obstacleRect.right;
-      final maxX = size.x - player.size.x;
-      player.position.x = resolvedX.clamp(0.0, maxX).toDouble();
+    final resolvedRect = resolveObstacleHorizontalCollision(
+      previousPlayerRect: previousPlayerRect,
+      futurePlayerRect: _playerRect,
+      obstacleRects: levelGeometry.obstacleColliders.map(
+        (obstacle) => Rect.fromLTWH(
+          obstacle.x,
+          obstacle.y,
+          obstacle.width,
+          obstacle.height,
+        ),
+      ),
+      minX: 0,
+      maxX: size.x - player.size.x,
+    );
+    if (resolvedRect.left != player.position.x) {
+      player.position.x = resolvedRect.left;
     }
   }
 }

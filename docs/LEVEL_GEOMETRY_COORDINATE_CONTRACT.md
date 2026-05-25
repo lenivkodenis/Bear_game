@@ -104,6 +104,20 @@ obstacle.height = 46.75
 obstacle.y = 489 - 46.75 = 442.25
 ```
 
+Active obstacles block horizontal movement only when the player hitbox is not
+above the obstacle top:
+
+```text
+if player.bottom > obstacle.top + smallTolerance:
+    block horizontal movement
+else:
+    allow the player to pass over the obstacle
+```
+
+The obstacle resolver must only adjust horizontal position. It must not change
+`player.y`, must not land the player on the obstacle top, and must not change the
+main ground, jump force, gravity, speed, or hitbox.
+
 Calibration obstacle previews use the same top-left math, but they are not
 gameplay colliders:
 
