@@ -24,14 +24,32 @@ class GroundCalibrationOverlayInfo {
   double get delta => calibratedGroundY - baseGroundY;
 }
 
+class ObstacleCalibrationOverlayInfo {
+  const ObstacleCalibrationOverlayInfo({
+    required this.levelId,
+    required this.groundTopY,
+    required this.candidate,
+    this.levelName,
+    this.exportPrinted = false,
+  });
+
+  final int levelId;
+  final String? levelName;
+  final double groundTopY;
+  final LevelGeometryCollider candidate;
+  final bool exportPrinted;
+}
+
 class LevelGeometryDebugOverlay extends PositionComponent {
   LevelGeometryDebugOverlay({
     required LevelGeometry Function() geometry,
     required PlayerBear Function() player,
     GroundCalibrationOverlayInfo? Function()? calibrationInfo,
+    ObstacleCalibrationOverlayInfo? Function()? obstacleCalibrationInfo,
   }) : _geometryProvider = geometry,
        _playerProvider = player,
        _calibrationInfoProvider = calibrationInfo,
+       _obstacleCalibrationInfoProvider = obstacleCalibrationInfo,
        super(priority: 10000);
 
   static const _groundFillColor = Color(0x2234C759);
@@ -55,6 +73,8 @@ class LevelGeometryDebugOverlay extends PositionComponent {
   final LevelGeometry Function() _geometryProvider;
   final PlayerBear Function() _playerProvider;
   final GroundCalibrationOverlayInfo? Function()? _calibrationInfoProvider;
+  final ObstacleCalibrationOverlayInfo? Function()?
+  _obstacleCalibrationInfoProvider;
 
   @override
   void render(Canvas canvas) {
@@ -107,7 +127,16 @@ class LevelGeometryDebugOverlay extends PositionComponent {
       'mentor',
     );
     _drawPlayerHitbox(canvas, player);
-    _drawCalibrationInfo(canvas, _calibrationInfoProvider?.call());
+    final groundCalibrationInfo = _calibrationInfoProvider?.call();
+    final obstacleCalibrationInfo = _obstacleCalibrationInfoProvider?.call();
+    _drawCalibrationInfo(canvas, groundCalibrationInfo);
+    _drawObstacleCalibrationInfo(
+      canvas,
+      obstacleCalibrationInfo,
+      groundCalibrationInfo == null
+          ? const Offset(12, 64)
+          : const Offset(12, 220),
+    );
   }
 
   void _drawColliders(
@@ -236,6 +265,41 @@ class LevelGeometryDebugOverlay extends PositionComponent {
     ];
 
     _drawTextPanel(canvas, lines, const Offset(12, 64));
+  }
+
+  void _drawObstacleCalibrationInfo(
+    Canvas canvas,
+    ObstacleCalibrationOverlayInfo? info,
+    Offset position,
+  ) {
+    if (info == null) {
+      return;
+    }
+
+    final levelName = info.levelName?.trim();
+    final candidate = info.candidate;
+    final lines = <String>[
+      'Obstacle calibration',
+      'levelId: ${info.levelId}',
+      if (levelName != null && levelName.isNotEmpty) 'level: $levelName',
+      'groundTopY: ${_formatNumber(info.groundTopY)}',
+      'candidate: ${candidate.id}',
+      'x: ${_formatNumber(candidate.x)}',
+      'y: ${_formatNumber(candidate.y)}',
+      'width: ${_formatNumber(candidate.width)}',
+      'height: ${_formatNumber(candidate.height)}',
+      'ArrowLeft/ArrowRight: x 10 px',
+      'Shift+Arrow: x 1 px',
+      'A/D: width 5 px',
+      'W/S: height 5 px',
+      'Shift+A/D/W/S: 1 px',
+      'C: print JSON',
+      'R: reset',
+      'Preview only — no collision',
+      if (info.exportPrinted) 'last export printed to console',
+    ];
+
+    _drawTextPanel(canvas, lines, position);
   }
 
   void _drawTextPanel(Canvas canvas, List<String> lines, Offset position) {

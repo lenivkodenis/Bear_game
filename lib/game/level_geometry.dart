@@ -14,6 +14,10 @@ bool get isGroundCalibrationModeEnabled {
   return isGroundCalibrationModeEnabledForUri(Uri.base);
 }
 
+bool get isObstacleCalibrationModeEnabled {
+  return isObstacleCalibrationModeEnabledForUri(Uri.base);
+}
+
 bool isLevelGeometryDebugOverlayEnabledForUri(Uri uri) {
   return _hasEnabledDebugGeometryFlag(uri.queryParameters) ||
       _hasEnabledDebugGeometryFlag(_fragmentQueryParameters(uri.fragment));
@@ -29,12 +33,26 @@ bool isGroundCalibrationModeEnabledForUri(Uri uri) {
           _hasEnabledGroundCalibrationFlag(fragmentParameters));
 }
 
+bool isObstacleCalibrationModeEnabledForUri(Uri uri) {
+  final queryParameters = uri.queryParameters;
+  final fragmentParameters = _fragmentQueryParameters(uri.fragment);
+
+  return (_hasEnabledDebugGeometryFlag(queryParameters) ||
+          _hasEnabledDebugGeometryFlag(fragmentParameters)) &&
+      (_hasEnabledObstacleCalibrationFlag(queryParameters) ||
+          _hasEnabledObstacleCalibrationFlag(fragmentParameters));
+}
+
 bool _hasEnabledDebugGeometryFlag(Map<String, String> parameters) {
   return parameters['debugGeometry'] == '1';
 }
 
 bool _hasEnabledGroundCalibrationFlag(Map<String, String> parameters) {
   return parameters['calibrateGround'] == '1';
+}
+
+bool _hasEnabledObstacleCalibrationFlag(Map<String, String> parameters) {
+  return parameters['calibrateObstacle'] == '1';
 }
 
 Map<String, String> _fragmentQueryParameters(String fragment) {
@@ -306,6 +324,23 @@ class LevelGeometry {
         calibratedMainGround,
         ...groundColliders.skip(1),
       ],
+      platformColliders: platformColliders,
+      obstacleColliders: obstacleColliders,
+      calibrationObstacles: calibrationObstacles,
+      notes: notes,
+    );
+  }
+
+  LevelGeometry withCalibrationObstacles(
+    List<LevelGeometryCollider> calibrationObstacles,
+  ) {
+    return LevelGeometry(
+      levelId: levelId,
+      world: world,
+      backgroundAsset: backgroundAsset,
+      playerSpawn: playerSpawn,
+      mentorPosition: mentorPosition,
+      groundColliders: groundColliders,
       platformColliders: platformColliders,
       obstacleColliders: obstacleColliders,
       calibrationObstacles: calibrationObstacles,

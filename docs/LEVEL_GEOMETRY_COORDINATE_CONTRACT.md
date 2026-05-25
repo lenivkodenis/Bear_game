@@ -108,6 +108,15 @@ previewBottomY = preview.y + preview.height
 previewBottomY must equal groundTopY
 ```
 
+Obstacle preview calibration is ground-locked while the preview is meant to
+stand on the main ground. Move the preview horizontally or change its size, but
+do not move `y` by hand. Whenever `height` changes, recalculate `y` from the
+current `groundTopY`:
+
+```text
+previewObstacle.y = groundTopY - previewObstacle.height
+```
+
 If a future component uses center coordinates instead, the equivalent formula
 would be:
 

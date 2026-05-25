@@ -68,6 +68,45 @@ not a gameplay collider, does not block movement, and must remain separate from
 After a screenshot and visual confirmation, a later separate step may convert
 the approved preview into a real `obstacleCollider`.
 
+# Obstacle calibration mode
+
+Run the web build only when a manual obstacle preview calibration pass is
+needed:
+
+```bash
+flutter run -d web-server --web-hostname=127.0.0.1 --web-port=8099 --release
+```
+
+Open level 1 with obstacle calibration enabled:
+
+```text
+http://127.0.0.1:8099/?debugGeometry=1&calibrateObstacle=1#/game
+```
+
+`calibrateObstacle=1` works only together with `debugGeometry=1`. The preview
+is debug-only and remains separate from `obstacleColliders`.
+
+Use the keyboard while the game is focused:
+
+- `ArrowLeft` / `ArrowRight` moves the candidate by 10 px on X.
+- `Shift + ArrowLeft` / `Shift + ArrowRight` moves it by 1 px on X.
+- `A` / `D` decreases or increases width by 5 px.
+- `W` / `S` increases or decreases height by 5 px.
+- `Shift + A/D/W/S` changes width or height by 1 px.
+- `R` resets the candidate to the values from `level_geometry.json`.
+- `C` prints the current candidate JSON to the browser console.
+
+The preview is ground-locked. Do not edit `y` manually while the obstacle is
+standing on the ground:
+
+```text
+y = groundTopY - height
+```
+
+After calibration, send the printed JSON. A later separate step may copy the
+approved preview into `level_geometry.json`, and only after that may another
+separate gameplay step convert it into an `obstacleCollider`.
+
 # Geometry calibration workflow
 
 The first manual calibration pass is complete. Keep calibration mode as a debug

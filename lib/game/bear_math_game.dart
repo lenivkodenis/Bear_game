@@ -36,6 +36,12 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   final LevelGeometryService _levelGeometryService = LevelGeometryService();
   final ProgressService _progressService = ProgressService();
   static final Map<int, double> _calibratedGroundYByLevel = <int, double>{};
+  static final Map<int, LevelGeometryCollider> _calibratedObstacleByLevel =
+      <int, LevelGeometryCollider>{};
+  static const double _minCalibrationObstacleWidth = 50;
+  static const double _maxCalibrationObstacleWidth = 160;
+  static const double _minCalibrationObstacleHeight = 20;
+  static const double _maxCalibrationObstacleHeight = 70;
 
   late final LevelGeometry _sourceLevelGeometry;
   late final PlatformComponent _mainGroundComponent;
@@ -48,7 +54,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   bool _mentorDialogOpen = false;
   bool _sceneReady = false;
   bool _groundCalibrationEnabled = false;
+  bool _obstacleCalibrationEnabled = false;
   bool _groundCalibrationExportPrinted = false;
+  bool _obstacleCalibrationExportPrinted = false;
   final Set<int> _questionsWithWrongAttempts = <int>{};
 
   Question? get currentQuestion {
@@ -84,6 +92,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     scoreNotifier.value = _progress.score;
 
     _groundCalibrationEnabled = isGroundCalibrationModeEnabled;
+    _obstacleCalibrationEnabled = isObstacleCalibrationModeEnabled;
     _sourceGeometries = _groundCalibrationEnabled
         ? await _levelGeometryService.loadGeometries()
         : const <LevelGeometry>[];
@@ -97,6 +106,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
         : await _levelGeometryService.loadLevelGeometry(currentLevel!.id);
     if (_groundCalibrationEnabled) {
       _seedGroundCalibrationValues(_sourceGeometries);
+    }
+    if (_obstacleCalibrationEnabled) {
+      _seedObstacleCalibrationValue(_sourceLevelGeometry);
     }
 
     levelGeometry = _currentSourceGeometry.scaledTo(size);
@@ -137,6 +149,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
           calibrationInfo: _groundCalibrationEnabled
               ? _buildGroundCalibrationOverlayInfo
               : null,
+          obstacleCalibrationInfo: _obstacleCalibrationEnabled
+              ? _buildObstacleCalibrationOverlayInfo
+              : null,
         ),
       );
     }
@@ -149,6 +164,10 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     KeyEvent event,
     Set<LogicalKeyboardKey> keysPressed,
   ) {
+    if (_handleObstacleCalibrationKey(event, keysPressed)) {
+      return KeyEventResult.handled;
+    }
+
     if (_handleGroundCalibrationKey(event, keysPressed)) {
       return KeyEventResult.handled;
     }
@@ -205,13 +224,22 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   LevelGeometry get _currentSourceGeometry {
+    var geometry = _sourceLevelGeometry;
     final calibratedGroundY =
         _calibratedGroundYByLevel[_sourceLevelGeometry.levelId];
-    if (!_groundCalibrationEnabled || calibratedGroundY == null) {
-      return _sourceLevelGeometry;
+    if (_groundCalibrationEnabled && calibratedGroundY != null) {
+      geometry = geometry.withMainGroundTopY(calibratedGroundY);
     }
 
-    return _sourceLevelGeometry.withMainGroundTopY(calibratedGroundY);
+    final calibratedObstacle =
+        _calibratedObstacleByLevel[_sourceLevelGeometry.levelId];
+    if (_obstacleCalibrationEnabled && calibratedObstacle != null) {
+      geometry = geometry.withCalibrationObstacles(<LevelGeometryCollider>[
+        _groundLockedObstacle(calibratedObstacle, geometry.mainGround.y),
+      ]);
+    }
+
+    return geometry;
   }
 
   void _seedGroundCalibrationValues(List<LevelGeometry> geometries) {
@@ -221,6 +249,68 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
         () => geometry.mainGround.y,
       );
     }
+  }
+
+  void _seedObstacleCalibrationValue(LevelGeometry geometry) {
+    if (geometry.calibrationObstacles.isEmpty) {
+      return;
+    }
+
+    _calibratedObstacleByLevel.putIfAbsent(
+      geometry.levelId,
+      () => _groundLockedObstacle(
+        geometry.calibrationObstacles.first,
+        geometry.mainGround.y,
+      ),
+    );
+  }
+
+  bool _handleObstacleCalibrationKey(
+    KeyEvent event,
+    Set<LogicalKeyboardKey> keysPressed,
+  ) {
+    if (!_obstacleCalibrationEnabled ||
+        !_sceneReady ||
+        (event is! KeyDownEvent && event is! KeyRepeatEvent) ||
+        _currentSourceObstacleCandidate == null) {
+      return false;
+    }
+
+    final key = event.logicalKey;
+    final isFineTuning = _isShiftPressed(keysPressed);
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      final step = isFineTuning ? 1.0 : 10.0;
+      final runtimeDelta = key == LogicalKeyboardKey.arrowLeft ? -step : step;
+      _adjustObstacleCalibrationX(runtimeDelta / _runtimeScaleX);
+      return true;
+    }
+
+    if (key == LogicalKeyboardKey.keyA || key == LogicalKeyboardKey.keyD) {
+      final step = isFineTuning ? 1.0 : 5.0;
+      final runtimeDelta = key == LogicalKeyboardKey.keyA ? -step : step;
+      _adjustObstacleCalibrationWidth(runtimeDelta / _runtimeScaleX);
+      return true;
+    }
+
+    if (key == LogicalKeyboardKey.keyW || key == LogicalKeyboardKey.keyS) {
+      final step = isFineTuning ? 1.0 : 5.0;
+      final runtimeDelta = key == LogicalKeyboardKey.keyW ? step : -step;
+      _adjustObstacleCalibrationHeight(runtimeDelta / _runtimeScaleY);
+      return true;
+    }
+
+    if (key == LogicalKeyboardKey.keyR) {
+      _resetObstacleCalibration();
+      return true;
+    }
+
+    if (key == LogicalKeyboardKey.keyC) {
+      _printObstacleCalibrationValues();
+      return true;
+    }
+
+    return false;
   }
 
   bool _handleGroundCalibrationKey(
@@ -255,9 +345,34 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     return false;
   }
 
+  LevelGeometryCollider? get _currentSourceObstacleCandidate {
+    final geometry = _currentSourceGeometry;
+    if (geometry.calibrationObstacles.isEmpty) {
+      return null;
+    }
+
+    return geometry.calibrationObstacles.first;
+  }
+
   bool _isShiftPressed(Set<LogicalKeyboardKey> keysPressed) {
     return keysPressed.contains(LogicalKeyboardKey.shiftLeft) ||
         keysPressed.contains(LogicalKeyboardKey.shiftRight);
+  }
+
+  double get _runtimeScaleX {
+    if (size.x == 0) {
+      return 1.0;
+    }
+
+    return size.x / _sourceLevelGeometry.world.width;
+  }
+
+  double get _runtimeScaleY {
+    if (size.y == 0) {
+      return 1.0;
+    }
+
+    return size.y / _sourceLevelGeometry.world.height;
   }
 
   void _adjustGroundCalibrationByRuntimeDelta(double runtimeDelta) {
@@ -305,6 +420,93 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     );
   }
 
+  void _adjustObstacleCalibrationX(double sourceDelta) {
+    final candidate = _currentSourceObstacleCandidate;
+    if (candidate == null) {
+      return;
+    }
+
+    _setObstacleCalibration(candidate.copyWith(x: candidate.x + sourceDelta));
+  }
+
+  void _adjustObstacleCalibrationWidth(double sourceDelta) {
+    final candidate = _currentSourceObstacleCandidate;
+    if (candidate == null) {
+      return;
+    }
+
+    _setObstacleCalibration(
+      candidate.copyWith(width: candidate.width + sourceDelta),
+    );
+  }
+
+  void _adjustObstacleCalibrationHeight(double sourceDelta) {
+    final candidate = _currentSourceObstacleCandidate;
+    if (candidate == null) {
+      return;
+    }
+
+    _setObstacleCalibration(
+      candidate.copyWith(height: candidate.height + sourceDelta),
+    );
+  }
+
+  void _resetObstacleCalibration() {
+    if (_sourceLevelGeometry.calibrationObstacles.isEmpty) {
+      return;
+    }
+
+    _setObstacleCalibration(_sourceLevelGeometry.calibrationObstacles.first);
+  }
+
+  void _setObstacleCalibration(LevelGeometryCollider candidate) {
+    final lockedCandidate = _boundedGroundLockedObstacle(
+      candidate,
+      _currentSourceGroundTopY,
+    );
+    _calibratedObstacleByLevel[_sourceLevelGeometry.levelId] = lockedCandidate;
+    _obstacleCalibrationExportPrinted = false;
+    levelGeometry = _currentSourceGeometry.scaledTo(size);
+  }
+
+  double get _currentSourceGroundTopY {
+    final calibratedGroundY =
+        _calibratedGroundYByLevel[_sourceLevelGeometry.levelId];
+    if (_groundCalibrationEnabled && calibratedGroundY != null) {
+      return calibratedGroundY;
+    }
+
+    return _sourceLevelGeometry.mainGround.y;
+  }
+
+  LevelGeometryCollider _boundedGroundLockedObstacle(
+    LevelGeometryCollider candidate,
+    double groundTopY,
+  ) {
+    final width = candidate.width
+        .clamp(_minCalibrationObstacleWidth, _maxCalibrationObstacleWidth)
+        .toDouble();
+    final height = candidate.height
+        .clamp(_minCalibrationObstacleHeight, _maxCalibrationObstacleHeight)
+        .toDouble();
+    final maxX = math.max(0.0, _sourceLevelGeometry.world.width - width);
+    final x = candidate.x.clamp(0.0, maxX).toDouble();
+
+    return candidate.copyWith(
+      x: x,
+      y: groundTopY - height,
+      width: width,
+      height: height,
+    );
+  }
+
+  LevelGeometryCollider _groundLockedObstacle(
+    LevelGeometryCollider candidate,
+    double groundTopY,
+  ) {
+    return candidate.copyWith(y: groundTopY - candidate.height);
+  }
+
   GroundCalibrationOverlayInfo _buildGroundCalibrationOverlayInfo() {
     final baseGroundY = _sourceLevelGeometry.mainGround.y;
     final calibratedGroundY =
@@ -317,6 +519,21 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       calibratedGroundY: calibratedGroundY,
       runtimeGroundY: levelGeometry.mainGround.y,
       exportPrinted: _groundCalibrationExportPrinted,
+    );
+  }
+
+  ObstacleCalibrationOverlayInfo? _buildObstacleCalibrationOverlayInfo() {
+    final candidate = _currentSourceObstacleCandidate;
+    if (candidate == null) {
+      return null;
+    }
+
+    return ObstacleCalibrationOverlayInfo(
+      levelId: _sourceLevelGeometry.levelId,
+      levelName: currentLevel?.locationName ?? currentLevel?.title,
+      groundTopY: _currentSourceGroundTopY,
+      candidate: candidate,
+      exportPrinted: _obstacleCalibrationExportPrinted,
     );
   }
 
@@ -335,6 +552,26 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     final json = const JsonEncoder.withIndent('  ').convert(values);
     debugPrint('Ground calibration values:\n$json');
     _groundCalibrationExportPrinted = true;
+  }
+
+  void _printObstacleCalibrationValues() {
+    final candidate = _currentSourceObstacleCandidate;
+    if (candidate == null) {
+      return;
+    }
+
+    final values = <String, Object>{
+      'id': candidate.id,
+      'x': _jsonNumber(candidate.x),
+      'y': _jsonNumber(candidate.y),
+      'width': _jsonNumber(candidate.width),
+      'height': _jsonNumber(candidate.height),
+      'groundTopY': _jsonNumber(_currentSourceGroundTopY),
+      'formula': 'y = groundTopY - height',
+    };
+    final json = const JsonEncoder.withIndent('  ').convert(values);
+    debugPrint('Obstacle calibration preview:\n$json');
+    _obstacleCalibrationExportPrinted = true;
   }
 
   num _jsonNumber(double value) {

@@ -35,11 +35,10 @@ EXPECTED_GROUND_Y = {
     10: 519,
 }
 
-EXPECTED_LEVEL_ONE_PREVIEW_ID = "ice_ridge_preview_1"
-EXPECTED_LEVEL_ONE_PREVIEW_X = 440
-EXPECTED_LEVEL_ONE_PREVIEW_Y = 455
-EXPECTED_LEVEL_ONE_PREVIEW_WIDTH = 90
-EXPECTED_LEVEL_ONE_PREVIEW_HEIGHT = 34
+MIN_PREVIEW_WIDTH = 50
+MAX_PREVIEW_WIDTH = 160
+MIN_PREVIEW_HEIGHT = 20
+MAX_PREVIEW_HEIGHT = 70
 
 
 class GeometryError(Exception):
@@ -182,61 +181,41 @@ def validate_calibration_obstacles(
     world_width: float,
     world_height: float,
 ) -> None:
-    if level_id != 1:
-        if calibration_obstacles:
+    for index, preview in enumerate(calibration_obstacles):
+        preview_context = f"{context} calibration preview {index + 1}"
+        if preview["notes"] != "Preview only. Not used for collision.":
             fail(
-                f"{context}: calibration obstacle previews are allowed "
-                "only on level 1."
+                f"{preview_context}: notes must mark the preview "
+                "as non-collision."
             )
-        return
 
-    if len(calibration_obstacles) != 1:
-        fail(f"{context}: level 1 must contain exactly one calibration preview.")
+        validate_collider_bounds(preview, preview_context, world_width, world_height)
+        if not (MIN_PREVIEW_WIDTH <= preview["width"] <= MAX_PREVIEW_WIDTH):
+            fail(
+                f"{preview_context}: width must be "
+                f"{MIN_PREVIEW_WIDTH}-{MAX_PREVIEW_WIDTH}."
+            )
+        if not (MIN_PREVIEW_HEIGHT <= preview["height"] <= MAX_PREVIEW_HEIGHT):
+            fail(
+                f"{preview_context}: height must be "
+                f"{MIN_PREVIEW_HEIGHT}-{MAX_PREVIEW_HEIGHT}."
+            )
 
-    preview = calibration_obstacles[0]
-    preview_context = f"{context} calibration preview"
-    if preview["id"] != EXPECTED_LEVEL_ONE_PREVIEW_ID:
-        fail(f"{preview_context}: unexpected preview id {preview['id']!r}.")
-    if preview["notes"] != "Preview only. Not used for collision.":
-        fail(f"{preview_context}: notes must mark the preview as non-collision.")
+        expected_y = float(ground["y"]) - float(preview["height"])
+        if not same_number(float(preview["y"]), expected_y):
+            fail(f"{preview_context}: y must equal main_ground.y - height.")
 
-    validate_collider_bounds(preview, preview_context, world_width, world_height)
-    if not same_number(float(preview["x"]), EXPECTED_LEVEL_ONE_PREVIEW_X):
-        fail(
-            f"{preview_context}: x must equal approved value "
-            f"{EXPECTED_LEVEL_ONE_PREVIEW_X}."
-        )
-    if not same_number(float(preview["width"]), EXPECTED_LEVEL_ONE_PREVIEW_WIDTH):
-        fail(
-            f"{preview_context}: width must equal approved value "
-            f"{EXPECTED_LEVEL_ONE_PREVIEW_WIDTH}."
-        )
-    if not same_number(float(preview["height"]), EXPECTED_LEVEL_ONE_PREVIEW_HEIGHT):
-        fail(
-            f"{preview_context}: height must equal approved value "
-            f"{EXPECTED_LEVEL_ONE_PREVIEW_HEIGHT}."
-        )
-    if not same_number(float(preview["y"]), EXPECTED_LEVEL_ONE_PREVIEW_Y):
-        fail(
-            f"{preview_context}: y must equal approved value "
-            f"{EXPECTED_LEVEL_ONE_PREVIEW_Y}."
-        )
-
-    expected_y = float(ground["y"]) - float(preview["height"])
-    if not same_number(float(preview["y"]), expected_y):
-        fail(f"{preview_context}: y must equal main_ground.y - height.")
-
-    preview_left = float(preview["x"])
-    preview_right = preview_left + float(preview["width"])
-    if preview_left <= player_x or preview_right >= mentor_x:
-        fail(
-            f"{preview_context}: preview must be between playerSpawn "
-            "and mentorPosition."
-        )
-    if point_intersects_rect(player_x, player_y, preview):
-        fail(f"{preview_context}: preview must not intersect playerSpawn.")
-    if point_intersects_rect(mentor_x, mentor_y, preview):
-        fail(f"{preview_context}: preview must not intersect mentorPosition.")
+        preview_left = float(preview["x"])
+        preview_right = preview_left + float(preview["width"])
+        if preview_left <= player_x or preview_right >= mentor_x:
+            fail(
+                f"{preview_context}: preview must be between playerSpawn "
+                "and mentorPosition."
+            )
+        if point_intersects_rect(player_x, player_y, preview):
+            fail(f"{preview_context}: preview must not intersect playerSpawn.")
+        if point_intersects_rect(mentor_x, mentor_y, preview):
+            fail(f"{preview_context}: preview must not intersect mentorPosition.")
 
 
 def validate_point(

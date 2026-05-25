@@ -79,4 +79,48 @@ void main() {
       );
     });
   });
+
+  group('obstacle calibration URL toggle', () {
+    test('is off without debugGeometry parameter', () {
+      expect(
+        isObstacleCalibrationModeEnabledForUri(
+          Uri.parse('http://127.0.0.1:8099/?calibrateObstacle=1'),
+        ),
+        isFalse,
+      );
+    });
+
+    test('is on when debugGeometry and calibrateObstacle are enabled', () {
+      expect(
+        isObstacleCalibrationModeEnabledForUri(
+          Uri.parse(
+            'http://127.0.0.1:8099/?debugGeometry=1&calibrateObstacle=1',
+          ),
+        ),
+        isTrue,
+      );
+    });
+
+    test('is on when both parameters appear inside hash route', () {
+      expect(
+        isObstacleCalibrationModeEnabledForUri(
+          Uri.parse(
+            'http://127.0.0.1:8099/#/game?debugGeometry=1&calibrateObstacle=1',
+          ),
+        ),
+        isTrue,
+      );
+    });
+
+    test('ignores other calibrateObstacle values', () {
+      expect(
+        isObstacleCalibrationModeEnabledForUri(
+          Uri.parse(
+            'http://127.0.0.1:8099/?debugGeometry=1&calibrateObstacle=0',
+          ),
+        ),
+        isFalse,
+      );
+    });
+  });
 }
