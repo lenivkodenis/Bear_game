@@ -7,14 +7,14 @@
     {
       "levelId": 1,
       "backgroundAsset": "assets/images/levels/level_01_ice_floe/background.png",
-      "playerSpawn": { "x": 72, "y": 460 },
-      "mentorPosition": { "x": 688, "y": 460 },
+      "playerSpawn": { "x": 72, "y": 489 },
+      "mentorPosition": { "x": 688, "y": 489 },
       "groundColliders": [
-        { "id": "main_ground", "x": 0, "y": 460, "width": 800, "height": 140 }
+        { "id": "main_ground", "x": 0, "y": 489, "width": 800, "height": 111 }
       ],
       "platformColliders": [],
       "obstacleColliders": [],
-      "notes": "Stable flat baseline. Ground line visually recalibrated to the foreground snow surface."
+      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {
       "levelId": 2,
@@ -26,7 +26,7 @@
       ],
       "platformColliders": [],
       "obstacleColliders": [],
-      "notes": "Stable flat baseline. Ground line visually recalibrated to the foreground snow surface."
+      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {
       "levelId": 3,
@@ -38,91 +38,91 @@
       ],
       "platformColliders": [],
       "obstacleColliders": [],
-      "notes": "Stable flat baseline. Ground line visually recalibrated to the foreground snow surface."
+      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {
       "levelId": 4,
       "backgroundAsset": "assets/images/levels/level_04_northern_forest/background.png",
-      "playerSpawn": { "x": 72, "y": 460 },
-      "mentorPosition": { "x": 688, "y": 460 },
+      "playerSpawn": { "x": 72, "y": 498 },
+      "mentorPosition": { "x": 688, "y": 498 },
       "groundColliders": [
-        { "id": "main_ground", "x": 0, "y": 460, "width": 800, "height": 140 }
+        { "id": "main_ground", "x": 0, "y": 498, "width": 800, "height": 102 }
       ],
       "platformColliders": [],
       "obstacleColliders": [],
-      "notes": "Stable flat baseline. Ground line visually recalibrated to the foreground snow surface."
+      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {
       "levelId": 5,
       "backgroundAsset": "assets/images/levels/level_05_ice_cave/background.png",
-      "playerSpawn": { "x": 72, "y": 460 },
-      "mentorPosition": { "x": 688, "y": 460 },
+      "playerSpawn": { "x": 72, "y": 409 },
+      "mentorPosition": { "x": 688, "y": 409 },
       "groundColliders": [
-        { "id": "main_ground", "x": 0, "y": 460, "width": 800, "height": 140 }
+        { "id": "main_ground", "x": 0, "y": 409, "width": 800, "height": 191 }
       ],
       "platformColliders": [],
       "obstacleColliders": [],
-      "notes": "Stable flat baseline. Ground line visually recalibrated to the foreground snow surface."
+      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {
       "levelId": 6,
       "backgroundAsset": "assets/images/levels/level_06_snowy_valley/background.png",
-      "playerSpawn": { "x": 72, "y": 460 },
-      "mentorPosition": { "x": 688, "y": 460 },
+      "playerSpawn": { "x": 72, "y": 506 },
+      "mentorPosition": { "x": 688, "y": 506 },
       "groundColliders": [
-        { "id": "main_ground", "x": 0, "y": 460, "width": 800, "height": 140 }
+        { "id": "main_ground", "x": 0, "y": 506, "width": 800, "height": 94 }
       ],
       "platformColliders": [],
       "obstacleColliders": [],
-      "notes": "Stable flat baseline. Ground line visually recalibrated to the foreground snow surface."
+      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {
       "levelId": 7,
       "backgroundAsset": "assets/images/levels/level_07_mountain_pass/background.png",
-      "playerSpawn": { "x": 72, "y": 460 },
-      "mentorPosition": { "x": 688, "y": 460 },
+      "playerSpawn": { "x": 72, "y": 464 },
+      "mentorPosition": { "x": 688, "y": 464 },
       "groundColliders": [
-        { "id": "main_ground", "x": 0, "y": 460, "width": 800, "height": 140 }
+        { "id": "main_ground", "x": 0, "y": 464, "width": 800, "height": 136 }
       ],
       "platformColliders": [],
       "obstacleColliders": [],
-      "notes": "Stable flat baseline. Ground line visually recalibrated to the foreground snow surface."
+      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {
       "levelId": 8,
       "backgroundAsset": "assets/images/levels/level_08_polar_night/background.png",
-      "playerSpawn": { "x": 72, "y": 460 },
-      "mentorPosition": { "x": 688, "y": 460 },
+      "playerSpawn": { "x": 72, "y": 485 },
+      "mentorPosition": { "x": 688, "y": 485 },
       "groundColliders": [
-        { "id": "main_ground", "x": 0, "y": 460, "width": 800, "height": 140 }
+        { "id": "main_ground", "x": 0, "y": 485, "width": 800, "height": 115 }
       ],
       "platformColliders": [],
       "obstacleColliders": [],
-      "notes": "Stable flat baseline. Ground line visually recalibrated to the foreground snow surface."
+      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {
       "levelId": 9,
       "backgroundAsset": "assets/images/levels/level_09_northern_lights/background.png",
-      "playerSpawn": { "x": 72, "y": 460 },
-      "mentorPosition": { "x": 688, "y": 460 },
+      "playerSpawn": { "x": 72, "y": 477 },
+      "mentorPosition": { "x": 688, "y": 477 },
       "groundColliders": [
-        { "id": "main_ground", "x": 0, "y": 460, "width": 800, "height": 140 }
+        { "id": "main_ground", "x": 0, "y": 477, "width": 800, "height": 123 }
       ],
       "platformColliders": [],
       "obstacleColliders": [],
-      "notes": "Stable flat baseline. Ground line visually recalibrated to the foreground snow surface."
+      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {
       "levelId": 10,
       "backgroundAsset": "assets/images/levels/level_10_northern_ocean/background.png",
-      "playerSpawn": { "x": 72, "y": 460 },
-      "mentorPosition": { "x": 688, "y": 460 },
+      "playerSpawn": { "x": 72, "y": 519 },
+      "mentorPosition": { "x": 688, "y": 519 },
       "groundColliders": [
-        { "id": "main_ground", "x": 0, "y": 460, "width": 800, "height": 140 }
+        { "id": "main_ground", "x": 0, "y": 519, "width": 800, "height": 81 }
       ],
       "platformColliders": [],
       "obstacleColliders": [],
-      "notes": "Stable flat baseline. Ground line visually recalibrated to the foreground snow surface."
+      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
     }
   ]
 }

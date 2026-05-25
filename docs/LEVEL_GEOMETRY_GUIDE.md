@@ -1,23 +1,27 @@
 # Level Geometry Guide
 
-## Temporary Stable Baseline
+## Production Per-Level Flat Baseline
 
-Complex geometry is disabled again. All 10 levels use one visually calibrated
-flat ground collider, with no platforms, no obstacles, no gaps, and no
-multi-level routes.
+The manual ground calibration pass is complete. The approved per-level
+`groundY` values are now written to `assets/data/level_geometry.json`.
+
+Complex geometry is still disabled. All 10 levels use one visually calibrated
+flat ground collider per level, with no platforms, no obstacles, no gaps, and
+no multi-level routes.
 
 The goal of this baseline is gameplay stability:
 
 - each level keeps its own `background.png`;
 - the bear spawns on the left side;
-- the bear stands on one horizontal ground line;
+- the bear stands on that level's calibrated horizontal ground line;
 - the bear can walk right and jump using the existing physics;
-- the mentor stands on the same ground line on the right side;
+- the mentor stands on the same per-level ground line on the right side;
 - the mentor trigger can open the dialog and questions.
 
 Do not add complex geometry back to all 10 levels at once. Future obstacles and
 platforms should be added one level at a time, with coordinate calibration and
-manual playtesting after each level.
+manual playtesting after each level. Obstacles and platforms may be added only
+after stable verification of these production per-level ground values.
 
 # Obstacle rollout paused again
 
@@ -33,9 +37,15 @@ Do not add obstacles by visual guessing. Before the next attempt:
 - add only a calibration obstacle preview after the ground line is verified;
 - keep all levels on flat baseline until level 1 is visually stable.
 
+The ground line is now calibrated per level in production, but obstacle rollout
+is still paused.
+
 # Geometry calibration workflow
 
-Before any platform or obstacle rollout:
+The first manual calibration pass is complete. Keep calibration mode as a debug
+tool for future corrections, screenshots, and spot checks.
+
+Before any future platform or obstacle rollout:
 
 1. Launch the game with the geometry debug URL parameter.
 2. Check that the highlighted `groundTopY` line lies on the visual snow
@@ -109,8 +119,10 @@ The calibration mode moves the debug ground line, `playerSpawn`,
 `mentorPosition`, the active player, and the hitbox/visual feet preview
 together. It does not write to `level_geometry.json`.
 
-After calibrating each background, send the exported `groundY` JSON values so
-`level_geometry.json` can be updated in a separate commit.
+The approved values from the completed calibration pass are already committed
+to production geometry. After any future recalibration, send the exported
+`groundY` JSON values so `level_geometry.json` can be updated in a separate
+commit.
 
 # Obstacle preview workflow
 
@@ -125,9 +137,9 @@ Future obstacles must start as calibration previews:
 5. Only after visual confirmation, move the calibrated rectangle into
    `obstacleColliders` in a separate gameplay change.
 
-The former level 1 preview has been removed from runtime data. These were the
-old coordinates before the ground line moved to `460`, so they are historical
-only:
+The former level 1 preview has been removed from runtime data. These were old
+coordinates from before the approved per-level ground values, so they are
+historical only:
 
 ```json
 {
@@ -144,7 +156,7 @@ The preview `y` is calculated, not guessed:
 
 ```text
 preview.y = main_ground.y - preview.height
-preview.y = 460 - preview.height
+preview.y = current level main_ground.y - preview.height
 ```
 
 ## JSON Shape
@@ -152,20 +164,21 @@ preview.y = 460 - preview.height
 `assets/data/level_geometry.json` uses design coordinates for an `800x600`
 world. Runtime scales the flat baseline to the current game size.
 
-All levels currently use the same flat baseline shape:
+All levels currently use the same flat baseline shape, with a per-level
+`main_ground.y`:
 
 ```json
 {
   "levelId": 1,
   "backgroundAsset": "assets/images/levels/level_01_ice_floe/background.png",
-  "playerSpawn": { "x": 72, "y": 460 },
-  "mentorPosition": { "x": 688, "y": 460 },
+  "playerSpawn": { "x": 72, "y": 489 },
+  "mentorPosition": { "x": 688, "y": 489 },
   "groundColliders": [
-    { "id": "main_ground", "x": 0, "y": 460, "width": 800, "height": 140 }
+    { "id": "main_ground", "x": 0, "y": 489, "width": 800, "height": 111 }
   ],
   "platformColliders": [],
   "obstacleColliders": [],
-  "notes": "Stable flat baseline. Ground line visually recalibrated to the foreground snow surface."
+  "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
 }
 ```
 
@@ -175,13 +188,30 @@ calibration previews.
 ## Ground
 
 Baseline mode requires exactly one `main_ground` collider per level. It must
-start at `x: 0`, span the full world width, and use the same `y` value as
-`playerSpawn` and `mentorPosition`.
+start at `x: 0`, span the full world width, use that level's approved `y`
+value, and use the same `y` value as `playerSpawn` and `mentorPosition`.
 
-The current temporary baseline `y` is `460`, chosen from the debug screenshot
-so the ground top line sits on the foreground snow surface instead of floating
-above it. This is `76.7%` of a `600` px scene. `main_ground.height` is `140`
-so the ground rectangle still ends at the bottom of the design world.
+`main_ground.height` should keep the ground rectangle ending at the bottom of
+the design world:
+
+```text
+main_ground.height = 600 - main_ground.y
+```
+
+Approved production `groundY` values:
+
+| Level | Background key | `groundY` |
+| --- | --- | ---: |
+| 1 | `level_01_ice_floe` | 489 |
+| 2 | `level_02_icy_river` | 460 |
+| 3 | `level_03_snowy_shore` | 460 |
+| 4 | `level_04_northern_forest` | 498 |
+| 5 | `level_05_ice_cave` | 409 |
+| 6 | `level_06_snowy_valley` | 506 |
+| 7 | `level_07_mountain_pass` | 464 |
+| 8 | `level_08_polar_night` | 485 |
+| 9 | `level_09_northern_lights` | 477 |
+| 10 | `level_10_northern_ocean` | 519 |
 
 ## Platforms And Obstacles
 
@@ -228,6 +258,6 @@ python3 tools/validate_level_geometry.py
 ```
 
 The validator checks all 10 levels, per-level backgrounds, one main ground,
-empty platforms, empty obstacles, no calibration previews, sane coordinates,
-mentor to the right of the spawn, both contact points on the main ground, and a
-foreground-range `main_ground.y`.
+approved per-level `groundY` values, empty platforms, empty obstacles, no
+calibration previews, sane coordinates, mentor to the right of the spawn, and
+both contact points on the main ground.

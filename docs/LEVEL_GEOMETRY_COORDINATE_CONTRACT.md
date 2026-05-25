@@ -24,10 +24,10 @@ colliding.
 ## Ground Colliders
 
 Ground collider `x` and `y` mean the top-left corner of the ground rectangle.
-For the current baseline:
+For a flat baseline level:
 
 ```json
-{ "id": "main_ground", "x": 0, "y": 460, "width": 800, "height": 140 }
+{ "id": "main_ground", "x": 0, "y": 489, "width": 800, "height": 111 }
 ```
 
 The top edge of any top-left ground collider is:
@@ -36,15 +36,29 @@ The top edge of any top-left ground collider is:
 groundTopY = collider.y
 ```
 
-The baseline main ground top is `460` in the `800x600` design world.
-
-Each level may have its own `groundTopY`. Do not assume one shared `groundY`
-fits every `background.png`, because the visual snow surface can be painted at
+The production baseline now uses an individual `groundTopY` for every level.
+There is no shared `groundY` baseline across all backgrounds. Do not assume one
+value fits every `background.png`, because the visual snow surface is painted at
 a different height in each background.
 
-`groundTopY` must be calibrated against the visual upper line of the snow
-surface for that specific level background before platforms or obstacles are
-introduced.
+`main_ground.y` must match the visual upper line of the snow surface for that
+specific level background. `main_ground.height` keeps the ground rectangle
+ending at the bottom of the `800x600` design world.
+
+Approved production `groundTopY` values:
+
+| Level | Background key | `groundTopY` |
+| --- | --- | ---: |
+| 1 | `level_01_ice_floe` | 489 |
+| 2 | `level_02_icy_river` | 460 |
+| 3 | `level_03_snowy_shore` | 460 |
+| 4 | `level_04_northern_forest` | 498 |
+| 5 | `level_05_ice_cave` | 409 |
+| 6 | `level_06_snowy_valley` | 506 |
+| 7 | `level_07_mountain_pass` | 464 |
+| 8 | `level_08_polar_night` | 485 |
+| 9 | `level_09_northern_lights` | 477 |
+| 10 | `level_10_northern_ocean` | 519 |
 
 ## Platform Colliders
 
@@ -72,7 +86,8 @@ obstacleBottomY = obstacle.y + obstacle.height
 obstacleBottomY must equal groundTopY
 ```
 
-Future real obstacles must follow this contract. Example:
+Future real obstacles must follow this contract. Example for a level whose
+`groundTopY` is `460`:
 
 ```text
 groundTopY = 460
@@ -120,7 +135,8 @@ player hitbox bottom = player.position.y + PlayerBear.defaultSize.y
 player hitbox bottom must equal playerSpawn.y while grounded
 ```
 
-For the flat baseline, `playerSpawn.y` must equal `main_ground.y`.
+For the flat baseline, `playerSpawn.y` must always equal that level's
+`main_ground.y`.
 
 ## Mentor Position
 
@@ -135,7 +151,7 @@ mentor.position.y = mentorPosition.y - WiseMentor.defaultSize.y
 For the flat baseline:
 
 ```text
-mentorPosition.y must equal main_ground.y
+mentorPosition.y must equal that level's main_ground.y
 mentorPosition.x must be greater than playerSpawn.x
 ```
 
@@ -181,12 +197,12 @@ background. If `groundTopY` is above the visual ground, the bear and any future
 obstacle will look like they are floating. If `groundTopY` is below the visual
 ground, the bear and obstacles will look sunken into the snow.
 
-The current flat baseline uses:
+The current production flat baseline uses per-level values:
 
 ```text
-main_ground.y = 460
-playerSpawn.y = 460
-mentorPosition.y = 460
+main_ground.y = approved level groundTopY
+playerSpawn.y = main_ground.y
+mentorPosition.y = main_ground.y
 ```
 
 Obstacles can only be added after the debug overlay confirms that the ground

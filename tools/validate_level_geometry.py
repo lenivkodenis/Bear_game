@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the visually calibrated flat-baseline level geometry."""
+"""Validate the production per-level flat-baseline level geometry."""
 
 from __future__ import annotations
 
@@ -8,8 +8,6 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GEOMETRY_PATH = REPO_ROOT / "assets/data/level_geometry.json"
-MIN_FOREGROUND_GROUND_Y = 440
-MAX_FOREGROUND_GROUND_Y = 485
 
 EXPECTED_BACKGROUNDS = {
     1: "assets/images/levels/level_01_ice_floe/background.png",
@@ -22,6 +20,19 @@ EXPECTED_BACKGROUNDS = {
     8: "assets/images/levels/level_08_polar_night/background.png",
     9: "assets/images/levels/level_09_northern_lights/background.png",
     10: "assets/images/levels/level_10_northern_ocean/background.png",
+}
+
+EXPECTED_GROUND_Y = {
+    1: 489,
+    2: 460,
+    3: 460,
+    4: 498,
+    5: 409,
+    6: 506,
+    7: 464,
+    8: 485,
+    9: 477,
+    10: 519,
 }
 
 
@@ -40,22 +51,27 @@ def main() -> None:
         fail(f"Expected 10 levels, found {len(levels)}.")
 
     seen_ids: set[int] = set()
+    ground_y_values: list[float] = []
     for raw_level in levels:
         level = as_object(raw_level, "level entry")
         level_id = required_int(level, "levelId", "level")
         if level_id in seen_ids:
             fail(f"Duplicate levelId {level_id}.")
         seen_ids.add(level_id)
-        validate_level(level, level_id, world_width, world_height)
+        ground_y_values.append(
+            validate_level(level, level_id, world_width, world_height)
+        )
 
     missing = set(EXPECTED_BACKGROUNDS) - seen_ids
     if missing:
         fail(f"Missing geometry for levels: {sorted(missing)}.")
+    if len(set(ground_y_values)) <= 1:
+        fail("Expected per-level groundY values, found one shared baseline.")
 
     assert_no_forbidden_keys(data)
 
     print(
-        "level_geometry.json OK: 10 visually calibrated flat-baseline levels."
+        "level_geometry.json OK: 10 per-level calibrated flat-baseline levels."
     )
 
 
@@ -64,7 +80,7 @@ def validate_level(
     level_id: int,
     world_width: float,
     world_height: float,
-) -> None:
+) -> float:
     context = f"level {level_id}"
     background = required_string(level, "backgroundAsset", context)
     if background != EXPECTED_BACKGROUNDS.get(level_id):
@@ -97,10 +113,21 @@ def validate_level(
     validate_collider_bounds(ground, context, world_width, world_height)
     if ground["x"] != 0 or ground["width"] != world_width:
         fail(f"{context}: main ground must span the full world width.")
-    if not (MIN_FOREGROUND_GROUND_Y <= ground["y"] <= MAX_FOREGROUND_GROUND_Y):
+
+    expected_ground_y = EXPECTED_GROUND_Y.get(level_id)
+    if expected_ground_y is None:
+        fail(f"{context}: missing expected per-level groundY.")
+    if not same_number(ground["y"], expected_ground_y):
         fail(
-            f"{context}: main_ground.y must be within the foreground visual "
-            f"ground range {MIN_FOREGROUND_GROUND_Y}-{MAX_FOREGROUND_GROUND_Y}."
+            f"{context}: main_ground.y must equal approved per-level "
+            f"groundY {expected_ground_y}."
+        )
+
+    expected_ground_height = world_height - ground["y"]
+    if not same_number(ground["height"], expected_ground_height):
+        fail(
+            f"{context}: main_ground.height must keep the ground rectangle "
+            f"ending at the bottom of the design world."
         )
 
     validate_point(player_spawn, context, "playerSpawn", world_width, world_height)
@@ -113,14 +140,15 @@ def validate_level(
 
     if mentor_x <= player_x:
         fail(f"{context}: mentorPosition.x must be greater than playerSpawn.x.")
-    if abs(player_y - ground["y"]) > 1:
-        fail(f"{context}: playerSpawn must sit on main ground.")
-    if abs(mentor_y - ground["y"]) > 1:
-        fail(f"{context}: mentorPosition must sit on main ground.")
+    if not same_number(player_y, ground["y"]):
+        fail(f"{context}: playerSpawn.y must equal main_ground.y.")
+    if not same_number(mentor_y, ground["y"]):
+        fail(f"{context}: mentorPosition.y must equal main_ground.y.")
 
     # TODO(obstacle-rollout): Before adding obstacles again, validate that each
     # obstacle bottom equals ground top, height is below safe jump height, and
     # the obstacle overlaps neither playerSpawn nor mentorPosition.
+    return ground["y"]
 
 
 def validate_point(
@@ -251,6 +279,10 @@ def required_number(data: dict[str, object], key: str, context: str) -> float:
     if isinstance(value, (int, float)):
         return float(value)
     fail(f"{context}: missing number {key!r}.")
+
+
+def same_number(left: float, right: float) -> bool:
+    return abs(left - right) < 0.001
 
 
 def as_object(value: object, context: str) -> dict[str, object]:
