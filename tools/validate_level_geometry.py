@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the flat-baseline rollout with one safe level 1 obstacle."""
+"""Validate the flat-baseline rollout with two safe level 1 obstacles."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ MIN_OBSTACLE_WIDTH = 80
 MAX_OBSTACLE_WIDTH = 130
 MIN_OBSTACLE_HEIGHT = 35
 MAX_OBSTACLE_HEIGHT = 55
+MIN_LANDING_GAP = 96
 
 EXPECTED_BACKGROUNDS = {
     1: "assets/images/levels/level_01_ice_floe/background.png",
@@ -58,7 +59,7 @@ def main() -> None:
 
     assert_no_forbidden_keys(data)
 
-    print("level_geometry.json OK: level 1 has one safe obstacle; levels 2-10 remain flat.")
+    print("level_geometry.json OK: level 1 has two safe obstacles; levels 2-10 remain flat.")
 
 
 def validate_level(
@@ -88,8 +89,8 @@ def validate_level(
     if platforms:
         fail(f"{context}: platformColliders must be empty during this rollout.")
     if level_id == 1:
-        if len(obstacles) != 1:
-            fail(f"{context}: level 1 must have exactly one safe obstacle.")
+        if len(obstacles) != 2:
+            fail(f"{context}: level 1 must have exactly two safe obstacles.")
     elif obstacles:
         fail(f"{context}: only level 1 may have an obstacle during this rollout.")
 
@@ -116,14 +117,54 @@ def validate_level(
         fail(f"{context}: mentorPosition must sit on main ground.")
 
     if level_id == 1:
-        validate_level_one_obstacle(
-            obstacles[0],
+        validate_level_one_obstacles(
+            obstacles,
             player_spawn,
             mentor_position,
             ground,
             context,
             world_width,
             world_height,
+        )
+
+
+def validate_level_one_obstacles(
+    obstacles: list[dict[str, float | str]],
+    player_spawn: dict[str, object],
+    mentor_position: dict[str, object],
+    ground: dict[str, float | str],
+    context: str,
+    world_width: float,
+    world_height: float,
+) -> None:
+    ordered = sorted(obstacles, key=lambda obstacle: obstacle["x"])
+    for obstacle in ordered:
+        validate_level_one_obstacle(
+            obstacle,
+            player_spawn,
+            mentor_position,
+            ground,
+            context,
+            world_width,
+            world_height,
+        )
+
+    for previous, current in zip(ordered, ordered[1:]):
+        previous_right = previous["x"] + previous["width"]
+        gap = current["x"] - previous_right
+        if gap < MIN_LANDING_GAP:
+            fail(
+                f"{context}: obstacles {previous['id']} and {current['id']} "
+                f"need at least {MIN_LANDING_GAP} px landing gap, found {gap}."
+            )
+
+    mentor_x = required_number(mentor_position, "x", f"{context}.mentorPosition")
+    final_obstacle = ordered[-1]
+    final_gap = mentor_x - (final_obstacle["x"] + final_obstacle["width"])
+    if final_gap < PLAYER_HITBOX_WIDTH:
+        fail(
+            f"{context}: final obstacle leaves too little space before mentor "
+            f"({final_gap} < {PLAYER_HITBOX_WIDTH})."
         )
 
 
