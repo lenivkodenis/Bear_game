@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the level geometry with one calibrated level 1 obstacle."""
+"""Validate the visually calibrated flat-baseline level geometry."""
 
 from __future__ import annotations
 
@@ -8,11 +8,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GEOMETRY_PATH = REPO_ROOT / "assets/data/level_geometry.json"
-PLAYER_HITBOX_WIDTH = 78
-MIN_OBSTACLE_WIDTH = 80
-MAX_OBSTACLE_WIDTH = 130
-MIN_OBSTACLE_HEIGHT = 35
-MAX_OBSTACLE_HEIGHT = 55
+MIN_FOREGROUND_GROUND_Y = 440
+MAX_FOREGROUND_GROUND_Y = 485
 
 EXPECTED_BACKGROUNDS = {
     1: "assets/images/levels/level_01_ice_floe/background.png",
@@ -57,7 +54,9 @@ def main() -> None:
 
     assert_no_forbidden_keys(data)
 
-    print("level_geometry.json OK: level 1 has one calibrated obstacle; levels 2-10 remain flat.")
+    print(
+        "level_geometry.json OK: 10 visually calibrated flat-baseline levels."
+    )
 
 
 def validate_level(
@@ -81,22 +80,16 @@ def validate_level(
     calibration_obstacles = read_calibration_obstacles(level, context)
     notes = required_string(level, "notes", context)
 
-    if level_id == 1:
-        if "calibrated obstacle" not in notes:
-            fail(f"{context}: notes must identify the calibrated obstacle rollout.")
-    elif "flat baseline" not in notes:
+    if "flat baseline" not in notes:
         fail(f"{context}: notes must identify the temporary flat baseline.")
     if len(grounds) != 1:
         fail(f"{context}: baseline requires exactly one main ground collider.")
     if platforms:
         fail(f"{context}: baseline platformColliders must be empty.")
-    if level_id == 1:
-        if len(obstacles) != 1:
-            fail(f"{context}: level 1 must have exactly one obstacleCollider.")
-    elif obstacles:
-        fail(f"{context}: obstacleColliders must be empty outside level 1.")
+    if obstacles:
+        fail(f"{context}: baseline obstacleColliders must be empty.")
     if calibration_obstacles:
-        fail(f"{context}: calibration obstacle previews must be removed after promotion.")
+        fail(f"{context}: calibration obstacle previews must be removed.")
 
     ground = grounds[0]
     if ground["id"] != "main_ground":
@@ -104,6 +97,11 @@ def validate_level(
     validate_collider_bounds(ground, context, world_width, world_height)
     if ground["x"] != 0 or ground["width"] != world_width:
         fail(f"{context}: main ground must span the full world width.")
+    if not (MIN_FOREGROUND_GROUND_Y <= ground["y"] <= MAX_FOREGROUND_GROUND_Y):
+        fail(
+            f"{context}: main_ground.y must be within the foreground visual "
+            f"ground range {MIN_FOREGROUND_GROUND_Y}-{MAX_FOREGROUND_GROUND_Y}."
+        )
 
     validate_point(player_spawn, context, "playerSpawn", world_width, world_height)
     validate_point(mentor_position, context, "mentorPosition", world_width, world_height)
@@ -120,18 +118,7 @@ def validate_level(
     if abs(mentor_y - ground["y"]) > 1:
         fail(f"{context}: mentorPosition must sit on main ground.")
 
-    if level_id == 1:
-        validate_level_one_obstacle(
-            obstacles[0],
-            player_spawn,
-            mentor_position,
-            ground,
-            context,
-            world_width,
-            world_height,
-        )
-
-    # TODO(obstacle-rollout): Before adding another obstacle, validate that the
+    # TODO(obstacle-rollout): Before adding obstacles again, validate that each
     # obstacle bottom equals ground top, height is below safe jump height, and
     # the obstacle overlaps neither playerSpawn nor mentorPosition.
 
@@ -165,46 +152,6 @@ def validate_collider_bounds(
         fail(f"{context}: collider {collider['id']} exceeds world width.")
     if collider["y"] + collider["height"] > world_height:
         fail(f"{context}: collider {collider['id']} exceeds world height.")
-
-
-def validate_level_one_obstacle(
-    obstacle: dict[str, float | str],
-    player_spawn: dict[str, object],
-    mentor_position: dict[str, object],
-    ground: dict[str, float | str],
-    context: str,
-    world_width: float,
-    world_height: float,
-) -> None:
-    validate_collider_bounds(obstacle, context, world_width, world_height)
-
-    if not (MIN_OBSTACLE_WIDTH <= obstacle["width"] <= MAX_OBSTACLE_WIDTH):
-        fail(
-            f"{context}: obstacle width must be between "
-            f"{MIN_OBSTACLE_WIDTH} and {MAX_OBSTACLE_WIDTH}."
-        )
-    if not (MIN_OBSTACLE_HEIGHT <= obstacle["height"] <= MAX_OBSTACLE_HEIGHT):
-        fail(
-            f"{context}: obstacle height must be between "
-            f"{MIN_OBSTACLE_HEIGHT} and {MAX_OBSTACLE_HEIGHT}."
-        )
-
-    expected_y = ground["y"] - obstacle["height"]
-    if abs(obstacle["y"] - expected_y) > 1:
-        fail(
-            f"{context}: obstacle y must equal main_ground.y - "
-            f"height ({expected_y}), found {obstacle['y']}."
-        )
-
-    player_x = required_number(player_spawn, "x", f"{context}.playerSpawn")
-    mentor_x = required_number(mentor_position, "x", f"{context}.mentorPosition")
-    obstacle_right = obstacle["x"] + obstacle["width"]
-    if obstacle["x"] <= player_x + PLAYER_HITBOX_WIDTH:
-        fail(f"{context}: obstacle overlaps or is too close to spawn.")
-    if obstacle_right >= mentor_x:
-        fail(f"{context}: obstacle overlaps mentorPosition.")
-    if not (player_x < obstacle["x"] < mentor_x):
-        fail(f"{context}: obstacle must be between spawn and mentor.")
 
 
 def assert_no_forbidden_keys(value: object) -> None:

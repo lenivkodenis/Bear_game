@@ -27,7 +27,7 @@ Ground collider `x` and `y` mean the top-left corner of the ground rectangle.
 For the current baseline:
 
 ```json
-{ "id": "main_ground", "x": 0, "y": 420, "width": 800, "height": 180 }
+{ "id": "main_ground", "x": 0, "y": 460, "width": 800, "height": 140 }
 ```
 
 The top edge of any top-left ground collider is:
@@ -36,7 +36,7 @@ The top edge of any top-left ground collider is:
 groundTopY = collider.y
 ```
 
-The baseline main ground top is `420` in the `800x600` design world.
+The baseline main ground top is `460` in the `800x600` design world.
 
 ## Platform Colliders
 
@@ -64,14 +64,16 @@ obstacleBottomY = obstacle.y + obstacle.height
 obstacleBottomY must equal groundTopY
 ```
 
-The first real level 1 obstacle follows this contract:
+Future real obstacles must follow this contract. Example:
 
 ```text
-groundTopY = 420
+groundTopY = 460
 obstacle.height = 45
 obstacle.y = groundTopY - obstacle.height
-obstacle.y = 420 - 45 = 375
+obstacle.y = 460 - 45 = 415
 ```
+
+There are no active obstacles in the current flat baseline.
 
 Calibration obstacle previews use the same top-left math, but they are not
 gameplay colliders:
@@ -160,6 +162,28 @@ Future obstacles are placed relative to `groundTopY`. If the visual feet line
 does not match the hitbox bottom, an obstacle that is mathematically correct
 will still look visually wrong: it may appear buried, floating, or out of sync
 with the bear's paws.
+
+# Ground visual calibration
+
+The player visual feet line already matches the hitbox bottom. Do not move the
+bear sprite, hitbox, jump force, gravity, or speed to fix visual ground errors.
+
+`groundTopY` must match the visual top line of the snow surface in the
+background. If `groundTopY` is above the visual ground, the bear and any future
+obstacle will look like they are floating. If `groundTopY` is below the visual
+ground, the bear and obstacles will look sunken into the snow.
+
+The current flat baseline uses:
+
+```text
+main_ground.y = 460
+playerSpawn.y = 460
+mentorPosition.y = 460
+```
+
+Obstacles can only be added after the debug overlay confirms that the ground
+line, hitbox bottom, visual feet line, `playerSpawn`, and `mentorPosition` all
+sit on the visual snow surface.
 
 ## Debug Overlay
 

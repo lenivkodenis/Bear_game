@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -23,7 +22,6 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   BearMathGame({required this.levelId});
 
   static const mentorDialogOverlay = 'mentorDialog';
-  static const _obstacleCollisionTolerance = 1.5;
 
   final int levelId;
   late final PlayerBear player;
@@ -34,8 +32,6 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   final LevelService _levelService = LevelService();
   final LevelGeometryService _levelGeometryService = LevelGeometryService();
   final ProgressService _progressService = ProgressService();
-  final List<LevelGeometryCollider> _obstacleColliders =
-      <LevelGeometryCollider>[];
 
   Level? currentLevel;
   PlayerProgress _progress = PlayerProgress.initial();
@@ -88,14 +84,6 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     add(
       PlatformComponent(position: mainGround.position, size: mainGround.size),
     );
-    _obstacleColliders
-      ..clear()
-      ..addAll(levelGeometry.obstacleColliders);
-    for (final obstacle in _obstacleColliders) {
-      add(
-        IceObstacleComponent(position: obstacle.position, size: obstacle.size),
-      );
-    }
 
     final playerSpawn = levelGeometry.playerSpawn.toVector2();
     player = PlayerBear(
@@ -224,15 +212,11 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   @override
   void update(double dt) {
-    final previousPlayerPosition = _sceneReady ? player.position.clone() : null;
-
     super.update(dt);
 
     if (!_sceneReady) {
       return;
     }
-
-    _resolveObstacleCollisions(previousPlayerPosition);
 
     if (!_mentorDialogWasShown && player.distance(mentor) < 92) {
       _mentorDialogWasShown = true;
@@ -240,55 +224,6 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       player.stopMoving();
       player.startInteracting();
       overlays.add(mentorDialogOverlay);
-    }
-  }
-
-  void _resolveObstacleCollisions(Vector2? previousPlayerPosition) {
-    if (_obstacleColliders.isEmpty || previousPlayerPosition == null) {
-      return;
-    }
-
-    final playerRect = Rect.fromLTWH(
-      player.position.x,
-      player.position.y,
-      player.size.x,
-      player.size.y,
-    );
-    final previousPlayerRect = Rect.fromLTWH(
-      previousPlayerPosition.x,
-      previousPlayerPosition.y,
-      player.size.x,
-      player.size.y,
-    );
-
-    for (final obstacle in _obstacleColliders) {
-      final obstacleRect = Rect.fromLTWH(
-        obstacle.x,
-        obstacle.y,
-        obstacle.width,
-        obstacle.height,
-      );
-      if (!playerRect.overlaps(obstacleRect)) {
-        continue;
-      }
-      final hasClearedObstacle =
-          playerRect.bottom <= obstacleRect.top + _obstacleCollisionTolerance;
-      if (hasClearedObstacle) {
-        continue;
-      }
-
-      if (previousPlayerRect.right <= obstacleRect.left) {
-        player.position.x = obstacleRect.left - player.size.x;
-      } else if (previousPlayerRect.left >= obstacleRect.right) {
-        player.position.x = obstacleRect.right;
-      } else {
-        final playerCenterX = playerRect.left + playerRect.width / 2;
-        final obstacleCenterX = obstacleRect.left + obstacleRect.width / 2;
-        player.position.x = playerCenterX <= obstacleCenterX
-            ? obstacleRect.left - player.size.x
-            : obstacleRect.right;
-      }
-      return;
     }
   }
 }
