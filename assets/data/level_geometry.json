@@ -17,10 +17,10 @@
       "calibrationObstacles": [
         {
           "id": "ice_ridge_preview_1",
-          "x": 560,
-          "y": 449,
-          "width": 110,
-          "height": 40,
+          "x": 440,
+          "y": 455,
+          "width": 90,
+          "height": 34,
           "notes": "Preview only. Not used for collision."
         }
       ],

@@ -50,13 +50,16 @@ Level 1 currently has one `calibrationObstacles` preview:
 ```json
 {
   "id": "ice_ridge_preview_1",
-  "x": 560,
-  "y": 449,
-  "width": 110,
-  "height": 40,
+  "x": 440,
+  "y": 455,
+  "width": 90,
+  "height": 34,
   "notes": "Preview only. Not used for collision."
 }
 ```
+
+After manual screenshot review, this preview was moved left and reduced in size
+so it sits closer to the small snow/ice bump area instead of near the mentor.
 
 The preview is visible only when `debugGeometry=1` is present in the URL. It is
 not a gameplay collider, does not block movement, and must remain separate from
@@ -167,10 +170,10 @@ The current level 1 preview is:
 ```json
 {
   "id": "ice_ridge_preview_1",
-  "x": 560,
-  "y": 449,
-  "width": 110,
-  "height": 40,
+  "x": 440,
+  "y": 455,
+  "width": 90,
+  "height": 34,
   "notes": "Preview only. Not used for collision."
 }
 ```
@@ -179,7 +182,7 @@ The preview `y` is calculated, not guessed:
 
 ```text
 preview.y = main_ground.y - preview.height
-preview.y = 489 - 40 = 449
+preview.y = 489 - 34 = 455
 ```
 
 ## JSON Shape
@@ -204,10 +207,10 @@ All levels currently use the same flat baseline shape, with a per-level
   "calibrationObstacles": [
     {
       "id": "ice_ridge_preview_1",
-      "x": 560,
-      "y": 449,
-      "width": 110,
-      "height": 40,
+      "x": 440,
+      "y": 455,
+      "width": 90,
+      "height": 34,
       "notes": "Preview only. Not used for collision."
     }
   ],

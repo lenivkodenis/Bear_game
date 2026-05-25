@@ -36,10 +36,10 @@ EXPECTED_GROUND_Y = {
 }
 
 EXPECTED_LEVEL_ONE_PREVIEW_ID = "ice_ridge_preview_1"
-MIN_PREVIEW_HEIGHT = 35
-MAX_PREVIEW_HEIGHT = 55
-MIN_PREVIEW_WIDTH = 80
-MAX_PREVIEW_WIDTH = 130
+EXPECTED_LEVEL_ONE_PREVIEW_X = 440
+EXPECTED_LEVEL_ONE_PREVIEW_Y = 455
+EXPECTED_LEVEL_ONE_PREVIEW_WIDTH = 90
+EXPECTED_LEVEL_ONE_PREVIEW_HEIGHT = 34
 
 
 class GeometryError(Exception):
@@ -201,15 +201,25 @@ def validate_calibration_obstacles(
         fail(f"{preview_context}: notes must mark the preview as non-collision.")
 
     validate_collider_bounds(preview, preview_context, world_width, world_height)
-    if not (MIN_PREVIEW_WIDTH <= preview["width"] <= MAX_PREVIEW_WIDTH):
+    if not same_number(float(preview["x"]), EXPECTED_LEVEL_ONE_PREVIEW_X):
         fail(
-            f"{preview_context}: width must be "
-            f"{MIN_PREVIEW_WIDTH}-{MAX_PREVIEW_WIDTH}."
+            f"{preview_context}: x must equal approved value "
+            f"{EXPECTED_LEVEL_ONE_PREVIEW_X}."
         )
-    if not (MIN_PREVIEW_HEIGHT <= preview["height"] <= MAX_PREVIEW_HEIGHT):
+    if not same_number(float(preview["width"]), EXPECTED_LEVEL_ONE_PREVIEW_WIDTH):
         fail(
-            f"{preview_context}: height must be "
-            f"{MIN_PREVIEW_HEIGHT}-{MAX_PREVIEW_HEIGHT}."
+            f"{preview_context}: width must equal approved value "
+            f"{EXPECTED_LEVEL_ONE_PREVIEW_WIDTH}."
+        )
+    if not same_number(float(preview["height"]), EXPECTED_LEVEL_ONE_PREVIEW_HEIGHT):
+        fail(
+            f"{preview_context}: height must equal approved value "
+            f"{EXPECTED_LEVEL_ONE_PREVIEW_HEIGHT}."
+        )
+    if not same_number(float(preview["y"]), EXPECTED_LEVEL_ONE_PREVIEW_Y):
+        fail(
+            f"{preview_context}: y must equal approved value "
+            f"{EXPECTED_LEVEL_ONE_PREVIEW_Y}."
         )
 
     expected_y = float(ground["y"]) - float(preview["height"])
