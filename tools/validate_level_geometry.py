@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the temporary flat-baseline level geometry."""
+"""Validate the flat-baseline rollout with one safe level 1 obstacle."""
 
 from __future__ import annotations
 
@@ -8,6 +8,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GEOMETRY_PATH = REPO_ROOT / "assets/data/level_geometry.json"
+PLAYER_HITBOX_WIDTH = 78
+MENTOR_WIDTH = 56
+MIN_OBSTACLE_WIDTH = 80
+MAX_OBSTACLE_WIDTH = 130
+MIN_OBSTACLE_HEIGHT = 35
+MAX_OBSTACLE_HEIGHT = 55
 
 EXPECTED_BACKGROUNDS = {
     1: "assets/images/levels/level_01_ice_floe/background.png",
@@ -50,7 +56,9 @@ def main() -> None:
     if missing:
         fail(f"Missing geometry for levels: {sorted(missing)}.")
 
-    print("level_geometry.json OK: 10 flat baseline levels are stable.")
+    assert_no_forbidden_keys(data)
+
+    print("level_geometry.json OK: level 1 has one safe obstacle; levels 2-10 remain flat.")
 
 
 def validate_level(
@@ -78,9 +86,12 @@ def validate_level(
     if len(grounds) != 1:
         fail(f"{context}: baseline requires exactly one main ground collider.")
     if platforms:
-        fail(f"{context}: baseline platformColliders must be empty.")
-    if obstacles:
-        fail(f"{context}: baseline obstacleColliders must be empty.")
+        fail(f"{context}: platformColliders must be empty during this rollout.")
+    if level_id == 1:
+        if len(obstacles) != 1:
+            fail(f"{context}: level 1 must have exactly one safe obstacle.")
+    elif obstacles:
+        fail(f"{context}: only level 1 may have an obstacle during this rollout.")
 
     ground = grounds[0]
     if ground["id"] != "main_ground":
@@ -103,6 +114,54 @@ def validate_level(
         fail(f"{context}: playerSpawn must sit on main ground.")
     if abs(mentor_y - ground["y"]) > 1:
         fail(f"{context}: mentorPosition must sit on main ground.")
+
+    if level_id == 1:
+        validate_level_one_obstacle(
+            obstacles[0],
+            player_spawn,
+            mentor_position,
+            ground,
+            context,
+            world_width,
+            world_height,
+        )
+
+
+def validate_level_one_obstacle(
+    obstacle: dict[str, float | str],
+    player_spawn: dict[str, object],
+    mentor_position: dict[str, object],
+    ground: dict[str, float | str],
+    context: str,
+    world_width: float,
+    world_height: float,
+) -> None:
+    validate_collider_bounds(obstacle, context, world_width, world_height)
+
+    if not (MIN_OBSTACLE_WIDTH <= obstacle["width"] <= MAX_OBSTACLE_WIDTH):
+        fail(
+            f"{context}: obstacle width must be between "
+            f"{MIN_OBSTACLE_WIDTH} and {MAX_OBSTACLE_WIDTH}."
+        )
+    if not (MIN_OBSTACLE_HEIGHT <= obstacle["height"] <= MAX_OBSTACLE_HEIGHT):
+        fail(
+            f"{context}: obstacle height must be between "
+            f"{MIN_OBSTACLE_HEIGHT} and {MAX_OBSTACLE_HEIGHT}."
+        )
+    if abs(obstacle["y"] + obstacle["height"] - ground["y"]) > 1:
+        fail(f"{context}: obstacle must sit on main ground.")
+
+    player_x = required_number(player_spawn, "x", f"{context}.playerSpawn")
+    mentor_x = required_number(mentor_position, "x", f"{context}.mentorPosition")
+    obstacle_right = obstacle["x"] + obstacle["width"]
+    if obstacle["x"] <= player_x + PLAYER_HITBOX_WIDTH:
+        fail(f"{context}: obstacle is too close to or overlaps playerSpawn.")
+    if obstacle_right >= mentor_x:
+        fail(f"{context}: obstacle is too close to or overlaps mentorPosition.")
+    if not (player_x < obstacle["x"] < mentor_x):
+        fail(f"{context}: obstacle must be between playerSpawn and mentorPosition.")
+    if obstacle_right + MENTOR_WIDTH > world_width:
+        fail(f"{context}: obstacle leaves too little world space after it.")
 
 
 def validate_point(
@@ -134,6 +193,18 @@ def validate_collider_bounds(
         fail(f"{context}: collider {collider['id']} exceeds world width.")
     if collider["y"] + collider["height"] > world_height:
         fail(f"{context}: collider {collider['id']} exceeds world height.")
+
+
+def assert_no_forbidden_keys(value: object) -> None:
+    forbidden = {"wrap", "worldWrap", "teleport", "resetPosition", "fallReset"}
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if key in forbidden:
+                fail(f"Forbidden teleport/wrap config key found: {key}.")
+            assert_no_forbidden_keys(child)
+    elif isinstance(value, list):
+        for child in value:
+            assert_no_forbidden_keys(child)
 
 
 def read_colliders(

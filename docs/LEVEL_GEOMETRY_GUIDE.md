@@ -2,9 +2,10 @@
 
 ## Temporary Stable Baseline
 
-Complex geometry is temporarily disabled. All 10 levels now use one flat,
-full-width ground collider, with no platforms, no obstacles, no gaps, and no
-multi-level routes.
+Complex geometry is temporarily disabled. All 10 levels use one flat,
+full-width ground collider, with no platforms, no gaps, and no multi-level
+routes. Level 1 is the only exception in the current rollout: it has one small
+test obstacle on the flat ground.
 
 The goal of this baseline is gameplay stability:
 
@@ -36,8 +37,10 @@ Each level has:
     { "id": "main_ground", "x": 0, "y": 420, "width": 800, "height": 180 }
   ],
   "platformColliders": [],
-  "obstacleColliders": [],
-  "notes": "Temporary stable flat baseline geometry. Obstacles and platforms will be added later per level."
+  "obstacleColliders": [
+    { "id": "ice_ridge_1", "x": 280, "y": 382, "width": 88, "height": 38 }
+  ],
+  "notes": "Temporary flat baseline with one safe level 1 ice ridge. More obstacles and platforms will be added later per level."
 }
 ```
 
@@ -52,13 +55,28 @@ The current baseline `y` is `420`, matching the previous stable ground line
 
 ## Platforms And Obstacles
 
-Baseline mode requires:
+For levels 2-10, baseline mode requires:
 
 - `platformColliders: []`
 - `obstacleColliders: []`
 
-No steps, gaps, crystals, logs, ridges, or blocked routes should be present
-until a later per-level tuning pass.
+For level 1, `platformColliders` remains empty, and exactly one low
+`obstacleCollider` is allowed for the first rollout. No steps, gaps, crystals,
+logs, extra ridges, or blocked routes should be present until a later per-level
+tuning pass.
+
+## Step-by-step obstacle rollout
+
+Do not add complex geometry back to all 10 levels at once. The safe rollout is:
+
+1. Add one small obstacle to level 1.
+2. Verify manually that the bear can walk to it, cannot walk through it, can
+   jump past it, and can still reach the mentor.
+3. Only after level 1 is verified, consider a second level 1 obstacle.
+4. Only after level 1 is stable, move to level 2.
+
+The current level 1 obstacle is `ice_ridge_1` at `x: 280`, `y: 382`, with
+`width: 88` and `height: 38`. It sits on the `main_ground` at `y: 420`.
 
 ## Runtime
 
@@ -68,10 +86,14 @@ until a later per-level tuning pass.
 - `playerSpawn`;
 - `mentorPosition`;
 - the single `main_ground`.
+- the single level 1 obstacle, if present.
 
 The bear still uses its original simple grounding logic from `PlayerBear`.
 Hitbox, speed, gravity, jump force, visual offsets, feet anchor, and walk
 animation are unchanged.
+
+Obstacle collision is deliberately minimal during this rollout: it blocks the
+bear while grounded, and jumping still uses the existing bear physics.
 
 `kLevelGeometryDebugOverlay` exists in `lib/game/level_geometry.dart` and must
 remain `false` by default. The baseline runtime does not need collider drawing.
@@ -85,5 +107,6 @@ python3 tools/validate_level_geometry.py
 ```
 
 The validator checks all 10 levels, per-level backgrounds, one main ground,
-empty platforms, empty obstacles, sane coordinates, mentor to the right of the
-spawn, and both contact points on the main ground.
+empty platforms, one safe level 1 obstacle, empty obstacles on levels 2-10,
+sane coordinates, mentor to the right of the spawn, and both contact points on
+the main ground.

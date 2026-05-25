@@ -13,8 +13,10 @@
         { "id": "main_ground", "x": 0, "y": 420, "width": 800, "height": 180 }
       ],
       "platformColliders": [],
-      "obstacleColliders": [],
-      "notes": "Temporary stable flat baseline geometry. Obstacles and platforms will be added later per level."
+      "obstacleColliders": [
+        { "id": "ice_ridge_1", "x": 280, "y": 382, "width": 88, "height": 38 }
+      ],
+      "notes": "Temporary flat baseline with one safe level 1 ice ridge. More obstacles and platforms will be added later per level."
     },
     {
       "levelId": 2,

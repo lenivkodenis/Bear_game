@@ -110,6 +110,7 @@ class LevelGeometryCollider {
   final double width;
   final double height;
 
+  Rect toRect() => Rect.fromLTWH(x, y, width, height);
   Vector2 get position => Vector2(x, y);
   Vector2 get size => Vector2(width, height);
 
@@ -217,7 +218,11 @@ class LevelGeometry {
         scaleY: scaleY,
       ),
       platformColliders: const <LevelGeometryCollider>[],
-      obstacleColliders: const <LevelGeometryCollider>[],
+      obstacleColliders: _scaleColliders(
+        obstacleColliders,
+        scaleX: scaleX,
+        scaleY: scaleY,
+      ),
       notes: notes,
     );
   }
