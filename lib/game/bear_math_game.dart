@@ -21,7 +21,6 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   BearMathGame({required this.levelId});
 
   static const mentorDialogOverlay = 'mentorDialog';
-  static const _obstacleCollisionTolerance = 1.5;
 
   final int levelId;
   late final PlayerBear player;
@@ -32,8 +31,6 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   final LevelService _levelService = LevelService();
   final LevelGeometryService _levelGeometryService = LevelGeometryService();
   final ProgressService _progressService = ProgressService();
-  final List<LevelGeometryCollider> _obstacleColliders =
-      <LevelGeometryCollider>[];
 
   Level? currentLevel;
   PlayerProgress _progress = PlayerProgress.initial();
@@ -86,14 +83,6 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     add(
       PlatformComponent(position: mainGround.position, size: mainGround.size),
     );
-    _obstacleColliders
-      ..clear()
-      ..addAll(levelGeometry.obstacleColliders);
-    for (final obstacle in _obstacleColliders) {
-      add(
-        IceObstacleComponent(position: obstacle.position, size: obstacle.size),
-      );
-    }
 
     final playerSpawn = levelGeometry.playerSpawn.toVector2();
     player = PlayerBear(
@@ -225,44 +214,12 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       return;
     }
 
-    _resolveGroundedObstacleCollisions();
-
     if (!_mentorDialogWasShown && player.distance(mentor) < 92) {
       _mentorDialogWasShown = true;
       _mentorDialogOpen = true;
       player.stopMoving();
       player.startInteracting();
       overlays.add(mentorDialogOverlay);
-    }
-  }
-
-  void _resolveGroundedObstacleCollisions() {
-    if (_obstacleColliders.isEmpty) {
-      return;
-    }
-
-    final playerRect = player.toRect();
-    final groundTop = levelGeometry.mainGround.y;
-    final isGrounded =
-        playerRect.bottom >= groundTop - _obstacleCollisionTolerance;
-    if (!isGrounded) {
-      return;
-    }
-
-    for (final obstacle in _obstacleColliders) {
-      final obstacleRect = obstacle.toRect();
-      if (!playerRect.overlaps(obstacleRect)) {
-        continue;
-      }
-
-      final playerCenterX = playerRect.left + playerRect.width / 2;
-      final obstacleCenterX = obstacleRect.left + obstacleRect.width / 2;
-      if (playerCenterX <= obstacleCenterX) {
-        player.position.x = obstacleRect.left - player.size.x;
-      } else {
-        player.position.x = obstacleRect.right;
-      }
-      return;
     }
   }
 }
