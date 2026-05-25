@@ -104,7 +104,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
     add(player);
     add(mentor);
-    if (kLevelGeometryDebugOverlay) {
+    if (isLevelGeometryDebugOverlayEnabled) {
       add(LevelGeometryDebugOverlay(geometry: levelGeometry, player: player));
     }
 

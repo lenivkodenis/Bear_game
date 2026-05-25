@@ -137,14 +137,15 @@ When enabled manually, the overlay draws ground rectangles, ground top lines,
 future platform and obstacle preview rectangles, `playerSpawn`,
 `mentorPosition`, the current player hitbox, and the player feet/bottom line.
 It is render-only and must not change collision, physics, coordinates, movement,
-or level routes.
+or level routes. For web calibration, enable it with `debugGeometry=1` in the
+URL instead of changing the default code flag.
 
 ## Calibration Rule
 
 Before adding platforms or obstacles again:
 
 1. Keep `platformColliders` and `obstacleColliders` empty.
-2. Enable the debug overlay locally.
+2. Enable the debug overlay with `debugGeometry=1`.
 3. Confirm that `groundTopY`, `playerSpawn`, `mentorPosition`, and the bear
    bottom line all coincide on the main ground.
 4. Add one test collider only after the coordinate contract is visually

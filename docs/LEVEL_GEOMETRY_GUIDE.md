@@ -36,8 +36,7 @@ Do not add obstacles by visual guessing. Before the next attempt:
 
 Before any platform or obstacle rollout:
 
-1. Manually enable `kLevelGeometryDebugOverlay` in
-   `lib/game/level_geometry.dart`.
+1. Launch the game with the geometry debug URL parameter.
 2. Check the main ground rectangle and its highlighted top line.
 3. Check the player hitbox and feet/bottom line.
 4. Confirm that `playerSpawn` is on the same surface line as the bear's feet.
@@ -48,6 +47,31 @@ Before any platform or obstacle rollout:
    after every collider.
 8. Do not add many obstacles at once, and do not roll geometry changes across
    all 10 levels in a single pass.
+
+# How to enable geometry debug overlay
+
+Run the web build only when a manual calibration pass is needed:
+
+```bash
+flutter run -d web-server --web-hostname=127.0.0.1 --web-port=8099 --release
+```
+
+Open the normal game with the debug URL parameter:
+
+```text
+http://127.0.0.1:8099/?debugGeometry=1
+```
+
+Then navigate to the map and open a level normally. For direct level 1
+calibration, the hash route can also keep the parameter before the hash:
+
+```text
+http://127.0.0.1:8099/?debugGeometry=1#/game
+```
+
+The overlay is only for calibration. Before ordinary gameplay checks, remove
+`debugGeometry=1` from the URL and reload. Do not commit a state where
+`kLevelGeometryDebugOverlay` is enabled by default.
 
 ## JSON Shape
 
@@ -99,10 +123,10 @@ until a later coordinate-calibrated tuning pass.
 - `mentorPosition`;
 - the single `main_ground`.
 
-When `kLevelGeometryDebugOverlay` is enabled manually, the runtime also draws
-geometry guides for ground, future platform and obstacle preview colliders,
-spawn points, mentor points, player hitbox, and player feet line. This overlay
-is visual only and must not affect movement, collision, physics, or routes.
+When `debugGeometry=1` is present in the URL, the runtime also draws geometry
+guides for ground, future platform and obstacle preview colliders, spawn
+points, mentor points, player hitbox, and player feet line. This overlay is
+visual only and must not affect movement, collision, physics, or routes.
 
 The bear still uses its original simple grounding logic from `PlayerBear`.
 Hitbox, speed, gravity, jump force, visual offsets, feet anchor, and walk

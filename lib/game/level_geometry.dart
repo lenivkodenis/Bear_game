@@ -5,6 +5,40 @@ import 'package:flutter/services.dart';
 
 const bool kLevelGeometryDebugOverlay = false;
 
+bool get isLevelGeometryDebugOverlayEnabled {
+  return kLevelGeometryDebugOverlay ||
+      isLevelGeometryDebugOverlayEnabledForUri(Uri.base);
+}
+
+bool isLevelGeometryDebugOverlayEnabledForUri(Uri uri) {
+  return _hasEnabledDebugGeometryFlag(uri.queryParameters) ||
+      _hasEnabledDebugGeometryFlag(_fragmentQueryParameters(uri.fragment));
+}
+
+bool _hasEnabledDebugGeometryFlag(Map<String, String> parameters) {
+  return parameters['debugGeometry'] == '1';
+}
+
+Map<String, String> _fragmentQueryParameters(String fragment) {
+  if (fragment.isEmpty) {
+    return const <String, String>{};
+  }
+
+  final queryStart = fragment.indexOf('?');
+  final query = queryStart == -1
+      ? fragment
+      : fragment.substring(queryStart + 1);
+  if (!query.contains('=')) {
+    return const <String, String>{};
+  }
+
+  try {
+    return Uri.splitQueryString(query);
+  } on FormatException {
+    return const <String, String>{};
+  }
+}
+
 class LevelGeometryService {
   Future<List<LevelGeometry>> loadGeometries() async {
     final jsonString = await rootBundle.loadString(
