@@ -39,6 +39,13 @@ MIN_PREVIEW_WIDTH = 50
 MAX_PREVIEW_WIDTH = 160
 MIN_PREVIEW_HEIGHT = 20
 MAX_PREVIEW_HEIGHT = 70
+EXPECTED_LEVEL_ONE_OBSTACLE = {
+    "id": "ice_ridge_1",
+    "x": 537.70,
+    "y": 442.25,
+    "width": 90,
+    "height": 46.75,
+}
 
 
 class GeometryError(Exception):
@@ -76,8 +83,8 @@ def main() -> None:
     assert_no_forbidden_keys(data)
 
     print(
-        "level_geometry.json OK: 10 per-level calibrated flat-baseline "
-        "levels with one level 1 debug preview."
+        "level_geometry.json OK: 10 per-level calibrated levels, "
+        "one active level 1 obstacle, no platforms."
     )
 
 
@@ -108,8 +115,20 @@ def validate_level(
         fail(f"{context}: baseline requires exactly one main ground collider.")
     if platforms:
         fail(f"{context}: baseline platformColliders must be empty.")
-    if obstacles:
+    if level_id == 1:
+        validate_level_one_obstacle(
+            obstacles,
+            context=context,
+            ground=grounds[0],
+            player_spawn=player_spawn,
+            mentor_position=mentor_position,
+            world_width=world_width,
+            world_height=world_height,
+        )
+    elif obstacles:
         fail(f"{context}: baseline obstacleColliders must be empty.")
+    if calibration_obstacles:
+        fail(f"{context}: calibration previews must be removed after activation.")
 
     ground = grounds[0]
     if ground["id"] != "main_ground":
@@ -162,10 +181,51 @@ def validate_level(
         world_height=world_height,
     )
 
-    # TODO(obstacle-rollout): Before adding obstacles again, validate that each
-    # obstacle bottom equals ground top, height is below safe jump height, and
-    # the obstacle overlaps neither playerSpawn nor mentorPosition.
     return ground["y"]
+
+
+def validate_level_one_obstacle(
+    obstacles: list[dict[str, float | str]],
+    *,
+    context: str,
+    ground: dict[str, float | str],
+    player_spawn: dict[str, object],
+    mentor_position: dict[str, object],
+    world_width: float,
+    world_height: float,
+) -> None:
+    if len(obstacles) != 1:
+        fail(f"{context}: level 1 must contain exactly one obstacleCollider.")
+
+    obstacle = obstacles[0]
+    obstacle_context = f"{context} obstacle"
+    if obstacle["id"] != EXPECTED_LEVEL_ONE_OBSTACLE["id"]:
+        fail(f"{obstacle_context}: id must be ice_ridge_1.")
+    for key in ("x", "y", "width", "height"):
+        if not same_number(float(obstacle[key]), EXPECTED_LEVEL_ONE_OBSTACLE[key]):
+            fail(
+                f"{obstacle_context}: {key} must equal "
+                f"{EXPECTED_LEVEL_ONE_OBSTACLE[key]}."
+            )
+
+    validate_collider_bounds(obstacle, obstacle_context, world_width, world_height)
+    expected_y = float(ground["y"]) - float(obstacle["height"])
+    if not same_number(float(obstacle["y"]), expected_y):
+        fail(f"{obstacle_context}: y must equal main_ground.y - height.")
+
+    player_x = required_number(player_spawn, "x", f"{context}.playerSpawn")
+    player_y = required_number(player_spawn, "y", f"{context}.playerSpawn")
+    mentor_x = required_number(mentor_position, "x", f"{context}.mentorPosition")
+    mentor_y = required_number(mentor_position, "y", f"{context}.mentorPosition")
+
+    obstacle_left = float(obstacle["x"])
+    obstacle_right = obstacle_left + float(obstacle["width"])
+    if obstacle_left <= player_x or obstacle_right >= mentor_x:
+        fail(f"{obstacle_context}: obstacle must be between spawn and mentor.")
+    if point_intersects_rect(player_x, player_y, obstacle):
+        fail(f"{obstacle_context}: obstacle must not intersect playerSpawn.")
+    if point_intersects_rect(mentor_x, mentor_y, obstacle):
+        fail(f"{obstacle_context}: obstacle must not intersect mentorPosition.")
 
 
 def validate_calibration_obstacles(

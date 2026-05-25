@@ -13,16 +13,8 @@
         { "id": "main_ground", "x": 0, "y": 489, "width": 800, "height": 111 }
       ],
       "platformColliders": [],
-      "obstacleColliders": [],
-      "calibrationObstacles": [
-        {
-          "id": "ice_ridge_preview_1",
-          "x": 440,
-          "y": 455,
-          "width": 90,
-          "height": 34,
-          "notes": "Preview only. Not used for collision."
-        }
+      "obstacleColliders": [
+        { "id": "ice_ridge_1", "x": 537.70, "y": 442.25, "width": 90, "height": 46.75 }
       ],
       "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
     },

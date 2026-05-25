@@ -5,9 +5,9 @@
 The manual ground calibration pass is complete. The approved per-level
 `groundY` values are now written to `assets/data/level_geometry.json`.
 
-Complex geometry is still disabled. All 10 levels use one visually calibrated
-flat ground collider per level, with no platforms, no obstacles, no gaps, and
-no multi-level routes.
+Complex geometry is still limited. All 10 levels use one visually calibrated
+flat ground collider per level, with no platforms, no gaps, and no multi-level
+routes. Level 1 has one calibrated active obstacle.
 
 The goal of this baseline is gameplay stability:
 
@@ -20,46 +20,60 @@ The goal of this baseline is gameplay stability:
 
 Do not add complex geometry back to all 10 levels at once. Future obstacles and
 platforms should be added one level at a time, with coordinate calibration and
-manual playtesting after each level. Obstacles and platforms may be added only
-after stable verification of these production per-level ground values.
+manual playtesting after each level. No second obstacle should be added until
+the first active level 1 obstacle is manually verified.
 
-# Obstacle rollout paused again
+# Obstacle rollout history
 
 The first real obstacle rollout was stopped after debug screenshots showed that
 the obstacle was mathematically aligned to `groundTopY`, but `groundTopY` itself
 was too high above the visual snow surface. The obstacle was removed and the
-project returned to a flat baseline.
+project returned to a flat baseline before the per-level ground calibration
+pass.
 
 Do not add obstacles by visual guessing. Before the next attempt:
 
 - use `docs/LEVEL_GEOMETRY_COORDINATE_CONTRACT.md`;
 - run a debug/calibration pass for the visual ground top first;
 - add only a calibration obstacle preview after the ground line is verified;
-- keep all levels on flat baseline until level 1 is visually stable.
+- keep future obstacle work scoped to one manually verified collider at a time.
 
-The ground line is now calibrated per level in production, but obstacle rollout
-is still paused.
+The ground line is now calibrated per level in production. Obstacle rollout is
+limited to one active level 1 obstacle.
+
+# First active obstacle on level 1
+
+The first obstacle was calibrated through the debug-only preview workflow and
+then moved into `obstacleColliders` after manual approval.
+
+Level 1 currently has one active obstacle:
+
+```json
+{
+  "id": "ice_ridge_1",
+  "x": 537.70,
+  "y": 442.25,
+  "width": 90,
+  "height": 46.75
+}
+```
+
+The obstacle is ground-locked:
+
+```text
+y = 489 - 46.75 = 442.25
+```
+
+This active obstacle exists only on level 1. Levels 2-10 remain on the flat
+baseline with `obstacleColliders: []` and `platformColliders: []`.
+
+Do not add another obstacle until this first active obstacle is manually checked
+in normal and debug modes.
 
 # Obstacle preview after ground calibration
 
 Ground `groundY` values are now calibrated for all levels and persisted in
 production geometry. Future obstacles still start as debug-only previews.
-
-Level 1 currently has one `calibrationObstacles` preview:
-
-```json
-{
-  "id": "ice_ridge_preview_1",
-  "x": 440,
-  "y": 455,
-  "width": 90,
-  "height": 34,
-  "notes": "Preview only. Not used for collision."
-}
-```
-
-After manual screenshot review, this preview was moved left and reduced in size
-so it sits closer to the small snow/ice bump area instead of near the mentor.
 
 The preview is visible only when `debugGeometry=1` is present in the URL. It is
 not a gameplay collider, does not block movement, and must remain separate from
@@ -204,32 +218,18 @@ Future obstacles must start as calibration previews:
 5. Only after visual confirmation, move the calibrated rectangle into
    `obstacleColliders` in a separate gameplay change.
 
-The current level 1 preview is:
-
-```json
-{
-  "id": "ice_ridge_preview_1",
-  "x": 440,
-  "y": 455,
-  "width": 90,
-  "height": 34,
-  "notes": "Preview only. Not used for collision."
-}
-```
-
 The preview `y` is calculated, not guessed:
 
 ```text
 preview.y = main_ground.y - preview.height
-preview.y = 489 - 34 = 455
 ```
 
 ## JSON Shape
 
 `assets/data/level_geometry.json` uses design coordinates for an `800x600`
-world. Runtime scales the flat baseline to the current game size.
+world. Runtime scales the calibrated geometry to the current game size.
 
-All levels currently use the same flat baseline shape, with a per-level
+All levels currently use the same main ground shape, with a per-level
 `main_ground.y`:
 
 ```json
@@ -242,24 +242,15 @@ All levels currently use the same flat baseline shape, with a per-level
     { "id": "main_ground", "x": 0, "y": 489, "width": 800, "height": 111 }
   ],
   "platformColliders": [],
-  "obstacleColliders": [],
-  "calibrationObstacles": [
-    {
-      "id": "ice_ridge_preview_1",
-      "x": 440,
-      "y": 455,
-      "width": 90,
-      "height": 34,
-      "notes": "Preview only. Not used for collision."
-    }
+  "obstacleColliders": [
+    { "id": "ice_ridge_1", "x": 537.70, "y": 442.25, "width": 90, "height": 46.75 }
   ],
   "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
 }
 ```
 
-Levels 1-10 keep `obstacleColliders: []` and `platformColliders: []`. Level 1
-has one debug-only calibration preview; levels 2-10 have no calibration
-previews.
+Level 1 has one active obstacle. Levels 2-10 keep `obstacleColliders: []`.
+Levels 1-10 keep `platformColliders: []`.
 
 ## Ground
 
@@ -291,25 +282,29 @@ Approved production `groundY` values:
 
 ## Platforms And Obstacles
 
-Baseline mode requires every level to have:
+Current rollout requires every level to have:
 
 - `platformColliders: []`
-- `obstacleColliders: []`
+
+Levels 2-10 must also have `obstacleColliders: []`. Level 1 has exactly one
+active obstacle.
 
 `calibrationObstacles` may contain preview rectangles for debug overlay
 calibration only. They are not gameplay colliders.
 
-No steps, gaps, crystals, logs, ridges, or blocked routes should be present
-until a later coordinate-calibrated tuning pass.
+No steps, gaps, crystals, logs, or blocked routes should be present until a
+later coordinate-calibrated tuning pass. Keep the level 1 ice ridge as the only
+active obstacle until it passes manual verification.
 
 ## Runtime
 
-`BearMathGame` loads the current level's geometry and uses only:
+`BearMathGame` loads the current level's geometry and uses:
 
 - `backgroundAsset`;
 - `playerSpawn`;
 - `mentorPosition`;
-- the single `main_ground`.
+- the single `main_ground`;
+- level 1 `obstacleColliders`.
 
 When `debugGeometry=1` is present in the URL, the runtime also draws geometry
 guides for ground, future platform and obstacle preview colliders, spawn
@@ -334,6 +329,6 @@ python3 tools/validate_level_geometry.py
 ```
 
 The validator checks all 10 levels, per-level backgrounds, one main ground,
-approved per-level `groundY` values, empty platforms, empty obstacles, no
-gameplay obstacle colliders, the level 1 debug-only preview, sane coordinates,
-mentor to the right of the spawn, and both contact points on the main ground.
+approved per-level `groundY` values, empty platforms, the single level 1 active
+obstacle, empty obstacle lists on levels 2-10, sane coordinates, mentor to the
+right of the spawn, and both contact points on the main ground.

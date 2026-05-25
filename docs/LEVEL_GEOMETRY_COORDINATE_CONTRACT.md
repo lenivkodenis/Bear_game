@@ -96,7 +96,13 @@ obstacle.y = groundTopY - obstacle.height
 obstacle.y = 460 - 45 = 415
 ```
 
-There are no active obstacles in the current flat baseline.
+The first active obstacle on level 1 follows the same formula:
+
+```text
+groundTopY = 489
+obstacle.height = 46.75
+obstacle.y = 489 - 46.75 = 442.25
+```
 
 Calibration obstacle previews use the same top-left math, but they are not
 gameplay colliders:
@@ -229,20 +235,24 @@ const bool kLevelGeometryDebugOverlay = false;
 ```
 
 When enabled manually, the overlay draws ground rectangles, ground top lines,
-future platform rectangles, calibration obstacle preview rectangles,
-`playerSpawn`, `mentorPosition`, the current player hitbox, and the player
-feet/bottom line. It is render-only and must not change collision, physics,
-coordinates, movement, or level routes. For web calibration, enable it with
-`debugGeometry=1` in the URL instead of changing the default code flag.
+the active level 1 obstacle, future platform rectangles, calibration obstacle
+preview rectangles, `playerSpawn`, `mentorPosition`, the current player hitbox,
+and the player feet/bottom line. It is render-only and must not change
+collision, physics, coordinates, movement, or level routes. For web
+calibration, enable it with `debugGeometry=1` in the URL instead of changing
+the default code flag.
 
 ## Calibration Rule
 
-Before adding platforms or obstacles again:
+Before adding future platforms or more obstacles:
 
-1. Keep `platformColliders` and `obstacleColliders` empty.
-2. Enable the debug overlay with `debugGeometry=1`.
-3. Confirm that `groundTopY`, `playerSpawn`, `mentorPosition`, and the bear
+1. Keep `platformColliders` empty on every level.
+2. Keep `obstacleColliders` empty on levels 2-10.
+3. Keep only the approved `ice_ridge_1` obstacle on level 1 until it is
+   manually verified.
+4. Enable the debug overlay with `debugGeometry=1`.
+5. Confirm that `groundTopY`, `playerSpawn`, `mentorPosition`, and the bear
    bottom line all coincide on the main ground.
-4. Add one test collider only after the coordinate contract is visually
+6. Add one test collider only after the coordinate contract is visually
    confirmed.
-5. Validate and manually playtest after every collider.
+7. Validate and manually playtest after every collider.

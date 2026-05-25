@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show KeyEventResult;
 
+import 'components/ice_ridge_obstacle.dart';
 import 'components/level_geometry_debug_overlay.dart';
 import 'components/platform_component.dart';
 import 'components/player_bear.dart';
@@ -121,6 +122,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       size: mainGround.size,
     );
     add(_mainGroundComponent);
+    for (final obstacle in levelGeometry.obstacleColliders) {
+      add(IceRidgeObstacle(position: obstacle.position, size: obstacle.size));
+    }
 
     final playerSpawn = levelGeometry.playerSpawn.toVector2();
     player = PlayerBear(
@@ -636,10 +640,15 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   @override
   void update(double dt) {
+    final previousPlayerRect = _sceneReady ? _playerRect : null;
     super.update(dt);
 
     if (!_sceneReady) {
       return;
+    }
+
+    if (previousPlayerRect != null) {
+      _resolveObstacleCollisions(previousPlayerRect);
     }
 
     if (!_mentorDialogWasShown && player.distance(mentor) < 92) {
@@ -648,6 +657,51 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       player.stopMoving();
       player.startInteracting();
       overlays.add(mentorDialogOverlay);
+    }
+  }
+
+  Rect get _playerRect {
+    return Rect.fromLTWH(
+      player.position.x,
+      player.position.y,
+      player.size.x,
+      player.size.y,
+    );
+  }
+
+  void _resolveObstacleCollisions(Rect previousPlayerRect) {
+    if (levelGeometry.obstacleColliders.isEmpty) {
+      return;
+    }
+
+    final currentRect = _playerRect;
+
+    for (final obstacle in levelGeometry.obstacleColliders) {
+      final obstacleRect = Rect.fromLTWH(
+        obstacle.x,
+        obstacle.y,
+        obstacle.width,
+        obstacle.height,
+      );
+      if (!currentRect.overlaps(obstacleRect)) {
+        continue;
+      }
+
+      final crossedFromLeft =
+          previousPlayerRect.right <= obstacleRect.left &&
+          currentRect.right > obstacleRect.left;
+      final crossedFromRight =
+          previousPlayerRect.left >= obstacleRect.right &&
+          currentRect.left < obstacleRect.right;
+      if (!crossedFromLeft && !crossedFromRight) {
+        continue;
+      }
+
+      final resolvedX = crossedFromLeft
+          ? obstacleRect.left - player.size.x
+          : obstacleRect.right;
+      final maxX = size.x - player.size.x;
+      player.position.x = resolvedX.clamp(0.0, maxX).toDouble();
     }
   }
 }
