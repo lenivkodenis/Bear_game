@@ -110,7 +110,10 @@ The state priority is:
 
 When the bear reaches the mentor, `BearMathGame` stops horizontal movement, starts the interacting state, and opens the mentor dialog. While that dialog is open, movement and jump commands are ignored so the walk animation cannot resume behind the dialog. Closing the dialog stops interacting and returns the bear to the normal idle/walk/jump state selection.
 
-Grounding remains unchanged. This stage did not modify `visualOffset`, `visualFeetAnchor`, `feetToGroundOffset`, hitbox size, collision clamp, gravity, jump impulse, level map, questions, rewards, or difficulty data.
+Gameplay grounding remains unchanged: hitbox size, collision clamp, gravity,
+jump impulse, level map, questions, rewards, and difficulty data are not part of
+the visual calibration pass. The visual feet constants must keep the sprite
+feet line aligned with the gameplay hitbox bottom.
 
 Assets still needed:
 
@@ -134,7 +137,8 @@ Grounding is handled with explicit visual alignment constants in `PlayerBear`:
 
 - `visualSize` controls the rendered sprite size.
 - `visualGroundInset` accounts for the transparent/soft bottom edge of the PNG.
-- `feetToGroundOffset` accounts for the visual snow surface being lower than the current physics ground line.
+- `feetToGroundOffset` is `0.0` after calibration because the visual feet line
+  must match the current physics ground line.
 - `visualFeetAnchor` is the local point where the bear's feet should touch the snow.
 - `visualOffset` is derived from that contact point so the visible bottom of the sprite aligns with the intended feet line.
 

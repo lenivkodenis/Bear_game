@@ -46,7 +46,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
       _walkVisualHeight * _walkFrameSourceWidth / _walkFrameSourceHeight;
   static const _walkVisualGroundInset = 10.0;
   static const visualGroundInset = 1.25;
-  static const feetToGroundOffset = 90.0;
+  static const feetToGroundOffset = 0.0;
   static const visualFeetAnchor = Offset(
     _hitboxWidth / 2,
     _hitboxHeight + feetToGroundOffset,
@@ -79,6 +79,17 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   bool get _isOnGround => position.y >= groundY - size.y - 0.5;
 
   BearAnimationState get animationState => _animationState;
+
+  Rect get visualBounds {
+    return _toWorldRect(_visualTransform(_animationState).destinationRect);
+  }
+
+  double get visualFeetY {
+    final state = _animationState;
+    final destinationRect = _visualTransform(state).destinationRect;
+
+    return position.y + _visualPivotY(state, destinationRect);
+  }
 
   BearAnimationState get _animationState {
     if (_isSitting) {
@@ -416,6 +427,15 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     }
 
     return destinationRect.bottom - visualGroundInset;
+  }
+
+  Rect _toWorldRect(Rect localRect) {
+    return Rect.fromLTWH(
+      position.x + localRect.left,
+      position.y + localRect.top,
+      localRect.width,
+      localRect.height,
+    );
   }
 
   void _renderDebugOverlay(Canvas canvas, Rect visualRect) {

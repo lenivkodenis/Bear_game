@@ -122,7 +122,26 @@ playerBottomY == surfaceTopY
 ```
 
 If the bear floats or sinks, fix the geometry contact line first. Do not adjust
-bear hitbox, gravity, jump force, speed, visual offset, or feet anchor.
+bear hitbox, gravity, jump force, or speed to hide a geometry problem. Visual
+feet alignment may be calibrated only when the visual feet line and hitbox
+bottom disagree.
+
+# Player visual alignment
+
+The player hitbox bottom must match the visual feet line. The visual sprite must
+not live separately below the hitbox or float above it.
+
+For a grounded bear:
+
+```text
+groundTopY == player hitbox bottom
+player hitbox bottom == visual feet line
+```
+
+Future obstacles are placed relative to `groundTopY`. If the visual feet line
+does not match the hitbox bottom, an obstacle that is mathematically correct
+will still look visually wrong: it may appear buried, floating, or out of sync
+with the bear's paws.
 
 ## Debug Overlay
 

@@ -2,6 +2,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import '../level_geometry.dart';
+import 'player_bear.dart';
 
 class LevelGeometryDebugOverlay extends PositionComponent {
   LevelGeometryDebugOverlay({required this.geometry, required this.player})
@@ -16,11 +17,13 @@ class LevelGeometryDebugOverlay extends PositionComponent {
   static const _mentorColor = Color(0xFFFF9F0A);
   static const _hitboxColor = Color(0xFFFFFFFF);
   static const _feetColor = Color(0xFFFF2D55);
+  static const _visualBoundsColor = Color(0xCC30D158);
+  static const _visualFeetColor = Color(0xCCBF5AF2);
   static const _labelBackgroundColor = Color(0xCC111827);
   static const _labelTextColor = Color(0xFFFFFFFF);
 
   final LevelGeometry geometry;
-  final PositionComponent player;
+  final PlayerBear player;
 
   @override
   void render(Canvas canvas) {
@@ -119,9 +122,36 @@ class LevelGeometryDebugOverlay extends PositionComponent {
     final feetPaint = Paint()
       ..color = _feetColor
       ..strokeWidth = 2.5;
+    final visualBoundsPaint = Paint()
+      ..color = _visualBoundsColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final visualFeetPaint = Paint()
+      ..color = _visualFeetColor
+      ..strokeWidth = 2.5;
+    final visualBounds = player.visualBounds;
+    final visualFeetY = player.visualFeetY;
 
+    canvas.drawRect(visualBounds, visualBoundsPaint);
+    canvas.drawLine(
+      Offset(visualBounds.left, visualFeetY),
+      Offset(visualBounds.right, visualFeetY),
+      visualFeetPaint,
+    );
     canvas.drawRect(hitbox, hitboxPaint);
     canvas.drawLine(hitbox.bottomLeft, hitbox.bottomRight, feetPaint);
+    _drawLabel(
+      canvas,
+      'visual bounds',
+      visualBounds.topLeft + const Offset(4, 4),
+      _visualBoundsColor,
+    );
+    _drawLabel(
+      canvas,
+      'visual feet',
+      Offset(visualBounds.left + 4, visualFeetY - 24),
+      _visualFeetColor,
+    );
     _drawLabel(
       canvas,
       'player hitbox',

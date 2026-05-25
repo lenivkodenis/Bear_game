@@ -37,15 +37,16 @@ Do not add obstacles by visual guessing. Before the next attempt:
 Before any platform or obstacle rollout:
 
 1. Launch the game with the geometry debug URL parameter.
-2. Check the main ground rectangle and its highlighted top line.
-3. Check the player hitbox and feet/bottom line.
-4. Confirm that `playerSpawn` is on the same surface line as the bear's feet.
-5. Confirm that `mentorPosition` is on the same surface line and remains to the
+2. Check the visual feet line first.
+3. Check the player hitbox bottom line.
+4. Check `groundTopY` using the highlighted ground top line.
+5. Confirm that `playerSpawn` is on the same surface line as the bear's feet.
+6. Confirm that `mentorPosition` is on the same surface line and remains to the
    right of `playerSpawn`.
-6. Add only one test collider after the baseline lines are visually confirmed.
-7. Manually check movement, jumping, mentor reach, dialog, and task opening
+7. Add only one test collider after these lines coincide.
+8. Manually check movement, jumping, mentor reach, dialog, and task opening
    after every collider.
-8. Do not add many obstacles at once, and do not roll geometry changes across
+9. Do not add many obstacles at once, and do not roll geometry changes across
    all 10 levels in a single pass.
 
 # How to enable geometry debug overlay
@@ -125,12 +126,14 @@ until a later coordinate-calibrated tuning pass.
 
 When `debugGeometry=1` is present in the URL, the runtime also draws geometry
 guides for ground, future platform and obstacle preview colliders, spawn
-points, mentor points, player hitbox, and player feet line. This overlay is
-visual only and must not affect movement, collision, physics, or routes.
+points, mentor points, player hitbox, player feet line, visual sprite bounds,
+and visual feet line. This overlay is visual only and must not affect movement,
+collision, physics, or routes.
 
 The bear still uses its original simple grounding logic from `PlayerBear`.
-Hitbox, speed, gravity, jump force, visual offsets, feet anchor, and walk
-animation are unchanged.
+Hitbox, speed, gravity, jump force, and walk animation are unchanged. The visual
+feet line must stay calibrated to the hitbox bottom before obstacle work
+resumes.
 
 `kLevelGeometryDebugOverlay` exists in `lib/game/level_geometry.dart` and must
 remain `false` by default. The baseline runtime does not need collider drawing.
