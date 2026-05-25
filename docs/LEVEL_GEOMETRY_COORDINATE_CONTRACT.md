@@ -64,6 +64,15 @@ obstacleBottomY = obstacle.y + obstacle.height
 obstacleBottomY must equal groundTopY
 ```
 
+The first real level 1 obstacle follows this contract:
+
+```text
+groundTopY = 420
+obstacle.height = 45
+obstacle.y = groundTopY - obstacle.height
+obstacle.y = 420 - 45 = 375
+```
+
 Calibration obstacle previews use the same top-left math, but they are not
 gameplay colliders:
 

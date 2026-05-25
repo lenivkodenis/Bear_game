@@ -2,16 +2,17 @@
 
 ## Temporary Stable Baseline
 
-Complex geometry is temporarily disabled. All 10 levels now use one flat,
-full-width ground collider, with no platforms, no obstacles, no gaps, and no
-multi-level routes.
+Complex geometry is still limited. Level 1 has one calibrated obstacle on one
+flat ground collider. Levels 2-10 remain flat baseline: one full-width ground
+collider, with no platforms, no obstacles, no gaps, and no multi-level routes.
 
 The goal of this baseline is gameplay stability:
 
 - each level keeps its own `background.png`;
 - the bear spawns on the left side;
 - the bear stands on one horizontal ground line;
-- the bear can walk right and jump using the existing physics;
+- the bear can walk right, jump, and clear the one level 1 obstacle using the
+  existing physics;
 - the mentor stands on the same ground line on the right side;
 - the mentor trigger can open the dialog and questions.
 
@@ -19,11 +20,29 @@ Do not add complex geometry back to all 10 levels at once. Future obstacles and
 platforms should be added one level at a time, with coordinate calibration and
 manual playtesting after each level.
 
-# Obstacle rollout paused
+# First real obstacle rollout
+
+The first real obstacle has been added only on level 1. It was first checked as
+a `calibrationObstacles` debug preview, then promoted to one `obstacleColliders`
+entry after the overlay confirmed the coordinate contract.
+
+The obstacle uses calculated top-left coordinates:
+
+```text
+obstacle.y = main_ground.y - obstacle.height
+obstacle.y = 420 - 45 = 375
+```
+
+Levels 2-10 were not changed. The next step is manual gameplay verification:
+the bear must be blocked by the obstacle while walking, must be able to jump
+over it, and must still reach the mentor.
+
+# Broader obstacle rollout paused
 
 The first obstacle rollout on level 1 broke gameplay: the bear could hang in
 the air and the obstacle height/ground contact was not reliable enough. The
-rollout is paused, and all levels are back on flat baseline geometry.
+broader rollout remains paused. Do not add more obstacles until the single
+level 1 obstacle is manually verified.
 
 Do not add obstacles by visual guessing. Before the next attempt:
 
@@ -87,7 +106,7 @@ Future obstacles must start as calibration previews:
 5. Only after visual confirmation, move the calibrated rectangle into
    `obstacleColliders` in a separate gameplay change.
 
-Current level 1 preview:
+The former level 1 preview was:
 
 ```json
 {
@@ -112,8 +131,7 @@ preview.y = 420 - 45 = 375
 `assets/data/level_geometry.json` uses design coordinates for an `800x600`
 world. Runtime scales the flat baseline to the current game size.
 
-Level 1 currently has one optional calibration preview. Levels 2-10 remain
-without calibration previews:
+Level 1 currently has one real calibrated obstacle:
 
 ```json
 {
@@ -125,20 +143,14 @@ without calibration previews:
     { "id": "main_ground", "x": 0, "y": 420, "width": 800, "height": 180 }
   ],
   "platformColliders": [],
-  "obstacleColliders": [],
-  "calibrationObstacles": [
-    {
-      "id": "ice_ridge_preview_1",
-      "x": 520,
-      "y": 375,
-      "width": 100,
-      "height": 45,
-      "notes": "Preview only. Not used for collision."
-    }
+  "obstacleColliders": [
+    { "id": "ice_ridge_1", "x": 520, "y": 375, "width": 100, "height": 45 }
   ],
-  "notes": "Stable flat baseline. Obstacles disabled until coordinate contract is verified."
+  "notes": "First calibrated obstacle rollout. One level 1 obstacle was promoted from debug preview."
 }
 ```
+
+Levels 2-10 keep `obstacleColliders: []` and no calibration previews.
 
 ## Ground
 
@@ -151,7 +163,12 @@ The current baseline `y` is `420`, matching the previous stable ground line
 
 ## Platforms And Obstacles
 
-Baseline mode requires:
+Level 1 rollout mode requires:
+
+- exactly one `obstacleColliders` entry;
+- `platformColliders: []`.
+
+Levels 2-10 baseline mode requires:
 
 - `platformColliders: []`
 - `obstacleColliders: []`
@@ -169,7 +186,8 @@ until a later coordinate-calibrated tuning pass.
 - `backgroundAsset`;
 - `playerSpawn`;
 - `mentorPosition`;
-- the single `main_ground`.
+- the single `main_ground`;
+- the one level 1 `obstacleColliders` entry.
 
 When `debugGeometry=1` is present in the URL, the runtime also draws geometry
 guides for ground, future platform and obstacle preview colliders, spawn
@@ -194,6 +212,6 @@ python3 tools/validate_level_geometry.py
 ```
 
 The validator checks all 10 levels, per-level backgrounds, one main ground,
-empty platforms, empty obstacles, sane coordinates, mentor to the right of the
-spawn, both contact points on the main ground, and level 1 calibration preview
-math.
+empty platforms, exactly one level 1 obstacle, empty obstacles on levels 2-10,
+sane coordinates, mentor to the right of the spawn, both contact points on the
+main ground, and obstacle ground-contact math.

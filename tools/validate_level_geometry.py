@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the temporary flat-baseline level geometry."""
+"""Validate the level geometry with one calibrated level 1 obstacle."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GEOMETRY_PATH = REPO_ROOT / "assets/data/level_geometry.json"
 PLAYER_HITBOX_WIDTH = 78
-MIN_PREVIEW_WIDTH = 80
-MAX_PREVIEW_WIDTH = 130
-MIN_PREVIEW_HEIGHT = 35
-MAX_PREVIEW_HEIGHT = 55
+MIN_OBSTACLE_WIDTH = 80
+MAX_OBSTACLE_WIDTH = 130
+MIN_OBSTACLE_HEIGHT = 35
+MAX_OBSTACLE_HEIGHT = 55
 
 EXPECTED_BACKGROUNDS = {
     1: "assets/images/levels/level_01_ice_floe/background.png",
@@ -57,7 +57,7 @@ def main() -> None:
 
     assert_no_forbidden_keys(data)
 
-    print("level_geometry.json OK: 10 flat baseline levels are stable.")
+    print("level_geometry.json OK: level 1 has one calibrated obstacle; levels 2-10 remain flat.")
 
 
 def validate_level(
@@ -81,19 +81,22 @@ def validate_level(
     calibration_obstacles = read_calibration_obstacles(level, context)
     notes = required_string(level, "notes", context)
 
-    if "flat baseline" not in notes:
+    if level_id == 1:
+        if "calibrated obstacle" not in notes:
+            fail(f"{context}: notes must identify the calibrated obstacle rollout.")
+    elif "flat baseline" not in notes:
         fail(f"{context}: notes must identify the temporary flat baseline.")
     if len(grounds) != 1:
         fail(f"{context}: baseline requires exactly one main ground collider.")
     if platforms:
         fail(f"{context}: baseline platformColliders must be empty.")
-    if obstacles:
-        fail(f"{context}: baseline obstacleColliders must be empty.")
     if level_id == 1:
-        if len(calibration_obstacles) != 1:
-            fail(f"{context}: expected exactly one calibration obstacle preview.")
-    elif calibration_obstacles:
-        fail(f"{context}: calibration obstacle previews are only allowed on level 1.")
+        if len(obstacles) != 1:
+            fail(f"{context}: level 1 must have exactly one obstacleCollider.")
+    elif obstacles:
+        fail(f"{context}: obstacleColliders must be empty outside level 1.")
+    if calibration_obstacles:
+        fail(f"{context}: calibration obstacle previews must be removed after promotion.")
 
     ground = grounds[0]
     if ground["id"] != "main_ground":
@@ -118,8 +121,8 @@ def validate_level(
         fail(f"{context}: mentorPosition must sit on main ground.")
 
     if level_id == 1:
-        validate_calibration_obstacle(
-            calibration_obstacles[0],
+        validate_level_one_obstacle(
+            obstacles[0],
             player_spawn,
             mentor_position,
             ground,
@@ -128,9 +131,9 @@ def validate_level(
             world_height,
         )
 
-    # TODO(obstacle-rollout): Before obstacles return, validate that obstacle
-    # bottom equals ground top, height is below safe jump height, and the
-    # obstacle overlaps neither playerSpawn nor mentorPosition.
+    # TODO(obstacle-rollout): Before adding another obstacle, validate that the
+    # obstacle bottom equals ground top, height is below safe jump height, and
+    # the obstacle overlaps neither playerSpawn nor mentorPosition.
 
 
 def validate_point(
@@ -164,7 +167,7 @@ def validate_collider_bounds(
         fail(f"{context}: collider {collider['id']} exceeds world height.")
 
 
-def validate_calibration_obstacle(
+def validate_level_one_obstacle(
     obstacle: dict[str, float | str],
     player_spawn: dict[str, object],
     mentor_position: dict[str, object],
@@ -174,26 +177,22 @@ def validate_calibration_obstacle(
     world_height: float,
 ) -> None:
     validate_collider_bounds(obstacle, context, world_width, world_height)
-    if "preview" not in str(obstacle["id"]):
-        fail(f"{context}: calibration obstacle id must include 'preview'.")
-    if "Preview only" not in str(obstacle["notes"]):
-        fail(f"{context}: calibration obstacle notes must say Preview only.")
 
-    if not (MIN_PREVIEW_WIDTH <= obstacle["width"] <= MAX_PREVIEW_WIDTH):
+    if not (MIN_OBSTACLE_WIDTH <= obstacle["width"] <= MAX_OBSTACLE_WIDTH):
         fail(
-            f"{context}: calibration obstacle width must be between "
-            f"{MIN_PREVIEW_WIDTH} and {MAX_PREVIEW_WIDTH}."
+            f"{context}: obstacle width must be between "
+            f"{MIN_OBSTACLE_WIDTH} and {MAX_OBSTACLE_WIDTH}."
         )
-    if not (MIN_PREVIEW_HEIGHT <= obstacle["height"] <= MAX_PREVIEW_HEIGHT):
+    if not (MIN_OBSTACLE_HEIGHT <= obstacle["height"] <= MAX_OBSTACLE_HEIGHT):
         fail(
-            f"{context}: calibration obstacle height must be between "
-            f"{MIN_PREVIEW_HEIGHT} and {MAX_PREVIEW_HEIGHT}."
+            f"{context}: obstacle height must be between "
+            f"{MIN_OBSTACLE_HEIGHT} and {MAX_OBSTACLE_HEIGHT}."
         )
 
     expected_y = ground["y"] - obstacle["height"]
     if abs(obstacle["y"] - expected_y) > 1:
         fail(
-            f"{context}: calibration obstacle y must equal main_ground.y - "
+            f"{context}: obstacle y must equal main_ground.y - "
             f"height ({expected_y}), found {obstacle['y']}."
         )
 
@@ -201,13 +200,11 @@ def validate_calibration_obstacle(
     mentor_x = required_number(mentor_position, "x", f"{context}.mentorPosition")
     obstacle_right = obstacle["x"] + obstacle["width"]
     if obstacle["x"] <= player_x + PLAYER_HITBOX_WIDTH:
-        fail(f"{context}: calibration obstacle overlaps or is too close to spawn.")
+        fail(f"{context}: obstacle overlaps or is too close to spawn.")
     if obstacle_right >= mentor_x:
-        fail(f"{context}: calibration obstacle overlaps mentorPosition.")
+        fail(f"{context}: obstacle overlaps mentorPosition.")
     if not (player_x < obstacle["x"] < mentor_x):
-        fail(
-            f"{context}: calibration obstacle must be between spawn and mentor."
-        )
+        fail(f"{context}: obstacle must be between spawn and mentor.")
 
 
 def assert_no_forbidden_keys(value: object) -> None:

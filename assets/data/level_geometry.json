@@ -13,18 +13,10 @@
         { "id": "main_ground", "x": 0, "y": 420, "width": 800, "height": 180 }
       ],
       "platformColliders": [],
-      "obstacleColliders": [],
-      "calibrationObstacles": [
-        {
-          "id": "ice_ridge_preview_1",
-          "x": 520,
-          "y": 375,
-          "width": 100,
-          "height": 45,
-          "notes": "Preview only. Not used for collision."
-        }
+      "obstacleColliders": [
+        { "id": "ice_ridge_1", "x": 520, "y": 375, "width": 100, "height": 45 }
       ],
-      "notes": "Stable flat baseline. Obstacles disabled until coordinate contract is verified."
+      "notes": "First calibrated obstacle rollout. One level 1 obstacle was promoted from debug preview."
     },
     {
       "levelId": 2,
