@@ -4,9 +4,35 @@ import 'package:flutter/material.dart';
 import '../level_geometry.dart';
 import 'player_bear.dart';
 
+class GroundCalibrationOverlayInfo {
+  const GroundCalibrationOverlayInfo({
+    required this.levelId,
+    required this.baseGroundY,
+    required this.calibratedGroundY,
+    required this.runtimeGroundY,
+    this.levelName,
+    this.exportPrinted = false,
+  });
+
+  final int levelId;
+  final String? levelName;
+  final double baseGroundY;
+  final double calibratedGroundY;
+  final double runtimeGroundY;
+  final bool exportPrinted;
+
+  double get delta => calibratedGroundY - baseGroundY;
+}
+
 class LevelGeometryDebugOverlay extends PositionComponent {
-  LevelGeometryDebugOverlay({required this.geometry, required this.player})
-    : super(priority: 10000);
+  LevelGeometryDebugOverlay({
+    required LevelGeometry Function() geometry,
+    required PlayerBear Function() player,
+    GroundCalibrationOverlayInfo? Function()? calibrationInfo,
+  }) : _geometryProvider = geometry,
+       _playerProvider = player,
+       _calibrationInfoProvider = calibrationInfo,
+       super(priority: 10000);
 
   static const _groundFillColor = Color(0x2234C759);
   static const _groundStrokeColor = Color(0xCC34C759);
@@ -23,13 +49,19 @@ class LevelGeometryDebugOverlay extends PositionComponent {
   static const _visualFeetColor = Color(0xCCBF5AF2);
   static const _labelBackgroundColor = Color(0xCC111827);
   static const _labelTextColor = Color(0xFFFFFFFF);
+  static const _panelBackgroundColor = Color(0xDD111827);
+  static const _panelBorderColor = Color(0x99FFFFFF);
 
-  final LevelGeometry geometry;
-  final PlayerBear player;
+  final LevelGeometry Function() _geometryProvider;
+  final PlayerBear Function() _playerProvider;
+  final GroundCalibrationOverlayInfo? Function()? _calibrationInfoProvider;
 
   @override
   void render(Canvas canvas) {
     super.render(canvas);
+
+    final geometry = _geometryProvider();
+    final player = _playerProvider();
 
     _drawColliders(
       canvas,
@@ -74,7 +106,8 @@ class LevelGeometryDebugOverlay extends PositionComponent {
       _mentorColor,
       'mentor',
     );
-    _drawPlayerHitbox(canvas);
+    _drawPlayerHitbox(canvas, player);
+    _drawCalibrationInfo(canvas, _calibrationInfoProvider?.call());
   }
 
   void _drawColliders(
@@ -123,7 +156,7 @@ class LevelGeometryDebugOverlay extends PositionComponent {
     }
   }
 
-  void _drawPlayerHitbox(Canvas canvas) {
+  void _drawPlayerHitbox(Canvas canvas, PlayerBear player) {
     final hitbox = Rect.fromLTWH(
       player.position.x,
       player.position.y,
@@ -181,6 +214,60 @@ class LevelGeometryDebugOverlay extends PositionComponent {
     );
   }
 
+  void _drawCalibrationInfo(Canvas canvas, GroundCalibrationOverlayInfo? info) {
+    if (info == null) {
+      return;
+    }
+
+    final levelName = info.levelName?.trim();
+    final lines = <String>[
+      'Ground calibration',
+      'levelId: ${info.levelId}',
+      if (levelName != null && levelName.isNotEmpty) 'level: $levelName',
+      'json main_ground.y: ${_formatNumber(info.baseGroundY)}',
+      'temporary groundY: ${_formatNumber(info.calibratedGroundY)}',
+      'delta: ${_formatSignedNumber(info.delta)}',
+      'runtime line y: ${_formatNumber(info.runtimeGroundY)}',
+      'ArrowUp/ArrowDown: 5 px',
+      'Shift+Arrow: 1 px',
+      'C: print JSON',
+      'R: reset',
+      if (info.exportPrinted) 'last export printed to console',
+    ];
+
+    _drawTextPanel(canvas, lines, const Offset(12, 64));
+  }
+
+  void _drawTextPanel(Canvas canvas, List<String> lines, Offset position) {
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: lines.join('\n'),
+        style: const TextStyle(
+          color: _labelTextColor,
+          fontSize: 11,
+          height: 1.25,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: 280);
+    final background = Rect.fromLTWH(
+      position.dx - 8,
+      position.dy - 6,
+      textPainter.width + 16,
+      textPainter.height + 12,
+    );
+    final backgroundPaint = Paint()..color = _panelBackgroundColor;
+    final borderPaint = Paint()
+      ..color = _panelBorderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    canvas.drawRect(background, backgroundPaint);
+    canvas.drawRect(background, borderPaint);
+    textPainter.paint(canvas, position);
+  }
+
   void _drawPoint(Canvas canvas, Vector2 point, Color color, String label) {
     final center = Offset(point.x, point.y);
     final paint = Paint()
@@ -228,5 +315,19 @@ class LevelGeometryDebugOverlay extends PositionComponent {
     canvas.drawRect(background, backgroundPaint);
     canvas.drawRect(background, borderPaint);
     textPainter.paint(canvas, position);
+  }
+
+  String _formatNumber(double value) {
+    if (value == value.roundToDouble()) {
+      return value.round().toString();
+    }
+
+    return value.toStringAsFixed(2);
+  }
+
+  String _formatSignedNumber(double value) {
+    final sign = value > 0 ? '+' : '';
+
+    return '$sign${_formatNumber(value)}';
   }
 }

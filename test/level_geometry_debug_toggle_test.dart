@@ -39,4 +39,44 @@ void main() {
       );
     });
   });
+
+  group('ground calibration URL toggle', () {
+    test('is off without debugGeometry parameter', () {
+      expect(
+        isGroundCalibrationModeEnabledForUri(
+          Uri.parse('http://127.0.0.1:8099/?calibrateGround=1'),
+        ),
+        isFalse,
+      );
+    });
+
+    test('is on when debugGeometry and calibrateGround are enabled', () {
+      expect(
+        isGroundCalibrationModeEnabledForUri(
+          Uri.parse('http://127.0.0.1:8099/?debugGeometry=1&calibrateGround=1'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('is on when both parameters appear inside hash route', () {
+      expect(
+        isGroundCalibrationModeEnabledForUri(
+          Uri.parse(
+            'http://127.0.0.1:8099/#/game?debugGeometry=1&calibrateGround=1',
+          ),
+        ),
+        isTrue,
+      );
+    });
+
+    test('ignores other calibrateGround values', () {
+      expect(
+        isGroundCalibrationModeEnabledForUri(
+          Uri.parse('http://127.0.0.1:8099/?debugGeometry=1&calibrateGround=0'),
+        ),
+        isFalse,
+      );
+    });
+  });
 }

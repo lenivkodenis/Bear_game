@@ -10,13 +10,31 @@ bool get isLevelGeometryDebugOverlayEnabled {
       isLevelGeometryDebugOverlayEnabledForUri(Uri.base);
 }
 
+bool get isGroundCalibrationModeEnabled {
+  return isGroundCalibrationModeEnabledForUri(Uri.base);
+}
+
 bool isLevelGeometryDebugOverlayEnabledForUri(Uri uri) {
   return _hasEnabledDebugGeometryFlag(uri.queryParameters) ||
       _hasEnabledDebugGeometryFlag(_fragmentQueryParameters(uri.fragment));
 }
 
+bool isGroundCalibrationModeEnabledForUri(Uri uri) {
+  final queryParameters = uri.queryParameters;
+  final fragmentParameters = _fragmentQueryParameters(uri.fragment);
+
+  return (_hasEnabledDebugGeometryFlag(queryParameters) ||
+          _hasEnabledDebugGeometryFlag(fragmentParameters)) &&
+      (_hasEnabledGroundCalibrationFlag(queryParameters) ||
+          _hasEnabledGroundCalibrationFlag(fragmentParameters));
+}
+
 bool _hasEnabledDebugGeometryFlag(Map<String, String> parameters) {
   return parameters['debugGeometry'] == '1';
+}
+
+bool _hasEnabledGroundCalibrationFlag(Map<String, String> parameters) {
+  return parameters['calibrateGround'] == '1';
 }
 
 Map<String, String> _fragmentQueryParameters(String fragment) {
@@ -106,6 +124,10 @@ class LevelGeometryPoint {
   final double x;
   final double y;
 
+  LevelGeometryPoint copyWith({double? x, double? y}) {
+    return LevelGeometryPoint(x: x ?? this.x, y: y ?? this.y);
+  }
+
   LevelGeometryPoint scaledBy({
     required double scaleX,
     required double scaleY,
@@ -146,6 +168,22 @@ class LevelGeometryCollider {
 
   Vector2 get position => Vector2(x, y);
   Vector2 get size => Vector2(width, height);
+
+  LevelGeometryCollider copyWith({
+    String? id,
+    double? x,
+    double? y,
+    double? width,
+    double? height,
+  }) {
+    return LevelGeometryCollider(
+      id: id ?? this.id,
+      x: x ?? this.x,
+      y: y ?? this.y,
+      width: width ?? this.width,
+      height: height ?? this.height,
+    );
+  }
 
   LevelGeometryCollider scaledBy({
     required double scaleX,
@@ -241,6 +279,39 @@ class LevelGeometry {
   final String notes;
 
   LevelGeometryCollider get mainGround => groundColliders.first;
+
+  String get exportKey {
+    final pathParts = backgroundAsset.split('/');
+    if (pathParts.length >= 2) {
+      return pathParts[pathParts.length - 2];
+    }
+
+    return 'level_${levelId.toString().padLeft(2, '0')}';
+  }
+
+  LevelGeometry withMainGroundTopY(double groundTopY) {
+    final calibratedGroundY = groundTopY.clamp(0, world.height).toDouble();
+    final calibratedMainGround = mainGround.copyWith(
+      y: calibratedGroundY,
+      height: world.height - calibratedGroundY,
+    );
+
+    return LevelGeometry(
+      levelId: levelId,
+      world: world,
+      backgroundAsset: backgroundAsset,
+      playerSpawn: playerSpawn.copyWith(y: calibratedGroundY),
+      mentorPosition: mentorPosition.copyWith(y: calibratedGroundY),
+      groundColliders: <LevelGeometryCollider>[
+        calibratedMainGround,
+        ...groundColliders.skip(1),
+      ],
+      platformColliders: platformColliders,
+      obstacleColliders: obstacleColliders,
+      calibrationObstacles: calibrationObstacles,
+      notes: notes,
+    );
+  }
 
   LevelGeometry scaledTo(Vector2 targetSize) {
     final scaleX = targetSize.x / world.width;

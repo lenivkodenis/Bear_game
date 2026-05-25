@@ -38,6 +38,14 @@ groundTopY = collider.y
 
 The baseline main ground top is `460` in the `800x600` design world.
 
+Each level may have its own `groundTopY`. Do not assume one shared `groundY`
+fits every `background.png`, because the visual snow surface can be painted at
+a different height in each background.
+
+`groundTopY` must be calibrated against the visual upper line of the snow
+surface for that specific level background before platforms or obstacles are
+introduced.
+
 ## Platform Colliders
 
 Future platform collider `x` and `y` also mean the top-left corner of the

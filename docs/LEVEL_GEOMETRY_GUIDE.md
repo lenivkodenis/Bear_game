@@ -76,6 +76,42 @@ The overlay is only for calibration. Before ordinary gameplay checks, remove
 `debugGeometry=1` from the URL and reload. Do not commit a state where
 `kLevelGeometryDebugOverlay` is enabled by default.
 
+# Ground calibration mode
+
+Run the web build only when a manual ground calibration pass is needed:
+
+```bash
+flutter run -d web-server --web-hostname=127.0.0.1 --web-port=8099 --release
+```
+
+Open the calibration route:
+
+```text
+http://127.0.0.1:8099/?debugGeometry=1&calibrateGround=1#/game
+```
+
+`calibrateGround=1` works only together with `debugGeometry=1`. In ordinary
+gameplay, without those URL parameters, the runtime uses
+`assets/data/level_geometry.json` unchanged.
+
+Use the keyboard while the game is focused:
+
+- `ArrowUp` moves the temporary ground line up by 5 runtime pixels.
+- `ArrowDown` moves the temporary ground line down by 5 runtime pixels.
+- `Shift + ArrowUp` moves it up by 1 runtime pixel.
+- `Shift + ArrowDown` moves it down by 1 runtime pixel.
+- `R` resets the current level to the `main_ground.y` value from
+  `level_geometry.json`.
+- `C` prints the calibrated `groundY` values for all levels to the browser
+  console as JSON.
+
+The calibration mode moves the debug ground line, `playerSpawn`,
+`mentorPosition`, the active player, and the hitbox/visual feet preview
+together. It does not write to `level_geometry.json`.
+
+After calibrating each background, send the exported `groundY` JSON values so
+`level_geometry.json` can be updated in a separate commit.
+
 # Obstacle preview workflow
 
 Future obstacles must start as calibration previews:
