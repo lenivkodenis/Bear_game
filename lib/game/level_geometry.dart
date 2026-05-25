@@ -171,6 +171,7 @@ class LevelGeometry {
     required this.groundColliders,
     required this.platformColliders,
     required this.obstacleColliders,
+    required this.calibrationObstacles,
     required this.notes,
   });
 
@@ -219,6 +220,11 @@ class LevelGeometry {
         'obstacleColliders',
         context: 'level geometry $levelId',
       ),
+      calibrationObstacles: _readOptionalColliders(
+        json,
+        'calibrationObstacles',
+        context: 'level geometry $levelId',
+      ),
       notes: _requiredString(json, 'notes', context: 'level geometry $levelId'),
     );
   }
@@ -231,6 +237,7 @@ class LevelGeometry {
   final List<LevelGeometryCollider> groundColliders;
   final List<LevelGeometryCollider> platformColliders;
   final List<LevelGeometryCollider> obstacleColliders;
+  final List<LevelGeometryCollider> calibrationObstacles;
   final String notes;
 
   LevelGeometryCollider get mainGround => groundColliders.first;
@@ -260,6 +267,11 @@ class LevelGeometry {
         scaleX: scaleX,
         scaleY: scaleY,
       ),
+      calibrationObstacles: _scaleColliders(
+        calibrationObstacles,
+        scaleX: scaleX,
+        scaleY: scaleY,
+      ),
       notes: notes,
     );
   }
@@ -280,6 +292,18 @@ List<LevelGeometryCollider> _readColliders(
         ),
       )
       .toList(growable: false);
+}
+
+List<LevelGeometryCollider> _readOptionalColliders(
+  Map<String, Object?> json,
+  String key, {
+  required String context,
+}) {
+  if (!json.containsKey(key)) {
+    return const <LevelGeometryCollider>[];
+  }
+
+  return _readColliders(json, key, context: context);
 }
 
 List<LevelGeometryCollider> _scaleColliders(

@@ -8,6 +8,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GEOMETRY_PATH = REPO_ROOT / "assets/data/level_geometry.json"
+PLAYER_HITBOX_WIDTH = 78
+MIN_PREVIEW_WIDTH = 80
+MAX_PREVIEW_WIDTH = 130
+MIN_PREVIEW_HEIGHT = 35
+MAX_PREVIEW_HEIGHT = 55
 
 EXPECTED_BACKGROUNDS = {
     1: "assets/images/levels/level_01_ice_floe/background.png",
@@ -73,6 +78,7 @@ def validate_level(
     grounds = read_colliders(level, "groundColliders", context)
     platforms = read_colliders(level, "platformColliders", context)
     obstacles = read_colliders(level, "obstacleColliders", context)
+    calibration_obstacles = read_calibration_obstacles(level, context)
     notes = required_string(level, "notes", context)
 
     if "flat baseline" not in notes:
@@ -83,6 +89,11 @@ def validate_level(
         fail(f"{context}: baseline platformColliders must be empty.")
     if obstacles:
         fail(f"{context}: baseline obstacleColliders must be empty.")
+    if level_id == 1:
+        if len(calibration_obstacles) != 1:
+            fail(f"{context}: expected exactly one calibration obstacle preview.")
+    elif calibration_obstacles:
+        fail(f"{context}: calibration obstacle previews are only allowed on level 1.")
 
     ground = grounds[0]
     if ground["id"] != "main_ground":
@@ -105,6 +116,17 @@ def validate_level(
         fail(f"{context}: playerSpawn must sit on main ground.")
     if abs(mentor_y - ground["y"]) > 1:
         fail(f"{context}: mentorPosition must sit on main ground.")
+
+    if level_id == 1:
+        validate_calibration_obstacle(
+            calibration_obstacles[0],
+            player_spawn,
+            mentor_position,
+            ground,
+            context,
+            world_width,
+            world_height,
+        )
 
     # TODO(obstacle-rollout): Before obstacles return, validate that obstacle
     # bottom equals ground top, height is below safe jump height, and the
@@ -142,6 +164,52 @@ def validate_collider_bounds(
         fail(f"{context}: collider {collider['id']} exceeds world height.")
 
 
+def validate_calibration_obstacle(
+    obstacle: dict[str, float | str],
+    player_spawn: dict[str, object],
+    mentor_position: dict[str, object],
+    ground: dict[str, float | str],
+    context: str,
+    world_width: float,
+    world_height: float,
+) -> None:
+    validate_collider_bounds(obstacle, context, world_width, world_height)
+    if "preview" not in str(obstacle["id"]):
+        fail(f"{context}: calibration obstacle id must include 'preview'.")
+    if "Preview only" not in str(obstacle["notes"]):
+        fail(f"{context}: calibration obstacle notes must say Preview only.")
+
+    if not (MIN_PREVIEW_WIDTH <= obstacle["width"] <= MAX_PREVIEW_WIDTH):
+        fail(
+            f"{context}: calibration obstacle width must be between "
+            f"{MIN_PREVIEW_WIDTH} and {MAX_PREVIEW_WIDTH}."
+        )
+    if not (MIN_PREVIEW_HEIGHT <= obstacle["height"] <= MAX_PREVIEW_HEIGHT):
+        fail(
+            f"{context}: calibration obstacle height must be between "
+            f"{MIN_PREVIEW_HEIGHT} and {MAX_PREVIEW_HEIGHT}."
+        )
+
+    expected_y = ground["y"] - obstacle["height"]
+    if abs(obstacle["y"] - expected_y) > 1:
+        fail(
+            f"{context}: calibration obstacle y must equal main_ground.y - "
+            f"height ({expected_y}), found {obstacle['y']}."
+        )
+
+    player_x = required_number(player_spawn, "x", f"{context}.playerSpawn")
+    mentor_x = required_number(mentor_position, "x", f"{context}.mentorPosition")
+    obstacle_right = obstacle["x"] + obstacle["width"]
+    if obstacle["x"] <= player_x + PLAYER_HITBOX_WIDTH:
+        fail(f"{context}: calibration obstacle overlaps or is too close to spawn.")
+    if obstacle_right >= mentor_x:
+        fail(f"{context}: calibration obstacle overlaps mentorPosition.")
+    if not (player_x < obstacle["x"] < mentor_x):
+        fail(
+            f"{context}: calibration obstacle must be between spawn and mentor."
+        )
+
+
 def assert_no_forbidden_keys(value: object) -> None:
     forbidden = {"wrap", "worldWrap", "teleport", "resetPosition", "fallReset"}
     if isinstance(value, dict):
@@ -173,6 +241,32 @@ def read_colliders(
             }
         )
     return colliders
+
+
+def read_calibration_obstacles(
+    level: dict[str, object],
+    context: str,
+) -> list[dict[str, float | str]]:
+    if "calibrationObstacles" not in level:
+        return []
+
+    obstacles = []
+    for index, raw_obstacle in enumerate(
+        required_list(level, "calibrationObstacles", context)
+    ):
+        obstacle_context = f"{context} calibrationObstacles[{index}]"
+        obstacle = as_object(raw_obstacle, obstacle_context)
+        obstacles.append(
+            {
+                "id": required_string(obstacle, "id", obstacle_context),
+                "x": required_number(obstacle, "x", obstacle_context),
+                "y": required_number(obstacle, "y", obstacle_context),
+                "width": required_number(obstacle, "width", obstacle_context),
+                "height": required_number(obstacle, "height", obstacle_context),
+                "notes": required_string(obstacle, "notes", obstacle_context),
+            }
+        )
+    return obstacles
 
 
 def required_object(

@@ -64,6 +64,15 @@ obstacleBottomY = obstacle.y + obstacle.height
 obstacleBottomY must equal groundTopY
 ```
 
+Calibration obstacle previews use the same top-left math, but they are not
+gameplay colliders:
+
+```text
+preview.y = groundTopY - preview.height
+previewBottomY = preview.y + preview.height
+previewBottomY must equal groundTopY
+```
+
 If a future component uses center coordinates instead, the equivalent formula
 would be:
 
@@ -153,11 +162,11 @@ const bool kLevelGeometryDebugOverlay = false;
 ```
 
 When enabled manually, the overlay draws ground rectangles, ground top lines,
-future platform and obstacle preview rectangles, `playerSpawn`,
-`mentorPosition`, the current player hitbox, and the player feet/bottom line.
-It is render-only and must not change collision, physics, coordinates, movement,
-or level routes. For web calibration, enable it with `debugGeometry=1` in the
-URL instead of changing the default code flag.
+future platform rectangles, calibration obstacle preview rectangles,
+`playerSpawn`, `mentorPosition`, the current player hitbox, and the player
+feet/bottom line. It is render-only and must not change collision, physics,
+coordinates, movement, or level routes. For web calibration, enable it with
+`debugGeometry=1` in the URL instead of changing the default code flag.
 
 ## Calibration Rule
 

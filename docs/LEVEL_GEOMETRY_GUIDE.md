@@ -74,12 +74,46 @@ The overlay is only for calibration. Before ordinary gameplay checks, remove
 `debugGeometry=1` from the URL and reload. Do not commit a state where
 `kLevelGeometryDebugOverlay` is enabled by default.
 
+# Obstacle preview workflow
+
+Future obstacles must start as calibration previews:
+
+1. Add one `calibrationObstacles` preview to the target level.
+2. Keep `obstacleColliders: []`; the preview is not collision and does not
+   block the bear.
+3. Enable `debugGeometry=1` and take a screenshot of the preview rectangle.
+4. Confirm that the preview bottom sits exactly on `groundTopY` and does not
+   overlap `playerSpawn` or `mentorPosition`.
+5. Only after visual confirmation, move the calibrated rectangle into
+   `obstacleColliders` in a separate gameplay change.
+
+Current level 1 preview:
+
+```json
+{
+  "id": "ice_ridge_preview_1",
+  "x": 520,
+  "y": 375,
+  "width": 100,
+  "height": 45,
+  "notes": "Preview only. Not used for collision."
+}
+```
+
+The preview `y` is calculated, not guessed:
+
+```text
+preview.y = main_ground.y - preview.height
+preview.y = 420 - 45 = 375
+```
+
 ## JSON Shape
 
 `assets/data/level_geometry.json` uses design coordinates for an `800x600`
 world. Runtime scales the flat baseline to the current game size.
 
-Each level has:
+Level 1 currently has one optional calibration preview. Levels 2-10 remain
+without calibration previews:
 
 ```json
 {
@@ -92,6 +126,16 @@ Each level has:
   ],
   "platformColliders": [],
   "obstacleColliders": [],
+  "calibrationObstacles": [
+    {
+      "id": "ice_ridge_preview_1",
+      "x": 520,
+      "y": 375,
+      "width": 100,
+      "height": 45,
+      "notes": "Preview only. Not used for collision."
+    }
+  ],
   "notes": "Stable flat baseline. Obstacles disabled until coordinate contract is verified."
 }
 ```
@@ -111,6 +155,9 @@ Baseline mode requires:
 
 - `platformColliders: []`
 - `obstacleColliders: []`
+
+`calibrationObstacles` may contain preview rectangles for debug overlay
+calibration only. They are not gameplay colliders.
 
 No steps, gaps, crystals, logs, ridges, or blocked routes should be present
 until a later coordinate-calibrated tuning pass.
@@ -148,4 +195,5 @@ python3 tools/validate_level_geometry.py
 
 The validator checks all 10 levels, per-level backgrounds, one main ground,
 empty platforms, empty obstacles, sane coordinates, mentor to the right of the
-spawn, and both contact points on the main ground.
+spawn, both contact points on the main ground, and level 1 calibration preview
+math.

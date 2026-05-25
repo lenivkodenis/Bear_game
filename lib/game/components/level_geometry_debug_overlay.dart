@@ -13,6 +13,8 @@ class LevelGeometryDebugOverlay extends PositionComponent {
   static const _groundTopColor = Color(0xFFFFD60A);
   static const _platformColor = Color(0xCC0A84FF);
   static const _obstacleColor = Color(0xFFFF453A);
+  static const _candidateFillColor = Color(0x33FF9F0A);
+  static const _candidateColor = Color(0xFFFF9F0A);
   static const _spawnColor = Color(0xFFBF5AF2);
   static const _mentorColor = Color(0xFFFF9F0A);
   static const _hitboxColor = Color(0xFFFFFFFF);
@@ -51,6 +53,15 @@ class LevelGeometryDebugOverlay extends PositionComponent {
       strokeColor: _obstacleColor,
       labelPrefix: 'obstacle',
     );
+    _drawColliders(
+      canvas,
+      geometry.calibrationObstacles,
+      fillColor: _candidateFillColor,
+      strokeColor: _candidateColor,
+      labelPrefix: 'candidate',
+      drawTopLine: true,
+      drawBottomLine: true,
+    );
     _drawPoint(
       canvas,
       geometry.playerSpawn.toVector2(),
@@ -73,6 +84,7 @@ class LevelGeometryDebugOverlay extends PositionComponent {
     required Color strokeColor,
     required String labelPrefix,
     bool drawTopLine = false,
+    bool drawBottomLine = false,
   }) {
     final fillPaint = Paint()
       ..color = fillColor
@@ -98,6 +110,9 @@ class LevelGeometryDebugOverlay extends PositionComponent {
       canvas.drawRect(rect, strokePaint);
       if (drawTopLine) {
         canvas.drawLine(rect.topLeft, rect.topRight, topLinePaint);
+      }
+      if (drawBottomLine) {
+        canvas.drawLine(rect.bottomLeft, rect.bottomRight, topLinePaint);
       }
       _drawLabel(
         canvas,

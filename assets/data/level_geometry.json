@@ -14,6 +14,16 @@
       ],
       "platformColliders": [],
       "obstacleColliders": [],
+      "calibrationObstacles": [
+        {
+          "id": "ice_ridge_preview_1",
+          "x": 520,
+          "y": 375,
+          "width": 100,
+          "height": 45,
+          "notes": "Preview only. Not used for collision."
+        }
+      ],
       "notes": "Stable flat baseline. Obstacles disabled until coordinate contract is verified."
     },
     {
