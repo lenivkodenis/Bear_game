@@ -216,8 +216,16 @@ class LevelGeometry {
         scaleX: scaleX,
         scaleY: scaleY,
       ),
-      platformColliders: const <LevelGeometryCollider>[],
-      obstacleColliders: const <LevelGeometryCollider>[],
+      platformColliders: _scaleColliders(
+        platformColliders,
+        scaleX: scaleX,
+        scaleY: scaleY,
+      ),
+      obstacleColliders: _scaleColliders(
+        obstacleColliders,
+        scaleX: scaleX,
+        scaleY: scaleY,
+      ),
       notes: notes,
     );
   }

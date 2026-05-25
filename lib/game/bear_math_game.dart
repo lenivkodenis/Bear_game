@@ -4,6 +4,7 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
 
+import 'components/level_geometry_debug_overlay.dart';
 import 'components/platform_component.dart';
 import 'components/player_bear.dart';
 import 'components/snowy_background.dart';
@@ -103,6 +104,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
     add(player);
     add(mentor);
+    if (kLevelGeometryDebugOverlay) {
+      add(LevelGeometryDebugOverlay(geometry: levelGeometry, player: player));
+    }
 
     _sceneReady = true;
   }

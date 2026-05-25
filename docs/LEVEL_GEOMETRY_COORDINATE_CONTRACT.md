@@ -1,71 +1,67 @@
 # Level Geometry Coordinate Contract
 
 This contract freezes how level geometry coordinates are interpreted before
-obstacles are reintroduced.
+platforms or obstacles are reintroduced.
 
 ## Scene Coordinates
 
 `assets/data/level_geometry.json` is authored in an `800x600` design world.
 `LevelGeometry.scaledTo(size)` scales every coordinate to the current Flame
-scene size.
+scene size before the scene is built.
 
-Flame `PositionComponent` coordinates use top-left positioning:
+The project uses top-left positioning for collider rectangles:
 
 - `x` grows to the right;
 - `y` grows downward;
-- `position` is the top-left corner unless a component explicitly sets another
-  anchor.
+- collider `x` and `y` are the top-left corner;
+- `width` grows right from `x`;
+- `height` grows down from `y`.
+
+This is not a center-based geometry model. If a future runtime component uses a
+center anchor, it must convert from this top-left contract before rendering or
+colliding.
 
 ## Ground Colliders
 
-Ground collider `x` and `y` are the top-left corner of the ground rectangle.
-
+Ground collider `x` and `y` mean the top-left corner of the ground rectangle.
 For the current baseline:
 
 ```json
 { "id": "main_ground", "x": 0, "y": 420, "width": 800, "height": 180 }
 ```
 
-The top edge of the ground is:
+The top edge of any top-left ground collider is:
 
 ```text
-groundTopY = main_ground.y
+groundTopY = collider.y
 ```
 
-The baseline ground top is `420` in the `800x600` design world.
+The baseline main ground top is `420` in the `800x600` design world.
 
-## Player Spawn
+## Platform Colliders
 
-`playerSpawn` is a foot/contact point on the main ground, not the top-left of
-the bear hitbox.
-
-Runtime places the bear with:
+Future platform collider `x` and `y` also mean the top-left corner of the
+platform rectangle:
 
 ```text
-player.position.x = playerSpawn.x
-player.position.y = playerSpawn.y - PlayerBear.defaultSize.y
+platformTopY = platform.y
+platformBottomY = platform.y + platform.height
 ```
 
-Therefore:
-
-```text
-playerSpawn.y must equal groundTopY
-player hitbox bottom = player.position.y + PlayerBear.defaultSize.y
-player hitbox bottom must equal playerSpawn.y
-```
-
-If the bear floats or sinks, fix the geometry contact line first. Do not adjust
-bear hitbox, gravity, jump force, speed, visual offset, or feet anchor.
+For a standing surface on top of a platform, the bear's bottom line must match
+`platformTopY`. Platforms are disabled in the current baseline and
+`platformColliders` must stay empty until a calibrated rollout.
 
 ## Obstacle Colliders
 
-Future obstacle collider `x` and `y` must mean the top-left corner of the
-obstacle rectangle.
-
-The project uses the top-left variant:
+Future obstacle collider `x` and `y` mean the top-left corner of the obstacle
+rectangle. To place an obstacle on a ground surface:
 
 ```text
+groundTopY = collider.y
 obstacle.y = groundTopY - obstacle.height
+obstacleBottomY = obstacle.y + obstacle.height
+obstacleBottomY must equal groundTopY
 ```
 
 If a future component uses center coordinates instead, the equivalent formula
@@ -75,43 +71,58 @@ would be:
 obstacle.centerY = groundTopY - obstacle.height / 2
 ```
 
-But that is not the current project contract. Use top-left obstacle coordinates
-unless the runtime is deliberately changed and documented.
+That is not the current project contract. Use top-left obstacle coordinates
+unless the runtime is deliberately changed and this document is updated.
 
-## Ground Contact Rules
+## Player Spawn
 
-For every obstacle that sits on the ground:
-
-```text
-obstacleBottomY = obstacle.y + obstacle.height
-obstacleBottomY must equal groundTopY
-```
-
-An obstacle must not float above ground:
+`playerSpawn` is a foot/contact point on the surface where the bear starts, not
+the top-left corner of the bear hitbox. Runtime places the bear with:
 
 ```text
-obstacle.y + obstacle.height < groundTopY
+player.position.x = playerSpawn.x
+player.position.y = playerSpawn.y - PlayerBear.defaultSize.y
 ```
 
-An obstacle must not be buried into the ground:
+Therefore:
 
 ```text
-obstacle.y + obstacle.height > groundTopY
+playerSpawn.y must match the surface top Y
+player hitbox bottom = player.position.y + PlayerBear.defaultSize.y
+player hitbox bottom must equal playerSpawn.y while grounded
 ```
 
-Small visual softness in art is acceptable, but the physics rectangle must use
-the exact formula.
+For the flat baseline, `playerSpawn.y` must equal `main_ground.y`.
 
-## Next Calibration Step
+## Mentor Position
 
-Before adding obstacles again:
+`mentorPosition` is also a contact point on the surface, not a top-left sprite
+coordinate. Runtime places the mentor with:
 
-1. Keep `obstacleColliders` empty.
-2. Add or enable a debug overlay for `main_ground`, `playerSpawn`, and a single
-   test obstacle rectangle.
-3. Confirm visually that `groundTopY`, bear hitbox bottom, and obstacle bottom
-   coincide.
-4. Only then add one obstacle to level 1 and validate it mathematically.
+```text
+mentor.position.x = mentorPosition.x
+mentor.position.y = mentorPosition.y - WiseMentor.defaultSize.y
+```
+
+For the flat baseline:
+
+```text
+mentorPosition.y must equal main_ground.y
+mentorPosition.x must be greater than playerSpawn.x
+```
+
+## Standing On A Surface
+
+The bear is standing on a surface when the physical hitbox bottom line matches
+the surface top line:
+
+```text
+playerBottomY = player.position.y + player.size.y
+playerBottomY == surfaceTopY
+```
+
+If the bear floats or sinks, fix the geometry contact line first. Do not adjust
+bear hitbox, gravity, jump force, speed, visual offset, or feet anchor.
 
 ## Debug Overlay
 
@@ -122,5 +133,20 @@ must stay off by default:
 const bool kLevelGeometryDebugOverlay = false;
 ```
 
-The next step before any new obstacle rollout is a debug/calibration pass, not
-new obstacle placement.
+When enabled manually, the overlay draws ground rectangles, ground top lines,
+future platform and obstacle preview rectangles, `playerSpawn`,
+`mentorPosition`, the current player hitbox, and the player feet/bottom line.
+It is render-only and must not change collision, physics, coordinates, movement,
+or level routes.
+
+## Calibration Rule
+
+Before adding platforms or obstacles again:
+
+1. Keep `platformColliders` and `obstacleColliders` empty.
+2. Enable the debug overlay locally.
+3. Confirm that `groundTopY`, `playerSpawn`, `mentorPosition`, and the bear
+   bottom line all coincide on the main ground.
+4. Add one test collider only after the coordinate contract is visually
+   confirmed.
+5. Validate and manually playtest after every collider.

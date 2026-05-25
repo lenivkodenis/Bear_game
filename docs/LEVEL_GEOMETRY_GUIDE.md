@@ -32,6 +32,23 @@ Do not add obstacles by visual guessing. Before the next attempt:
 - add one obstacle only after the coordinate contract is verified;
 - keep levels 2-10 on flat baseline until level 1 is proven stable.
 
+# Geometry calibration workflow
+
+Before any platform or obstacle rollout:
+
+1. Manually enable `kLevelGeometryDebugOverlay` in
+   `lib/game/level_geometry.dart`.
+2. Check the main ground rectangle and its highlighted top line.
+3. Check the player hitbox and feet/bottom line.
+4. Confirm that `playerSpawn` is on the same surface line as the bear's feet.
+5. Confirm that `mentorPosition` is on the same surface line and remains to the
+   right of `playerSpawn`.
+6. Add only one test collider after the baseline lines are visually confirmed.
+7. Manually check movement, jumping, mentor reach, dialog, and task opening
+   after every collider.
+8. Do not add many obstacles at once, and do not roll geometry changes across
+   all 10 levels in a single pass.
+
 ## JSON Shape
 
 `assets/data/level_geometry.json` uses design coordinates for an `800x600`
@@ -81,6 +98,11 @@ until a later coordinate-calibrated tuning pass.
 - `playerSpawn`;
 - `mentorPosition`;
 - the single `main_ground`.
+
+When `kLevelGeometryDebugOverlay` is enabled manually, the runtime also draws
+geometry guides for ground, future platform and obstacle preview colliders,
+spawn points, mentor points, player hitbox, and player feet line. This overlay
+is visual only and must not affect movement, collision, physics, or routes.
 
 The bear still uses its original simple grounding logic from `PlayerBear`.
 Hitbox, speed, gravity, jump force, visual offsets, feet anchor, and walk
