@@ -52,16 +52,16 @@ Level 1 currently has one active obstacle:
 {
   "id": "ice_ridge_1",
   "x": 537.70,
-  "y": 442.25,
+  "y": 459,
   "width": 90,
-  "height": 46.75
+  "height": 30
 }
 ```
 
 The obstacle is ground-locked:
 
 ```text
-y = 489 - 46.75 = 442.25
+y = 489 - 30 = 459
 ```
 
 This active obstacle exists only on level 1. Levels 2-10 remain on the flat
@@ -80,10 +80,11 @@ With `debugGeometry=1`, the obstacle is still visible as a debug rectangle with
 the `obstacle: ice_ridge_1` label. Use that overlay to compare the active
 collider with the player hitbox, visual feet, and ground line.
 
-The obstacle is not a platform. It blocks horizontal movement only while the
-player hitbox is not above the obstacle top. The resolver must not change
-`player.y`, must not land the player on top of the obstacle, and must not alter
-ground, jump force, gravity, speed, or hitbox values.
+The obstacle is now treated as a solid block. It blocks horizontal movement
+from both sides, catches the player when the hitbox lands on its top face, keeps
+that top face as the active ground while the player's feet remain within the
+obstacle width, and falls back to the main ground after the player walks off an
+edge. The resolver must not alter jump force, gravity, speed, or hitbox values.
 
 The visual obstacle can return in a separate step after the collider behavior is
 confirmed in normal and debug modes.
@@ -261,7 +262,7 @@ All levels currently use the same main ground shape, with a per-level
   ],
   "platformColliders": [],
   "obstacleColliders": [
-    { "id": "ice_ridge_1", "x": 537.70, "y": 442.25, "width": 90, "height": 46.75 }
+    { "id": "ice_ridge_1", "x": 537.70, "y": 459, "width": 90, "height": 30 }
   ],
   "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
 }

@@ -1,22 +1,31 @@
 import 'dart:ui';
 
-const double obstacleTopPassTolerance = 3.0;
+const double obstacleTopTolerance = 3.0;
 
-Rect resolveObstacleHorizontalCollision({
+Rect resolveObstacleSideCollision({
   required Rect previousPlayerRect,
   required Rect futurePlayerRect,
   required Iterable<Rect> obstacleRects,
   required double minX,
   required double maxX,
-  double topPassTolerance = obstacleTopPassTolerance,
+  double topTolerance = obstacleTopTolerance,
 }) {
   var resolvedRect = futurePlayerRect;
 
   for (final obstacleRect in obstacleRects) {
-    if (!blocksObstacleHorizontalMovement(
+    if (_isLeavingTopSurface(
+      previousPlayerRect: previousPlayerRect,
       futurePlayerRect: resolvedRect,
       obstacleRect: obstacleRect,
-      topPassTolerance: topPassTolerance,
+      topTolerance: topTolerance,
+    )) {
+      continue;
+    }
+
+    if (!blocksObstacleSideMovement(
+      futurePlayerRect: resolvedRect,
+      obstacleRect: obstacleRect,
+      topTolerance: topTolerance,
     )) {
       continue;
     }
@@ -41,13 +50,106 @@ Rect resolveObstacleHorizontalCollision({
   return resolvedRect;
 }
 
-bool blocksObstacleHorizontalMovement({
+Rect? findObstacleTopLanding({
+  required Rect previousPlayerRect,
+  required Rect futurePlayerRect,
+  required Iterable<Rect> obstacleRects,
+  double topTolerance = obstacleTopTolerance,
+}) {
+  for (final obstacleRect in obstacleRects) {
+    if (!feetXInsideObstacle(futurePlayerRect, obstacleRect)) {
+      continue;
+    }
+
+    final wasAboveTop =
+        previousPlayerRect.bottom <= obstacleRect.top + topTolerance;
+    final crossedTop =
+        futurePlayerRect.bottom >= obstacleRect.top &&
+        futurePlayerRect.top < obstacleRect.top;
+    final movingDown = futurePlayerRect.bottom >= previousPlayerRect.bottom;
+    if (wasAboveTop && crossedTop && movingDown) {
+      return obstacleRect;
+    }
+  }
+
+  return null;
+}
+
+Rect? findObstacleTopSupport({
+  required Rect playerRect,
+  required Iterable<Rect> obstacleRects,
+  double topTolerance = obstacleTopTolerance,
+}) {
+  for (final obstacleRect in obstacleRects) {
+    final feetOnTop =
+        (playerRect.bottom - obstacleRect.top).abs() <= topTolerance;
+    if (feetOnTop && feetXInsideObstacle(playerRect, obstacleRect)) {
+      return obstacleRect;
+    }
+  }
+
+  return null;
+}
+
+bool blocksObstacleSideMovement({
   required Rect futurePlayerRect,
   required Rect obstacleRect,
-  double topPassTolerance = obstacleTopPassTolerance,
+  double topTolerance = obstacleTopTolerance,
 }) {
-  return futurePlayerRect.overlaps(obstacleRect) &&
-      futurePlayerRect.bottom > obstacleRect.top + topPassTolerance;
+  return rectsOverlapHorizontally(futurePlayerRect, obstacleRect) &&
+      futurePlayerRect.overlaps(obstacleRect) &&
+      !isPlayerAboveObstacleTop(
+        playerRect: futurePlayerRect,
+        obstacleRect: obstacleRect,
+        topTolerance: topTolerance,
+      );
+}
+
+bool isPlayerAboveObstacleTop({
+  required Rect playerRect,
+  required Rect obstacleRect,
+  double topTolerance = obstacleTopTolerance,
+}) {
+  return playerRect.bottom <= obstacleRect.top + topTolerance;
+}
+
+bool feetXInsideObstacle(Rect playerRect, Rect obstacleRect) {
+  final feetX = playerRect.center.dx;
+  return feetX >= obstacleRect.left && feetX <= obstacleRect.right;
+}
+
+bool rectsOverlapHorizontally(Rect a, Rect b) {
+  return a.left < b.right && a.right > b.left;
+}
+
+bool _isLeavingTopSurface({
+  required Rect previousPlayerRect,
+  required Rect futurePlayerRect,
+  required Rect obstacleRect,
+  required double topTolerance,
+}) {
+  if (feetXInsideObstacle(futurePlayerRect, obstacleRect)) {
+    return false;
+  }
+
+  final horizontalDelta = futurePlayerRect.left - previousPlayerRect.left;
+  final feetPastRightEdge = futurePlayerRect.center.dx > obstacleRect.right;
+  final feetPastLeftEdge = futurePlayerRect.center.dx < obstacleRect.left;
+  final movingIntoObstacle =
+      (feetPastRightEdge && horizontalDelta < 0) ||
+      (feetPastLeftEdge && horizontalDelta > 0);
+  if (movingIntoObstacle) {
+    return false;
+  }
+
+  final justLeftTop =
+      previousPlayerRect.bottom <= obstacleRect.top + topTolerance &&
+      futurePlayerRect.bottom > obstacleRect.top;
+  final stillDroppingBesideObstacle =
+      previousPlayerRect.bottom < obstacleRect.bottom &&
+      futurePlayerRect.top < obstacleRect.top;
+
+  return justLeftTop || stillDroppingBesideObstacle;
 }
 
 bool _shouldResolveOnLeft({

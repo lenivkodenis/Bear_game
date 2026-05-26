@@ -5,14 +5,14 @@ import 'package:bear_game/game/obstacle_collision.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  const obstacle = Rect.fromLTWH(537.70, 442.25, 90, 46.75);
+  const obstacle = Rect.fromLTWH(537.70, 459, 90, 30);
 
-  group('obstacle side collision', () {
+  group('obstacle solid block collision', () {
     test('blocks a grounded player moving into the obstacle from the left', () {
       const previous = Rect.fromLTWH(459, 397, 78, 92);
       const future = Rect.fromLTWH(462, 397, 78, 92);
 
-      final resolved = resolveObstacleHorizontalCollision(
+      final resolved = resolveObstacleSideCollision(
         previousPlayerRect: previous,
         futurePlayerRect: future,
         obstacleRects: const <Rect>[obstacle],
@@ -25,11 +25,81 @@ void main() {
       expect(resolved.bottom, future.bottom);
     });
 
-    test('allows a player above the obstacle top to pass over', () {
-      const previous = Rect.fromLTWH(459, 352, 78, 92);
-      const future = Rect.fromLTWH(462, 352, 78, 92);
+    test(
+      'blocks a grounded player moving into the obstacle from the right',
+      () {
+        const previous = Rect.fromLTWH(629, 397, 78, 92);
+        const future = Rect.fromLTWH(626, 397, 78, 92);
 
-      final resolved = resolveObstacleHorizontalCollision(
+        final resolved = resolveObstacleSideCollision(
+          previousPlayerRect: previous,
+          futurePlayerRect: future,
+          obstacleRects: const <Rect>[obstacle],
+          minX: 0,
+          maxX: 722,
+        );
+
+        expect(resolved.left, obstacle.right);
+        expect(resolved.top, future.top);
+        expect(resolved.bottom, future.bottom);
+      },
+    );
+
+    test('lands a falling player on the obstacle top', () {
+      const previous = Rect.fromLTWH(548, 360, 78, 92);
+      const future = Rect.fromLTWH(548, 370, 78, 92);
+
+      final landing = findObstacleTopLanding(
+        previousPlayerRect: previous,
+        futurePlayerRect: future,
+        obstacleRects: const <Rect>[obstacle],
+      );
+
+      expect(landing, obstacle);
+    });
+
+    test('does not land when feet are outside obstacle width', () {
+      const previous = Rect.fromLTWH(450, 360, 78, 92);
+      const future = Rect.fromLTWH(450, 370, 78, 92);
+
+      final landing = findObstacleTopLanding(
+        previousPlayerRect: previous,
+        futurePlayerRect: future,
+        obstacleRects: const <Rect>[obstacle],
+      );
+
+      expect(landing, isNull);
+    });
+
+    test('keeps top support while feet stay inside obstacle width', () {
+      const playerOnTop = Rect.fromLTWH(548, 367, 78, 92);
+
+      final support = findObstacleTopSupport(
+        playerRect: playerOnTop,
+        obstacleRects: const <Rect>[obstacle],
+      );
+
+      expect(support, obstacle);
+      expect(feetXInsideObstacle(playerOnTop, obstacle), isTrue);
+    });
+
+    test('drops top support after walking past the obstacle edge', () {
+      const playerPastRightEdge = Rect.fromLTWH(590, 367, 78, 92);
+
+      final support = findObstacleTopSupport(
+        playerRect: playerPastRightEdge,
+        obstacleRects: const <Rect>[obstacle],
+      );
+
+      expect(support, isNull);
+      expect(feetXInsideObstacle(playerPastRightEdge, obstacle), isFalse);
+    });
+
+    test('does not side-snap when walking off the obstacle top edge', () {
+      const previous = Rect.fromLTWH(590, 367, 78, 92);
+      const future = Rect.fromLTWH(593, 369, 78, 92);
+
+      final resolved = resolveObstacleSideCollision(
         previousPlayerRect: previous,
         futurePlayerRect: future,
         obstacleRects: const <Rect>[obstacle],
@@ -37,21 +107,69 @@ void main() {
         maxX: 722,
       );
 
+      expect(future.overlaps(obstacle), isTrue);
+      expect(feetXOutsideRightEdge(future, obstacle), isTrue);
       expect(resolved, future);
-      expect(
-        blocksObstacleHorizontalMovement(
-          futurePlayerRect: future,
-          obstacleRect: obstacle,
-        ),
-        isFalse,
+    });
+
+    test('keeps falling past the right edge after leaving top tolerance', () {
+      const previous = Rect.fromLTWH(604, 371, 78, 92);
+      const future = Rect.fromLTWH(607, 374, 78, 92);
+
+      final resolved = resolveObstacleSideCollision(
+        previousPlayerRect: previous,
+        futurePlayerRect: future,
+        obstacleRects: const <Rect>[obstacle],
+        minX: 0,
+        maxX: 722,
       );
+
+      expect(previous.bottom, greaterThan(obstacle.top + obstacleTopTolerance));
+      expect(future.overlaps(obstacle), isTrue);
+      expect(feetXOutsideRightEdge(future, obstacle), isTrue);
+      expect(resolved, future);
+    });
+
+    test('keeps falling past the left edge after leaving top tolerance', () {
+      const previous = Rect.fromLTWH(475, 371, 78, 92);
+      const future = Rect.fromLTWH(472, 374, 78, 92);
+
+      final resolved = resolveObstacleSideCollision(
+        previousPlayerRect: previous,
+        futurePlayerRect: future,
+        obstacleRects: const <Rect>[obstacle],
+        minX: 0,
+        maxX: 722,
+      );
+
+      expect(previous.bottom, greaterThan(obstacle.top + obstacleTopTolerance));
+      expect(future.overlaps(obstacle), isTrue);
+      expect(feetXOutsideLeftEdge(future, obstacle), isTrue);
+      expect(resolved, future);
+    });
+
+    test('blocks movement back into the obstacle after leaving the top', () {
+      const previous = Rect.fromLTWH(607, 374, 78, 92);
+      const future = Rect.fromLTWH(604, 377, 78, 92);
+
+      final resolved = resolveObstacleSideCollision(
+        previousPlayerRect: previous,
+        futurePlayerRect: future,
+        obstacleRects: const <Rect>[obstacle],
+        minX: 0,
+        maxX: 722,
+      );
+
+      expect(feetXOutsideRightEdge(future, obstacle), isTrue);
+      expect(resolved.left, obstacle.right);
+      expect(resolved.top, future.top);
     });
 
     test('does not apply when a level has no obstacle colliders', () {
       const previous = Rect.fromLTWH(459, 397, 78, 92);
       const future = Rect.fromLTWH(462, 397, 78, 92);
 
-      final resolved = resolveObstacleHorizontalCollision(
+      final resolved = resolveObstacleSideCollision(
         previousPlayerRect: previous,
         futurePlayerRect: future,
         obstacleRects: const <Rect>[],
@@ -62,28 +180,11 @@ void main() {
       expect(resolved, future);
     });
 
-    test('resolves to the nearest side without changing vertical position', () {
-      const previous = Rect.fromLTWH(630, 397, 78, 92);
-      const future = Rect.fromLTWH(625, 397, 78, 92);
-
-      final resolved = resolveObstacleHorizontalCollision(
-        previousPlayerRect: previous,
-        futurePlayerRect: future,
-        obstacleRects: const <Rect>[obstacle],
-        minX: 0,
-        maxX: 722,
-      );
-
-      expect(resolved.left, obstacle.right);
-      expect(resolved.top, future.top);
-      expect(resolved.height, future.height);
-    });
-
-    test('keeps the correction small for normal frame movement', () {
+    test('side collision does not change vertical position', () {
       const previous = Rect.fromLTWH(459, 397, 78, 92);
       const future = Rect.fromLTWH(462, 397, 78, 92);
 
-      final resolved = resolveObstacleHorizontalCollision(
+      final resolved = resolveObstacleSideCollision(
         previousPlayerRect: previous,
         futurePlayerRect: future,
         obstacleRects: const <Rect>[obstacle],
@@ -91,7 +192,8 @@ void main() {
         maxX: 722,
       );
 
-      expect((future.left - resolved.left).abs(), lessThan(4));
+      expect(resolved.top, future.top);
+      expect(resolved.height, future.height);
     });
   });
 
@@ -106,4 +208,12 @@ void main() {
     expect(source, contains('static const _hitboxWidth = 78.0;'));
     expect(source, contains('static const _hitboxHeight = 92.0;'));
   });
+}
+
+bool feetXOutsideRightEdge(Rect playerRect, Rect obstacleRect) {
+  return playerRect.center.dx > obstacleRect.right;
+}
+
+bool feetXOutsideLeftEdge(Rect playerRect, Rect obstacleRect) {
+  return playerRect.center.dx < obstacleRect.left;
 }

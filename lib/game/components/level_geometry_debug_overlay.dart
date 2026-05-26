@@ -57,6 +57,7 @@ class LevelGeometryDebugOverlay extends PositionComponent {
   static const _groundTopColor = Color(0xFFFFD60A);
   static const _platformColor = Color(0xCC0A84FF);
   static const _obstacleColor = Color(0xFFFF453A);
+  static const _obstacleFillColor = Color(0x33FF453A);
   static const _candidateFillColor = Color(0x33FF9F0A);
   static const _candidateColor = Color(0xFFFF9F0A);
   static const _spawnColor = Color(0xFFBF5AF2);
@@ -101,9 +102,11 @@ class LevelGeometryDebugOverlay extends PositionComponent {
     _drawColliders(
       canvas,
       geometry.obstacleColliders,
-      fillColor: Colors.transparent,
+      fillColor: _obstacleFillColor,
       strokeColor: _obstacleColor,
       labelPrefix: 'obstacle',
+      drawTopLine: true,
+      drawBottomLine: true,
     );
     _drawColliders(
       canvas,

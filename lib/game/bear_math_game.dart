@@ -637,6 +637,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   @override
   void update(double dt) {
+    if (_sceneReady) {
+      _updatePlayerActiveGround();
+    }
     final previousPlayerRect = _sceneReady ? _playerRect : null;
     super.update(dt);
 
@@ -671,22 +674,53 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       return;
     }
 
-    final resolvedRect = resolveObstacleHorizontalCollision(
+    final currentRect = _playerRect;
+    final obstacleRects = _obstacleRects;
+    final landingObstacle = findObstacleTopLanding(
       previousPlayerRect: previousPlayerRect,
-      futurePlayerRect: _playerRect,
-      obstacleRects: levelGeometry.obstacleColliders.map(
-        (obstacle) => Rect.fromLTWH(
-          obstacle.x,
-          obstacle.y,
-          obstacle.width,
-          obstacle.height,
-        ),
-      ),
+      futurePlayerRect: currentRect,
+      obstacleRects: obstacleRects,
+    );
+    if (landingObstacle != null) {
+      player.landOnSurface(landingObstacle.top);
+      return;
+    }
+
+    final resolvedRect = resolveObstacleSideCollision(
+      previousPlayerRect: previousPlayerRect,
+      futurePlayerRect: currentRect,
+      obstacleRects: obstacleRects,
       minX: 0,
       maxX: size.x - player.size.x,
     );
     if (resolvedRect.left != player.position.x) {
       player.position.x = resolvedRect.left;
     }
+  }
+
+  void _updatePlayerActiveGround() {
+    final supportObstacle = findObstacleTopSupport(
+      playerRect: _playerRect,
+      obstacleRects: _obstacleRects,
+    );
+    if (supportObstacle == null) {
+      player.setActiveGroundY(levelGeometry.mainGround.y);
+      return;
+    }
+
+    player.setActiveGroundY(supportObstacle.top);
+  }
+
+  List<Rect> get _obstacleRects {
+    return levelGeometry.obstacleColliders
+        .map(
+          (obstacle) => Rect.fromLTWH(
+            obstacle.x,
+            obstacle.y,
+            obstacle.width,
+            obstacle.height,
+          ),
+        )
+        .toList(growable: false);
   }
 }

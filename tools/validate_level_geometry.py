@@ -42,9 +42,9 @@ MAX_PREVIEW_HEIGHT = 70
 EXPECTED_LEVEL_ONE_OBSTACLE = {
     "id": "ice_ridge_1",
     "x": 537.70,
-    "y": 442.25,
+    "y": 459,
     "width": 90,
-    "height": 46.75,
+    "height": 30,
 }
 
 

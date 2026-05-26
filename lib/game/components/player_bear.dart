@@ -25,7 +25,8 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     required super.position,
     required this.groundY,
     required this.levelWidth,
-  }) : super(size: defaultSize, anchor: Anchor.topLeft);
+  }) : _activeGroundY = groundY,
+       super(size: defaultSize, anchor: Anchor.topLeft);
 
   static const _hitboxWidth = 78.0;
   static const _hitboxHeight = 92.0;
@@ -66,6 +67,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   final double groundY;
   final double levelWidth;
   final Vector2 _velocity = Vector2.zero();
+  double _activeGroundY;
   Image? _image;
   Image? _jumpImage;
   Image? _sitImage;
@@ -76,7 +78,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   bool _isInteracting = false;
   bool _isSitting = false;
 
-  bool get _isOnGround => position.y >= groundY - size.y - 0.5;
+  bool get _isOnGround => position.y >= _activeGroundY - size.y - 0.5;
 
   BearAnimationState get animationState => _animationState;
 
@@ -146,7 +148,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     _velocity.y += _gravity * dt;
     position += _velocity * dt;
 
-    final groundTop = groundY - size.y;
+    final groundTop = _activeGroundY - size.y;
     if (position.y > groundTop) {
       position.y = groundTop;
       _velocity.y = 0;
@@ -296,6 +298,16 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
 
   void stopMoving() {
     _velocity.x = 0;
+  }
+
+  void setActiveGroundY(double value) {
+    _activeGroundY = value;
+  }
+
+  void landOnSurface(double surfaceY) {
+    _activeGroundY = surfaceY;
+    position.y = surfaceY - size.y;
+    _velocity.y = 0;
   }
 
   void jump() {

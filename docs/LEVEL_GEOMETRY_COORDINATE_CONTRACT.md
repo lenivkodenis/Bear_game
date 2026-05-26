@@ -100,12 +100,12 @@ The first active obstacle on level 1 follows the same formula:
 
 ```text
 groundTopY = 489
-obstacle.height = 46.75
-obstacle.y = 489 - 46.75 = 442.25
+obstacle.height = 30
+obstacle.y = 489 - 30 = 459
 ```
 
-Active obstacles block horizontal movement only when the player hitbox is not
-above the obstacle top:
+Active solid-block obstacles block horizontal movement only when the player
+hitbox is not above the obstacle top:
 
 ```text
 if player.bottom > obstacle.top + smallTolerance:
@@ -114,9 +114,11 @@ else:
     allow the player to pass over the obstacle
 ```
 
-The obstacle resolver must only adjust horizontal position. It must not change
-`player.y`, must not land the player on the obstacle top, and must not change the
-main ground, jump force, gravity, speed, or hitbox.
+When the player is falling from above and the hitbox bottom crosses the obstacle
+top while the feet are inside `obstacle.left..obstacle.right`, the obstacle top
+becomes the active ground. After the player walks off the left or right edge,
+active ground returns to the main ground so normal gravity can handle the fall.
+This must not change jump force, gravity, speed, or hitbox.
 
 Calibration obstacle previews use the same top-left math, but they are not
 gameplay colliders:
