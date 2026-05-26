@@ -203,7 +203,7 @@ void main() {
     ).readAsStringSync();
 
     expect(source, contains('static const _moveSpeed = 160.0;'));
-    expect(source, contains('static const _jumpImpulse = -360.0;'));
+    expect(source, contains('static const _jumpImpulse = -410.0;'));
     expect(source, contains('static const _gravity = 820.0;'));
     expect(source, contains('static const _hitboxWidth = 78.0;'));
     expect(source, contains('static const _hitboxHeight = 92.0;'));

@@ -9,10 +9,10 @@ import 'package:flutter/widgets.dart' show KeyEventResult;
 
 import 'components/distant_birds_component.dart';
 import 'components/level_geometry_debug_overlay.dart';
+import 'components/mentor_visual_component.dart';
 import 'components/platform_component.dart';
 import 'components/player_bear.dart';
 import 'components/snowy_background.dart';
-import 'components/wise_mentor.dart';
 import 'ground_segment_collision.dart';
 import 'level_geometry.dart';
 import 'obstacle_collision.dart';
@@ -31,7 +31,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   final int levelId;
   late PlayerBear player;
-  late final WiseMentor mentor;
+  late final MentorVisualComponent mentor;
   late LevelGeometry levelGeometry;
 
   final ValueNotifier<int> scoreNotifier = ValueNotifier<int>(0);
@@ -149,13 +149,11 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       ),
       groundY: groundY,
       levelWidth: size.x,
-    );
+    )..priority = 20;
     final mentorSpawn = levelGeometry.mentorPosition.toVector2();
-    mentor = WiseMentor(
-      position: Vector2(
-        mentorSpawn.x,
-        mentorSpawn.y - WiseMentor.defaultSize.y,
-      ),
+    mentor = MentorVisualComponent(
+      levelId: currentLevel!.id,
+      groundPosition: mentorSpawn,
     );
 
     add(player);
@@ -615,14 +613,11 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       position: Vector2(playerX, mainGround.y - PlayerBear.defaultSize.y),
       groundY: mainGround.y,
       levelWidth: size.x,
-    );
+    )..priority = 20;
     add(player);
 
     final mentorSpawn = levelGeometry.mentorPosition.toVector2();
-    mentor.position = Vector2(
-      mentorSpawn.x,
-      mentorSpawn.y - WiseMentor.defaultSize.y,
-    );
+    mentor.moveToGroundPosition(mentorSpawn);
   }
 
   void _adjustGroundDipLeftEdge(double sourceDelta) {
@@ -1062,7 +1057,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       _resolveObstacleCollisions(previousPlayerRect);
     }
 
-    if (!_mentorDialogWasShown && player.distance(mentor) < 92) {
+    if (!_mentorDialogWasShown && _isPlayerNearMentor) {
       _mentorDialogWasShown = true;
       _mentorDialogOpen = true;
       player.stopMoving();
@@ -1078,6 +1073,11 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       player.size.x,
       player.size.y,
     );
+  }
+
+  bool get _isPlayerNearMentor {
+    final playerCenter = player.position + player.size / 2;
+    return playerCenter.distanceTo(mentor.interactionPoint) < 92;
   }
 
   void _resolveObstacleCollisions(Rect previousPlayerRect) {

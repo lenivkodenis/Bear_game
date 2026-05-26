@@ -60,7 +60,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   static const jumpTiltAmplitude = math.pi / 90;
 
   static const _moveSpeed = 160.0;
-  static const _jumpImpulse = -360.0;
+  static const _jumpImpulse = -410.0;
   static const _gravity = 820.0;
   static const _idleCycleSpeed = 2.4;
 

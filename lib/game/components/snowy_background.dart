@@ -8,7 +8,7 @@ import '../level_background_assets.dart';
 
 class SnowyBackground extends PositionComponent {
   SnowyBackground({required Vector2 size, required this.assetPath})
-    : super(size: size);
+    : super(size: size, priority: -1000);
 
   final String assetPath;
   ui.Image? _background;

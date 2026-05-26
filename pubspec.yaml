@@ -26,6 +26,16 @@ flutter:
     - assets/images/bear_cub/bear_cub_base.png
     - assets/images/characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png
     - assets/images/characters/bear_cub/animations/walk/
+    - assets/images/characters/mentors/level_01_ice_floe/mentor.png
+    - assets/images/characters/mentors/level_02_icy_river/mentor.png
+    - assets/images/characters/mentors/level_03_snowy_shore/mentor.png
+    - assets/images/characters/mentors/level_04_northern_forest/mentor.png
+    - assets/images/characters/mentors/level_05_ice_cave/mentor.png
+    - assets/images/characters/mentors/level_06_snowy_valley/mentor.png
+    - assets/images/characters/mentors/level_07_mountain_pass/mentor.png
+    - assets/images/characters/mentors/level_08_polar_night/mentor.png
+    - assets/images/characters/mentors/level_09_northern_lights/mentor.png
+    - assets/images/characters/mentors/level_10_northern_ocean/mentor.png
     - assets/images/locations/snowy_clearing/01_sky.png
     - assets/images/locations/snowy_clearing/02_far_hills.png
     - assets/images/locations/snowy_clearing/03_mid_forest.png
