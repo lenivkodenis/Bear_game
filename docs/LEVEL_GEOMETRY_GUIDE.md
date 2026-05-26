@@ -44,15 +44,15 @@ currently limited to two active level 1 obstacles.
 # Active obstacles on level 1
 
 The first obstacle was calibrated through the debug-only preview workflow. The
-second obstacle reuses the same solid-block mechanics and temporary Canvas
-visual to verify that multiple `obstacleColliders` work on one level.
+second obstacle reuses the same solid-block mechanics to verify that multiple
+`obstacleColliders` work on one level.
 
 Level 1 currently has two active obstacles:
 
 ```json
 [
-  { "id": "ice_ridge_1", "x": 170, "y": 446.25, "width": 90, "height": 42.75 },
-  { "id": "ice_ridge_2", "x": 528.74, "y": 442, "width": 92.87, "height": 47 }
+  { "id": "ice_ridge_1", "x": 139.08, "y": 446.25, "width": 58.39, "height": 42.75 },
+  { "id": "ice_ridge_2", "x": 545.98, "y": 442, "width": 64.13, "height": 47 }
 ]
 ```
 
@@ -68,8 +68,9 @@ baseline with `obstacleColliders: []` and `platformColliders: []`.
 
 # Obstacle collision stabilization
 
-The active level 1 obstacles remain in `obstacleColliders`, and ordinary
-gameplay draws the shared temporary Canvas obstacle visual for each collider.
+The active level 1 obstacles remain in `obstacleColliders`. Ordinary gameplay
+does not draw a custom obstacle layer; the completed level background provides
+the production look.
 
 With `debugGeometry=1`, both obstacles are visible as debug rectangles with
 `obstacle:` labels. Use that overlay to compare the active colliders with the
@@ -81,8 +82,8 @@ that top face as the active ground while the player's feet remain within the
 obstacle width, and falls back to the main ground after the player walks off an
 edge. The resolver must not alter jump force, gravity, speed, or hitbox values.
 
-The temporary Canvas visual is production-visible for now and must remain
-decorative; collider behavior still comes only from `obstacleColliders`.
+Collider behavior still comes only from `obstacleColliders`; debug rectangles
+remain a calibration aid and are shown only with `debugGeometry=1`.
 
 # Obstacle preview after ground calibration
 
@@ -257,8 +258,8 @@ All levels currently use the same main ground shape, with a per-level
   ],
   "platformColliders": [],
   "obstacleColliders": [
-    { "id": "ice_ridge_1", "x": 170, "y": 446.25, "width": 90, "height": 42.75 },
-    { "id": "ice_ridge_2", "x": 528.74, "y": 442, "width": 92.87, "height": 47 }
+    { "id": "ice_ridge_1", "x": 139.08, "y": 446.25, "width": 58.39, "height": 42.75 },
+    { "id": "ice_ridge_2", "x": 545.98, "y": 442, "width": 64.13, "height": 47 }
   ],
   "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
 }
