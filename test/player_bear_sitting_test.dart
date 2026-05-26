@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bear_game/game/components/player_bear.dart';
 import 'package:flame/components.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,7 +23,7 @@ void main() {
     bear.update(3.0);
     expect(bear.animationState, BearAnimationState.sitDown);
 
-    bear.update(0.35);
+    bear.update(0.56);
     expect(bear.animationState, BearAnimationState.sitting);
   }
 
@@ -87,7 +89,7 @@ void main() {
       bear.moveRight();
       expect(bear.animationState, BearAnimationState.standUp);
 
-      bear.update(0.35);
+      bear.update(0.56);
       expect(bear.animationState, BearAnimationState.walk);
     });
 
@@ -98,8 +100,29 @@ void main() {
       bear.jump();
       expect(bear.animationState, BearAnimationState.standUp);
 
-      bear.update(0.35);
+      bear.update(0.56);
       expect(bear.animationState, BearAnimationState.jump);
+    });
+
+    test('sitting pose keeps visual feet on the ground line', () {
+      final bear = createBear();
+      settleIntoSitting(bear);
+
+      expect(bear.visualFeetY, closeTo(groundY, 0.001));
+    });
+
+    test('sitting animation frames are ordered from standing to sitting', () {
+      for (var index = 1; index <= kBearSitFrameOrder.length; index += 1) {
+        expect(
+          File(
+            'assets/images/characters/bear_cub/animations/sit_down/bear_sit_down_${index.toString().padLeft(2, '0')}.png',
+          ).existsSync(),
+          isTrue,
+        );
+      }
+
+      expect(kBearSitFrameOrder.first, 'bear_sit_down_01.png');
+      expect(kBearSitFrameOrder.last, 'bear_sit_down_09.png');
     });
   });
 }
