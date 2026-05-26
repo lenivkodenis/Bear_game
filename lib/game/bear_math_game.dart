@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show KeyEventResult;
 
 import 'components/level_geometry_debug_overlay.dart';
+import 'components/obstacle_visual_component.dart';
 import 'components/platform_component.dart';
 import 'components/player_bear.dart';
 import 'components/snowy_background.dart';
@@ -122,6 +123,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       size: mainGround.size,
     );
     add(_mainGroundComponent);
+    _addObstacleVisuals();
 
     final playerSpawn = levelGeometry.playerSpawn.toVector2();
     player = PlayerBear(
@@ -695,6 +697,17 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     );
     if (resolvedRect.left != player.position.x) {
       player.position.x = resolvedRect.left;
+    }
+  }
+
+  void _addObstacleVisuals() {
+    for (final obstacle in levelGeometry.obstacleColliders) {
+      add(
+        ObstacleVisualComponent(
+          position: obstacle.position,
+          size: obstacle.size,
+        ),
+      );
     }
   }
 
