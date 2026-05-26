@@ -30,7 +30,8 @@ class _GameScreenState extends State<GameScreen> {
       return;
     }
 
-    final levelId = ModalRoute.of(context)?.settings.arguments as int? ?? 1;
+    final routeLevelId = ModalRoute.of(context)?.settings.arguments as int?;
+    final levelId = routeLevelId ?? _levelIdFromUri(Uri.base) ?? 1;
     _game = BearMathGame(levelId: levelId);
     _gameWasCreated = true;
   }
@@ -107,5 +108,45 @@ class _GameScreenState extends State<GameScreen> {
         solvedQuestions: game.totalQuestions,
       ),
     );
+  }
+
+  int? _levelIdFromUri(Uri uri) {
+    return _parseLevelId(uri.queryParameters['levelId']) ??
+        _parseLevelId(_fragmentQueryParameters(uri.fragment)['levelId']);
+  }
+
+  int? _parseLevelId(String? value) {
+    if (value == null) {
+      return null;
+    }
+
+    final levelId = int.tryParse(value);
+    if (levelId == null || levelId < 1 || levelId > 10) {
+      return null;
+    }
+
+    return levelId;
+  }
+
+  Map<String, String> _fragmentQueryParameters(String fragment) {
+    if (fragment.isEmpty) {
+      return const <String, String>{};
+    }
+
+    final queryStart = fragment.indexOf('?');
+    if (queryStart == -1) {
+      return const <String, String>{};
+    }
+
+    final query = fragment.substring(queryStart + 1);
+    if (!query.contains('=')) {
+      return const <String, String>{};
+    }
+
+    try {
+      return Uri.splitQueryString(query);
+    } on FormatException {
+      return const <String, String>{};
+    }
   }
 }

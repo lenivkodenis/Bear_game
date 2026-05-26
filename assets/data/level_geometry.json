@@ -28,7 +28,10 @@
         { "id": "main_ground", "x": 0, "y": 460, "width": 800, "height": 140 }
       ],
       "platformColliders": [],
-      "obstacleColliders": [],
+      "obstacleColliders": [
+        { "id": "river_log", "x": 209.77, "y": 436.25, "width": 128.62, "height": 23.75 },
+        { "id": "ice_block", "x": 458.28, "y": 403, "width": 64.89, "height": 57 }
+      ],
       "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {

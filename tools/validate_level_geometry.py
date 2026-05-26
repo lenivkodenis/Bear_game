@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate production per-level geometry and active level 1 obstacles."""
+"""Validate production per-level geometry and active obstacle layouts."""
 
 from __future__ import annotations
 
@@ -55,6 +55,22 @@ EXPECTED_LEVEL_ONE_OBSTACLES = [
         "height": 47,
     },
 ]
+EXPECTED_LEVEL_TWO_OBSTACLES = [
+    {
+        "id": "river_log",
+        "x": 209.77,
+        "y": 436.25,
+        "width": 128.62,
+        "height": 23.75,
+    },
+    {
+        "id": "ice_block",
+        "x": 458.28,
+        "y": 403,
+        "width": 64.89,
+        "height": 57,
+    },
+]
 
 
 class GeometryError(Exception):
@@ -93,7 +109,8 @@ def main() -> None:
 
     print(
         "level_geometry.json OK: 10 per-level calibrated levels, "
-        "two active level 1 obstacles, no platforms."
+        "two active level 1 obstacles, two active level 2 obstacles, no "
+        "platforms."
     )
 
 
@@ -125,8 +142,20 @@ def validate_level(
     if platforms:
         fail(f"{context}: baseline platformColliders must be empty.")
     if level_id == 1:
-        validate_level_one_obstacle(
+        validate_expected_obstacles(
             obstacles,
+            expected=EXPECTED_LEVEL_ONE_OBSTACLES,
+            context=context,
+            ground=grounds[0],
+            player_spawn=player_spawn,
+            mentor_position=mentor_position,
+            world_width=world_width,
+            world_height=world_height,
+        )
+    elif level_id == 2:
+        validate_expected_obstacles(
+            obstacles,
+            expected=EXPECTED_LEVEL_TWO_OBSTACLES,
             context=context,
             ground=grounds[0],
             player_spawn=player_spawn,
@@ -193,9 +222,10 @@ def validate_level(
     return ground["y"]
 
 
-def validate_level_one_obstacle(
+def validate_expected_obstacles(
     obstacles: list[dict[str, float | str]],
     *,
+    expected: list[dict[str, float | str]],
     context: str,
     ground: dict[str, float | str],
     player_spawn: dict[str, object],
@@ -203,10 +233,10 @@ def validate_level_one_obstacle(
     world_width: float,
     world_height: float,
 ) -> None:
-    if len(obstacles) != len(EXPECTED_LEVEL_ONE_OBSTACLES):
+    if len(obstacles) != len(expected):
         fail(
-            f"{context}: level 1 must contain exactly "
-            f"{len(EXPECTED_LEVEL_ONE_OBSTACLES)} obstacleColliders."
+            f"{context}: must contain exactly {len(expected)} "
+            "obstacleColliders."
         )
 
     player_x = required_number(player_spawn, "x", f"{context}.playerSpawn")
@@ -215,16 +245,19 @@ def validate_level_one_obstacle(
     mentor_y = required_number(mentor_position, "y", f"{context}.mentorPosition")
 
     previous_right: float | None = None
-    for index, (obstacle, expected) in enumerate(
-        zip(obstacles, EXPECTED_LEVEL_ONE_OBSTACLES),
+    for index, (obstacle, expected_obstacle) in enumerate(
+        zip(obstacles, expected),
         start=1,
     ):
         obstacle_context = f"{context} obstacle {index}"
-        if obstacle["id"] != expected["id"]:
-            fail(f"{obstacle_context}: id must be {expected['id']}.")
+        if obstacle["id"] != expected_obstacle["id"]:
+            fail(f"{obstacle_context}: id must be {expected_obstacle['id']}.")
         for key in ("x", "y", "width", "height"):
-            if not same_number(float(obstacle[key]), expected[key]):
-                fail(f"{obstacle_context}: {key} must equal {expected[key]}.")
+            if not same_number(float(obstacle[key]), float(expected_obstacle[key])):
+                fail(
+                    f"{obstacle_context}: {key} must equal "
+                    f"{expected_obstacle[key]}."
+                )
 
         validate_collider_bounds(obstacle, obstacle_context, world_width, world_height)
         expected_y = float(ground["y"]) - float(obstacle["height"])

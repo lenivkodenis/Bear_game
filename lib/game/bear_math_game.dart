@@ -236,9 +236,11 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     final calibratedObstacles =
         _calibratedObstaclesByLevel[_sourceLevelGeometry.levelId];
     if (_obstacleCalibrationEnabled && calibratedObstacles != null) {
-      geometry = geometry.withObstacleColliders(
-        _groundLockedObstacles(calibratedObstacles, geometry.mainGround.y),
-      );
+      geometry = geometry
+          .withObstacleColliders(
+            _groundLockedObstacles(calibratedObstacles, geometry.mainGround.y),
+          )
+          .withCalibrationObstacles(const <LevelGeometryCollider>[]);
     }
 
     return geometry;
