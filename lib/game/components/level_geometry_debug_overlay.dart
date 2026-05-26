@@ -44,15 +44,42 @@ class ObstacleCalibrationOverlayInfo {
   final bool exportPrinted;
 }
 
+class GroundSegmentCalibrationOverlayInfo {
+  const GroundSegmentCalibrationOverlayInfo({
+    required this.levelId,
+    required this.topGroundY,
+    required this.leftSegment,
+    required this.floorSegment,
+    required this.rightSegment,
+    this.levelName,
+    this.exportPrinted = false,
+  });
+
+  final int levelId;
+  final String? levelName;
+  final double topGroundY;
+  final LevelGeometryCollider leftSegment;
+  final LevelGeometryCollider floorSegment;
+  final LevelGeometryCollider rightSegment;
+  final bool exportPrinted;
+
+  double get leftEdgeX => floorSegment.x;
+  double get rightEdgeX => floorSegment.x + floorSegment.width;
+  double get depth => floorSegment.y - topGroundY;
+}
+
 class LevelGeometryDebugOverlay extends PositionComponent {
   LevelGeometryDebugOverlay({
     required LevelGeometry Function() geometry,
     required PlayerBear Function() player,
     GroundCalibrationOverlayInfo? Function()? calibrationInfo,
+    GroundSegmentCalibrationOverlayInfo? Function()?
+    groundSegmentCalibrationInfo,
     ObstacleCalibrationOverlayInfo? Function()? obstacleCalibrationInfo,
   }) : _geometryProvider = geometry,
        _playerProvider = player,
        _calibrationInfoProvider = calibrationInfo,
+       _groundSegmentCalibrationInfoProvider = groundSegmentCalibrationInfo,
        _obstacleCalibrationInfoProvider = obstacleCalibrationInfo,
        super(priority: 10000);
 
@@ -78,6 +105,8 @@ class LevelGeometryDebugOverlay extends PositionComponent {
   final LevelGeometry Function() _geometryProvider;
   final PlayerBear Function() _playerProvider;
   final GroundCalibrationOverlayInfo? Function()? _calibrationInfoProvider;
+  final GroundSegmentCalibrationOverlayInfo? Function()?
+  _groundSegmentCalibrationInfoProvider;
   final ObstacleCalibrationOverlayInfo? Function()?
   _obstacleCalibrationInfoProvider;
 
@@ -88,6 +117,8 @@ class LevelGeometryDebugOverlay extends PositionComponent {
     final geometry = _geometryProvider();
     final player = _playerProvider();
     final groundCalibrationInfo = _calibrationInfoProvider?.call();
+    final groundSegmentCalibrationInfo = _groundSegmentCalibrationInfoProvider
+        ?.call();
     final obstacleCalibrationInfo = _obstacleCalibrationInfoProvider?.call();
 
     _drawColliders(
@@ -124,6 +155,7 @@ class LevelGeometryDebugOverlay extends PositionComponent {
       drawBottomLine: true,
     );
     _drawSelectedObstacle(canvas, geometry, obstacleCalibrationInfo);
+    _drawSelectedGroundDip(canvas, groundSegmentCalibrationInfo);
     _drawPoint(
       canvas,
       geometry.playerSpawn.toVector2(),
@@ -138,10 +170,17 @@ class LevelGeometryDebugOverlay extends PositionComponent {
     );
     _drawPlayerHitbox(canvas, player);
     _drawCalibrationInfo(canvas, groundCalibrationInfo);
+    _drawGroundSegmentCalibrationInfo(
+      canvas,
+      groundSegmentCalibrationInfo,
+      groundCalibrationInfo == null
+          ? const Offset(12, 64)
+          : const Offset(12, 220),
+    );
     _drawObstacleCalibrationInfo(
       canvas,
       obstacleCalibrationInfo,
-      groundCalibrationInfo == null
+      groundCalibrationInfo == null && groundSegmentCalibrationInfo == null
           ? const Offset(12, 64)
           : const Offset(12, 220),
     );
@@ -220,6 +259,40 @@ class LevelGeometryDebugOverlay extends PositionComponent {
     _drawLabel(
       canvas,
       'selected obstacle ${info.selectedIndex + 1}',
+      Offset(rect.left + 4, rect.bottom + 6),
+      _candidateColor,
+    );
+  }
+
+  void _drawSelectedGroundDip(
+    Canvas canvas,
+    GroundSegmentCalibrationOverlayInfo? info,
+  ) {
+    if (info == null) {
+      return;
+    }
+
+    final floor = info.floorSegment;
+    final rect = Rect.fromLTWH(floor.x, floor.y, floor.width, floor.height);
+    final selectionPaint = Paint()
+      ..color = _candidateColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+
+    canvas.drawRect(rect.inflate(3), selectionPaint);
+    canvas.drawLine(
+      Offset(info.leftEdgeX, info.topGroundY),
+      Offset(info.leftEdgeX, info.floorSegment.y),
+      selectionPaint,
+    );
+    canvas.drawLine(
+      Offset(info.rightEdgeX, info.topGroundY),
+      Offset(info.rightEdgeX, info.floorSegment.y),
+      selectionPaint,
+    );
+    _drawLabel(
+      canvas,
+      'selected ground dip',
       Offset(rect.left + 4, rect.bottom + 6),
       _candidateColor,
     );
@@ -305,6 +378,38 @@ class LevelGeometryDebugOverlay extends PositionComponent {
     ];
 
     _drawTextPanel(canvas, lines, const Offset(12, 64));
+  }
+
+  void _drawGroundSegmentCalibrationInfo(
+    Canvas canvas,
+    GroundSegmentCalibrationOverlayInfo? info,
+    Offset position,
+  ) {
+    if (info == null) {
+      return;
+    }
+
+    final levelName = info.levelName?.trim();
+    final lines = <String>[
+      'Ground dip calibration',
+      'levelId: ${info.levelId}',
+      if (levelName != null && levelName.isNotEmpty) 'level: $levelName',
+      'top groundY: ${_formatNumber(info.topGroundY)}',
+      'left edge x: ${_formatNumber(info.leftEdgeX)}',
+      'right edge x: ${_formatNumber(info.rightEdgeX)}',
+      'floor y: ${_formatNumber(info.floorSegment.y)}',
+      'depth: ${_formatNumber(info.depth)}',
+      'A/D: left edge x 5 px',
+      'ArrowLeft/ArrowRight: right edge x 5 px',
+      'W/S: floor y 5 px',
+      'Shift+A/D/Arrow/W/S: 1 px',
+      'C: print groundColliders JSON',
+      'R: reset',
+      'Debug layout — copy JSON to save',
+      if (info.exportPrinted) 'last export printed to console',
+    ];
+
+    _drawTextPanel(canvas, lines, position);
   }
 
   void _drawObstacleCalibrationInfo(

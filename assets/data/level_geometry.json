@@ -40,11 +40,13 @@
       "playerSpawn": { "x": 72, "y": 460 },
       "mentorPosition": { "x": 688, "y": 460 },
       "groundColliders": [
-        { "id": "main_ground", "x": 0, "y": 460, "width": 800, "height": 140 }
+        { "id": "ground_left", "x": 0, "y": 460, "width": 388.62, "height": 140 },
+        { "id": "ground_dip_floor", "x": 388.62, "y": 500, "width": 230.63, "height": 100 },
+        { "id": "ground_right", "x": 619.25, "y": 460, "width": 180.75, "height": 140 }
       ],
       "platformColliders": [],
       "obstacleColliders": [],
-      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
+      "notes": "Segmented ground dip. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {
       "levelId": 4,

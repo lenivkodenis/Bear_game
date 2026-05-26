@@ -12,6 +12,7 @@ import 'components/platform_component.dart';
 import 'components/player_bear.dart';
 import 'components/snowy_background.dart';
 import 'components/wise_mentor.dart';
+import 'ground_segment_collision.dart';
 import 'level_geometry.dart';
 import 'obstacle_collision.dart';
 import '../models/level.dart';
@@ -38,8 +39,13 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   final ProgressService _progressService = ProgressService();
   static final Map<int, double> _calibratedGroundYByLevel = <int, double>{};
   static final Map<int, List<LevelGeometryCollider>>
+  _calibratedGroundSegmentsByLevel = <int, List<LevelGeometryCollider>>{};
+  static final Map<int, List<LevelGeometryCollider>>
   _calibratedObstaclesByLevel = <int, List<LevelGeometryCollider>>{};
   static final Map<int, int> _selectedObstacleIndexByLevel = <int, int>{};
+  static const double _minGroundDipWidth = 90;
+  static const double _minGroundDipDepth = 10;
+  static const double _maxGroundDipDepth = 70;
   static const double _minCalibrationObstacleWidth = 50;
   static const double _maxCalibrationObstacleWidth = 160;
   static const double _minCalibrationObstacleHeight = 20;
@@ -56,8 +62,10 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   bool _mentorDialogOpen = false;
   bool _sceneReady = false;
   bool _groundCalibrationEnabled = false;
+  bool _groundSegmentCalibrationEnabled = false;
   bool _obstacleCalibrationEnabled = false;
   bool _groundCalibrationExportPrinted = false;
+  bool _groundSegmentCalibrationExportPrinted = false;
   bool _obstacleCalibrationExportPrinted = false;
   final Set<int> _questionsWithWrongAttempts = <int>{};
 
@@ -94,6 +102,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     scoreNotifier.value = _progress.score;
 
     _groundCalibrationEnabled = isGroundCalibrationModeEnabled;
+    _groundSegmentCalibrationEnabled = isGroundSegmentCalibrationModeEnabled;
     _obstacleCalibrationEnabled = isObstacleCalibrationModeEnabled;
     _sourceGeometries = _groundCalibrationEnabled
         ? await _levelGeometryService.loadGeometries()
@@ -108,6 +117,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
         : await _levelGeometryService.loadLevelGeometry(currentLevel!.id);
     if (_groundCalibrationEnabled) {
       _seedGroundCalibrationValues(_sourceGeometries);
+    }
+    if (_groundSegmentCalibrationEnabled) {
+      _seedGroundSegmentCalibrationValue(_sourceLevelGeometry);
     }
     if (_obstacleCalibrationEnabled) {
       _seedObstacleCalibrationValue(_sourceLevelGeometry);
@@ -151,6 +163,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
           calibrationInfo: _groundCalibrationEnabled
               ? _buildGroundCalibrationOverlayInfo
               : null,
+          groundSegmentCalibrationInfo: _groundSegmentCalibrationEnabled
+              ? _buildGroundSegmentCalibrationOverlayInfo
+              : null,
           obstacleCalibrationInfo: _obstacleCalibrationEnabled
               ? _buildObstacleCalibrationOverlayInfo
               : null,
@@ -166,6 +181,10 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     KeyEvent event,
     Set<LogicalKeyboardKey> keysPressed,
   ) {
+    if (_handleGroundSegmentCalibrationKey(event, keysPressed)) {
+      return KeyEventResult.handled;
+    }
+
     if (_handleObstacleCalibrationKey(event, keysPressed)) {
       return KeyEventResult.handled;
     }
@@ -233,6 +252,17 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       geometry = geometry.withMainGroundTopY(calibratedGroundY);
     }
 
+    final calibratedGroundSegments =
+        _calibratedGroundSegmentsByLevel[_sourceLevelGeometry.levelId];
+    if (_groundSegmentCalibrationEnabled && calibratedGroundSegments != null) {
+      geometry = geometry.withGroundColliders(
+        _groundLockedGroundSegments(
+          calibratedGroundSegments,
+          geometry.mainGround.y,
+        ),
+      );
+    }
+
     final calibratedObstacles =
         _calibratedObstaclesByLevel[_sourceLevelGeometry.levelId];
     if (_obstacleCalibrationEnabled && calibratedObstacles != null) {
@@ -255,6 +285,20 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     }
   }
 
+  void _seedGroundSegmentCalibrationValue(LevelGeometry geometry) {
+    if (geometry.groundColliders.length < 3) {
+      return;
+    }
+
+    _calibratedGroundSegmentsByLevel.putIfAbsent(
+      geometry.levelId,
+      () => _groundLockedGroundSegments(
+        geometry.groundColliders,
+        geometry.mainGround.y,
+      ),
+    );
+  }
+
   void _seedObstacleCalibrationValue(LevelGeometry geometry) {
     final sourceObstacles = geometry.obstacleColliders.isNotEmpty
         ? geometry.obstacleColliders
@@ -268,6 +312,52 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       () => _groundLockedObstacles(sourceObstacles, geometry.mainGround.y),
     );
     _selectedObstacleIndexByLevel.putIfAbsent(geometry.levelId, () => 0);
+  }
+
+  bool _handleGroundSegmentCalibrationKey(
+    KeyEvent event,
+    Set<LogicalKeyboardKey> keysPressed,
+  ) {
+    if (!_groundSegmentCalibrationEnabled ||
+        !_sceneReady ||
+        (event is! KeyDownEvent && event is! KeyRepeatEvent) ||
+        _currentSourceGroundSegments == null) {
+      return false;
+    }
+
+    final key = event.logicalKey;
+    final step = _isShiftPressed(keysPressed) ? 1.0 : 5.0;
+
+    if (key == LogicalKeyboardKey.keyA || key == LogicalKeyboardKey.keyD) {
+      final runtimeDelta = key == LogicalKeyboardKey.keyA ? -step : step;
+      _adjustGroundDipLeftEdge(runtimeDelta / _runtimeScaleX);
+      return true;
+    }
+
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      final runtimeDelta = key == LogicalKeyboardKey.arrowLeft ? -step : step;
+      _adjustGroundDipRightEdge(runtimeDelta / _runtimeScaleX);
+      return true;
+    }
+
+    if (key == LogicalKeyboardKey.keyW || key == LogicalKeyboardKey.keyS) {
+      final runtimeDelta = key == LogicalKeyboardKey.keyW ? -step : step;
+      _adjustGroundDipFloorY(runtimeDelta / _runtimeScaleY);
+      return true;
+    }
+
+    if (key == LogicalKeyboardKey.keyR) {
+      _resetGroundSegmentCalibration();
+      return true;
+    }
+
+    if (key == LogicalKeyboardKey.keyC) {
+      _printGroundSegmentCalibrationValues();
+      return true;
+    }
+
+    return false;
   }
 
   bool _handleObstacleCalibrationKey(
@@ -365,6 +455,19 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     return false;
+  }
+
+  List<LevelGeometryCollider>? get _currentSourceGroundSegments {
+    return _calibratedGroundSegmentsByLevel[_sourceLevelGeometry.levelId];
+  }
+
+  LevelGeometryCollider? get _currentSourceGroundDipFloor {
+    final segments = _currentSourceGroundSegments;
+    if (segments == null || segments.length < 3) {
+      return null;
+    }
+
+    return segments[1];
   }
 
   LevelGeometryCollider? get _currentSourceObstacleCandidate {
@@ -517,6 +620,88 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     );
   }
 
+  void _adjustGroundDipLeftEdge(double sourceDelta) {
+    final segments = _currentSourceGroundSegments;
+    if (segments == null || segments.length < 3) {
+      return;
+    }
+
+    final floor = segments[1];
+    _setGroundDip(
+      leftEdgeX: floor.x + sourceDelta,
+      rightEdgeX: floor.x + floor.width,
+      floorY: floor.y,
+    );
+  }
+
+  void _adjustGroundDipRightEdge(double sourceDelta) {
+    final segments = _currentSourceGroundSegments;
+    if (segments == null || segments.length < 3) {
+      return;
+    }
+
+    final floor = segments[1];
+    _setGroundDip(
+      leftEdgeX: floor.x,
+      rightEdgeX: floor.x + floor.width + sourceDelta,
+      floorY: floor.y,
+    );
+  }
+
+  void _adjustGroundDipFloorY(double sourceDelta) {
+    final floor = _currentSourceGroundDipFloor;
+    if (floor == null) {
+      return;
+    }
+
+    _setGroundDip(
+      leftEdgeX: floor.x,
+      rightEdgeX: floor.x + floor.width,
+      floorY: floor.y + sourceDelta,
+    );
+  }
+
+  void _resetGroundSegmentCalibration() {
+    _calibratedGroundSegmentsByLevel.remove(_sourceLevelGeometry.levelId);
+    _seedGroundSegmentCalibrationValue(_sourceLevelGeometry);
+    _groundSegmentCalibrationExportPrinted = false;
+    levelGeometry = _currentSourceGeometry.scaledTo(size);
+    final mainGround = levelGeometry.mainGround;
+    _mainGroundComponent.position = mainGround.position;
+    _mainGroundComponent.size = mainGround.size;
+  }
+
+  void _setGroundDip({
+    required double leftEdgeX,
+    required double rightEdgeX,
+    required double floorY,
+  }) {
+    final topY = _sourceLevelGeometry.mainGround.y;
+    final worldWidth = _sourceLevelGeometry.world.width;
+    final worldHeight = _sourceLevelGeometry.world.height;
+    final minLeftEdgeX = 0.0;
+    final maxLeftEdgeX = worldWidth - _minGroundDipWidth;
+    final leftX = leftEdgeX.clamp(minLeftEdgeX, maxLeftEdgeX).toDouble();
+    final minRightEdgeX = leftX + _minGroundDipWidth;
+    final rightX = rightEdgeX.clamp(minRightEdgeX, worldWidth).toDouble();
+    final minFloorY = topY + _minGroundDipDepth;
+    final maxFloorY = math.min(worldHeight - 20, topY + _maxGroundDipDepth);
+    final lockedFloorY = floorY.clamp(minFloorY, maxFloorY).toDouble();
+
+    _calibratedGroundSegmentsByLevel[_sourceLevelGeometry.levelId] =
+        _buildGroundDipSegments(
+          leftEdgeX: leftX,
+          rightEdgeX: rightX,
+          topY: topY,
+          floorY: lockedFloorY,
+        );
+    _groundSegmentCalibrationExportPrinted = false;
+    levelGeometry = _currentSourceGeometry.scaledTo(size);
+    final mainGround = levelGeometry.mainGround;
+    _mainGroundComponent.position = mainGround.position;
+    _mainGroundComponent.size = mainGround.size;
+  }
+
   void _adjustObstacleCalibrationX(double sourceDelta) {
     final candidate = _currentSourceObstacleCandidate;
     if (candidate == null) {
@@ -614,6 +799,58 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     return candidate.copyWith(y: groundTopY - candidate.height);
   }
 
+  List<LevelGeometryCollider> _buildGroundDipSegments({
+    required double leftEdgeX,
+    required double rightEdgeX,
+    required double topY,
+    required double floorY,
+  }) {
+    final worldWidth = _sourceLevelGeometry.world.width;
+    final worldHeight = _sourceLevelGeometry.world.height;
+
+    return <LevelGeometryCollider>[
+      LevelGeometryCollider(
+        id: 'ground_left',
+        x: 0,
+        y: topY,
+        width: leftEdgeX,
+        height: worldHeight - topY,
+      ),
+      LevelGeometryCollider(
+        id: 'ground_dip_floor',
+        x: leftEdgeX,
+        y: floorY,
+        width: rightEdgeX - leftEdgeX,
+        height: worldHeight - floorY,
+      ),
+      LevelGeometryCollider(
+        id: 'ground_right',
+        x: rightEdgeX,
+        y: topY,
+        width: worldWidth - rightEdgeX,
+        height: worldHeight - topY,
+      ),
+    ];
+  }
+
+  List<LevelGeometryCollider> _groundLockedGroundSegments(
+    Iterable<LevelGeometryCollider> candidates,
+    double groundTopY,
+  ) {
+    final segments = candidates.toList(growable: false);
+    if (segments.length < 3) {
+      return segments;
+    }
+
+    final floor = segments[1];
+    return _buildGroundDipSegments(
+      leftEdgeX: floor.x,
+      rightEdgeX: floor.x + floor.width,
+      topY: groundTopY,
+      floorY: floor.y,
+    );
+  }
+
   List<LevelGeometryCollider> _groundLockedObstacles(
     Iterable<LevelGeometryCollider> candidates,
     double groundTopY,
@@ -635,6 +872,24 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       calibratedGroundY: calibratedGroundY,
       runtimeGroundY: levelGeometry.mainGround.y,
       exportPrinted: _groundCalibrationExportPrinted,
+    );
+  }
+
+  GroundSegmentCalibrationOverlayInfo?
+  _buildGroundSegmentCalibrationOverlayInfo() {
+    final segments = _currentSourceGroundSegments;
+    if (segments == null || segments.length < 3) {
+      return null;
+    }
+
+    return GroundSegmentCalibrationOverlayInfo(
+      levelId: _sourceLevelGeometry.levelId,
+      levelName: currentLevel?.locationName ?? currentLevel?.title,
+      topGroundY: _sourceLevelGeometry.mainGround.y,
+      leftSegment: segments[0],
+      floorSegment: segments[1],
+      rightSegment: segments[2],
+      exportPrinted: _groundSegmentCalibrationExportPrinted,
     );
   }
 
@@ -671,6 +926,32 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     final json = const JsonEncoder.withIndent('  ').convert(values);
     debugPrint('Ground calibration values:\n$json');
     _groundCalibrationExportPrinted = true;
+  }
+
+  void _printGroundSegmentCalibrationValues() {
+    final segments = _currentSourceGroundSegments;
+    if (segments == null || segments.isEmpty) {
+      return;
+    }
+
+    final values = <String, Object>{
+      'groundColliders': segments
+          .map(
+            (segment) => <String, Object>{
+              'id': segment.id,
+              'x': _jsonNumber(segment.x),
+              'y': _jsonNumber(segment.y),
+              'width': _jsonNumber(segment.width),
+              'height': _jsonNumber(segment.height),
+            },
+          )
+          .toList(growable: false),
+      'topGroundY': _jsonNumber(_sourceLevelGeometry.mainGround.y),
+      'formula': 'segment.height = world.height - segment.y',
+    };
+    final json = const JsonEncoder.withIndent('  ').convert(values);
+    debugPrint('Ground segment calibration:\n$json');
+    _groundSegmentCalibrationExportPrinted = true;
   }
 
   void _printObstacleCalibrationValues() {
@@ -772,6 +1053,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     if (previousPlayerRect != null) {
+      _resolveGroundSegmentCollisions(previousPlayerRect);
       _resolveObstacleCollisions(previousPlayerRect);
     }
 
@@ -822,17 +1104,49 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     }
   }
 
+  void _resolveGroundSegmentCollisions(Rect previousPlayerRect) {
+    if (levelGeometry.groundColliders.length < 2) {
+      return;
+    }
+
+    final resolvedRect = resolveGroundSegmentSideCollision(
+      previousPlayerRect: previousPlayerRect,
+      futurePlayerRect: _playerRect,
+      groundRects: _groundRects,
+      minX: 0,
+      maxX: size.x - player.size.x,
+    );
+    if (resolvedRect.left != player.position.x) {
+      player.position.x = resolvedRect.left;
+    }
+  }
+
   void _updatePlayerActiveGround() {
     final supportObstacle = findObstacleTopSupport(
       playerRect: _playerRect,
       obstacleRects: _obstacleRects,
     );
     if (supportObstacle == null) {
-      player.setActiveGroundY(levelGeometry.mainGround.y);
+      player.setActiveGroundY(
+        findGroundSurfaceY(
+          playerRect: _playerRect,
+          groundRects: _groundRects,
+          fallbackGroundY: levelGeometry.mainGround.y,
+        ),
+      );
       return;
     }
 
     player.setActiveGroundY(supportObstacle.top);
+  }
+
+  List<Rect> get _groundRects {
+    return levelGeometry.groundColliders
+        .map(
+          (ground) =>
+              Rect.fromLTWH(ground.x, ground.y, ground.width, ground.height),
+        )
+        .toList(growable: false);
   }
 
   List<Rect> get _obstacleRects {

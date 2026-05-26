@@ -71,6 +71,29 @@ EXPECTED_LEVEL_TWO_OBSTACLES = [
         "height": 57,
     },
 ]
+EXPECTED_LEVEL_THREE_GROUND_SEGMENTS = [
+    {
+        "id": "ground_left",
+        "x": 0,
+        "y": 460,
+        "width": 388.62,
+        "height": 140,
+    },
+    {
+        "id": "ground_dip_floor",
+        "x": 388.62,
+        "y": 500,
+        "width": 230.63,
+        "height": 100,
+    },
+    {
+        "id": "ground_right",
+        "x": 619.25,
+        "y": 460,
+        "width": 180.75,
+        "height": 140,
+    },
+]
 
 
 class GeometryError(Exception):
@@ -109,8 +132,8 @@ def main() -> None:
 
     print(
         "level_geometry.json OK: 10 per-level calibrated levels, "
-        "two active level 1 obstacles, two active level 2 obstacles, no "
-        "platforms."
+        "two active level 1 obstacles, two active level 2 obstacles, level 3 "
+        "ground dip, no platforms."
     )
 
 
@@ -135,9 +158,17 @@ def validate_level(
     calibration_obstacles = read_calibration_obstacles(level, context)
     notes = required_string(level, "notes", context)
 
-    if "flat baseline" not in notes:
-        fail(f"{context}: notes must identify the temporary flat baseline.")
-    if len(grounds) != 1:
+    if "flat baseline" not in notes and "Segmented ground dip" not in notes:
+        fail(f"{context}: notes must identify the current geometry baseline.")
+    if level_id == 3:
+        validate_expected_ground_segments(
+            grounds,
+            expected=EXPECTED_LEVEL_THREE_GROUND_SEGMENTS,
+            context=context,
+            world_width=world_width,
+            world_height=world_height,
+        )
+    elif len(grounds) != 1:
         fail(f"{context}: baseline requires exactly one main ground collider.")
     if platforms:
         fail(f"{context}: baseline platformColliders must be empty.")
@@ -169,10 +200,10 @@ def validate_level(
         fail(f"{context}: calibration previews must be removed after activation.")
 
     ground = grounds[0]
-    if ground["id"] != "main_ground":
+    if level_id != 3 and ground["id"] != "main_ground":
         fail(f"{context}: baseline ground id must be main_ground.")
     validate_collider_bounds(ground, context, world_width, world_height)
-    if ground["x"] != 0 or ground["width"] != world_width:
+    if level_id != 3 and (ground["x"] != 0 or ground["width"] != world_width):
         fail(f"{context}: main ground must span the full world width.")
 
     expected_ground_y = EXPECTED_GROUND_Y.get(level_id)
@@ -187,7 +218,7 @@ def validate_level(
     expected_ground_height = world_height - ground["y"]
     if not same_number(ground["height"], expected_ground_height):
         fail(
-            f"{context}: main_ground.height must keep the ground rectangle "
+            f"{context}: first ground height must keep the ground rectangle "
             f"ending at the bottom of the design world."
         )
 
@@ -220,6 +251,42 @@ def validate_level(
     )
 
     return ground["y"]
+
+
+def validate_expected_ground_segments(
+    grounds: list[dict[str, float | str]],
+    *,
+    expected: list[dict[str, float | str]],
+    context: str,
+    world_width: float,
+    world_height: float,
+) -> None:
+    if len(grounds) != len(expected):
+        fail(f"{context}: expected {len(expected)} ground segments.")
+
+    previous_right = 0.0
+    for index, (ground, expected_ground) in enumerate(
+        zip(grounds, expected),
+        start=1,
+    ):
+        ground_context = f"{context} ground segment {index}"
+        if ground["id"] != expected_ground["id"]:
+            fail(f"{ground_context}: id must be {expected_ground['id']}.")
+        for key in ("x", "y", "width", "height"):
+            if not same_number(float(ground[key]), float(expected_ground[key])):
+                fail(
+                    f"{ground_context}: {key} must equal "
+                    f"{expected_ground[key]}."
+                )
+        validate_collider_bounds(ground, ground_context, world_width, world_height)
+        if not same_number(float(ground["x"]), previous_right):
+            fail(f"{ground_context}: ground segments must be contiguous.")
+        if not same_number(float(ground["height"]), world_height - float(ground["y"])):
+            fail(f"{ground_context}: height must end at the world bottom.")
+        previous_right = float(ground["x"]) + float(ground["width"])
+
+    if not same_number(previous_right, world_width):
+        fail(f"{context}: ground segments must span the full world width.")
 
 
 def validate_expected_obstacles(

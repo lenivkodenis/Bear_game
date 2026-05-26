@@ -18,6 +18,10 @@ bool get isObstacleCalibrationModeEnabled {
   return isObstacleCalibrationModeEnabledForUri(Uri.base);
 }
 
+bool get isGroundSegmentCalibrationModeEnabled {
+  return isGroundSegmentCalibrationModeEnabledForUri(Uri.base);
+}
+
 bool isLevelGeometryDebugOverlayEnabledForUri(Uri uri) {
   return _hasEnabledDebugGeometryFlag(uri.queryParameters) ||
       _hasEnabledDebugGeometryFlag(_fragmentQueryParameters(uri.fragment));
@@ -43,6 +47,16 @@ bool isObstacleCalibrationModeEnabledForUri(Uri uri) {
           _hasEnabledObstacleCalibrationFlag(fragmentParameters));
 }
 
+bool isGroundSegmentCalibrationModeEnabledForUri(Uri uri) {
+  final queryParameters = uri.queryParameters;
+  final fragmentParameters = _fragmentQueryParameters(uri.fragment);
+
+  return (_hasEnabledDebugGeometryFlag(queryParameters) ||
+          _hasEnabledDebugGeometryFlag(fragmentParameters)) &&
+      (_hasEnabledGroundSegmentCalibrationFlag(queryParameters) ||
+          _hasEnabledGroundSegmentCalibrationFlag(fragmentParameters));
+}
+
 bool _hasEnabledDebugGeometryFlag(Map<String, String> parameters) {
   return parameters['debugGeometry'] == '1';
 }
@@ -53,6 +67,11 @@ bool _hasEnabledGroundCalibrationFlag(Map<String, String> parameters) {
 
 bool _hasEnabledObstacleCalibrationFlag(Map<String, String> parameters) {
   return parameters['calibrateObstacle'] == '1';
+}
+
+bool _hasEnabledGroundSegmentCalibrationFlag(Map<String, String> parameters) {
+  return parameters['calibrateGroundSegment'] == '1' ||
+      parameters['calibratePit'] == '1';
 }
 
 Map<String, String> _fragmentQueryParameters(String fragment) {
@@ -324,6 +343,23 @@ class LevelGeometry {
         calibratedMainGround,
         ...groundColliders.skip(1),
       ],
+      platformColliders: platformColliders,
+      obstacleColliders: obstacleColliders,
+      calibrationObstacles: calibrationObstacles,
+      notes: notes,
+    );
+  }
+
+  LevelGeometry withGroundColliders(
+    List<LevelGeometryCollider> groundColliders,
+  ) {
+    return LevelGeometry(
+      levelId: levelId,
+      world: world,
+      backgroundAsset: backgroundAsset,
+      playerSpawn: playerSpawn,
+      mentorPosition: mentorPosition,
+      groundColliders: groundColliders,
       platformColliders: platformColliders,
       obstacleColliders: obstacleColliders,
       calibrationObstacles: calibrationObstacles,

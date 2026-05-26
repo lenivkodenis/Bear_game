@@ -5,9 +5,9 @@
 The manual ground calibration pass is complete. The approved per-level
 `groundY` values are now written to `assets/data/level_geometry.json`.
 
-Complex geometry is still limited. All 10 levels use one visually calibrated
-flat ground collider per level, with no platforms, no gaps, and no multi-level
-routes. Levels 1 and 2 each have two calibrated active obstacles.
+Complex geometry is still limited. All 10 levels use visually calibrated
+ground, with no platforms and no multi-level routes. Levels 1 and 2 each have
+two calibrated active obstacles. Level 3 has one calibrated ground dip.
 
 The goal of this baseline is gameplay stability:
 
@@ -40,7 +40,7 @@ Do not add obstacles by visual guessing. Before the next attempt:
 
 The ground line is now calibrated per level in production. Obstacle rollout is
 currently limited to two active obstacles on level 1 and two active obstacles
-on level 2.
+on level 2. Level 3 has an active segmented ground dip.
 
 # Active obstacles on level 1
 
@@ -64,7 +64,7 @@ ice_ridge_1: y = 489 - 42.75 = 446.25
 ice_ridge_2: y = 489 - 47 = 442
 ```
 
-Level 1 active obstacles are part of the production geometry. Levels 3-10
+Level 1 active obstacles are part of the production geometry. Levels 4-10
 remain on the flat baseline with `obstacleColliders: []` and
 `platformColliders: []`.
 
@@ -88,6 +88,29 @@ ice_block: y = 460 - 57 = 403
 
 Level 2 `calibrationObstacles` is empty after activation; collider behavior
 comes only from `obstacleColliders`.
+
+# Active ground dip on level 3
+
+Level 3 currently uses three active ground segments:
+
+```json
+[
+  { "id": "ground_left", "x": 0, "y": 460, "width": 388.62, "height": 140 },
+  { "id": "ground_dip_floor", "x": 388.62, "y": 500, "width": 230.63, "height": 100 },
+  { "id": "ground_right", "x": 619.25, "y": 460, "width": 180.75, "height": 140 }
+]
+```
+
+The left and right segments stay on the level 3 top ground line. The middle
+segment is the bottom of the dip:
+
+```text
+dip depth = 500 - 460 = 40
+```
+
+The bear can walk off the top ground and fall to the dip floor. Moving from the
+dip floor into the raised left or right ground is blocked unless the bear jumps
+high enough to clear the upper ledge.
 
 # Obstacle collision stabilization
 
@@ -140,6 +163,21 @@ Open level 2 with obstacle calibration enabled:
 ```text
 http://127.0.0.1:8099/?debugGeometry=1&calibrateObstacle=1&levelId=2#/game
 ```
+
+Open level 3 with ground dip calibration enabled:
+
+```text
+http://127.0.0.1:8099/?debugGeometry=1&calibrateGroundSegment=1&levelId=3#/game
+```
+
+Use the keyboard while the game is focused:
+
+- `A` / `D` moves the left edge of the dip by 5 px.
+- `ArrowLeft` / `ArrowRight` moves the right edge of the dip by 5 px.
+- `W` / `S` moves the dip floor up or down by 5 px.
+- `Shift` with any of those keys changes the step to 1 px.
+- `R` resets the dip to the values from `level_geometry.json`.
+- `C` prints the current `groundColliders` JSON to the browser console.
 
 `calibrateObstacle=1` works only together with `debugGeometry=1`. The preview
 is debug-only and remains separate from production `obstacleColliders`.
@@ -273,8 +311,8 @@ preview.y = main_ground.y - preview.height
 `assets/data/level_geometry.json` uses design coordinates for an `800x600`
 world. Runtime scales the calibrated geometry to the current game size.
 
-All levels currently use the same main ground shape, with a per-level
-`main_ground.y`:
+Most levels currently use one main ground shape, with a per-level
+`main_ground.y`. Level 3 uses three ground segments for the dip:
 
 ```json
 {
@@ -300,9 +338,11 @@ Levels 1-10 keep `platformColliders: []`.
 
 ## Ground
 
-Baseline mode requires exactly one `main_ground` collider per level. It must
-start at `x: 0`, span the full world width, use that level's approved `y`
+Baseline mode requires exactly one `main_ground` collider per flat level. It
+must start at `x: 0`, span the full world width, use that level's approved `y`
 value, and use the same `y` value as `playerSpawn` and `mentorPosition`.
+Level 3 is the current exception: it uses contiguous `ground_left`,
+`ground_dip_floor`, and `ground_right` segments.
 
 `main_ground.height` should keep the ground rectangle ending at the bottom of
 the design world:
@@ -339,8 +379,8 @@ exactly two active obstacles.
 calibration only. They are not production gameplay colliders and should be
 removed after activation.
 
-No steps, gaps, crystals, logs, or blocked routes should be active until a
-later coordinate-calibrated tuning pass. Keep active obstacles scoped to the
+No extra steps, crystals, logs, or blocked routes should be active until a
+later coordinate-calibrated tuning pass. Keep active geometry scoped to the
 levels that have been manually verified.
 
 ## Runtime
@@ -350,7 +390,7 @@ levels that have been manually verified.
 - `backgroundAsset`;
 - `playerSpawn`;
 - `mentorPosition`;
-- the single `main_ground`;
+- the single `main_ground`, or level 3's contiguous ground segments;
 - active `obstacleColliders` for manually verified levels.
 
 When `debugGeometry=1` is present in the URL, the runtime also draws geometry

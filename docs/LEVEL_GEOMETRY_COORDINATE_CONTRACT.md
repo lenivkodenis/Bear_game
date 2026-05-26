@@ -30,6 +30,10 @@ For a flat baseline level:
 { "id": "main_ground", "x": 0, "y": 489, "width": 800, "height": 111 }
 ```
 
+Level 3 is the current non-flat exception. It uses contiguous ground segments:
+left top ground, lower dip floor, and right top ground. Each segment still uses
+the same top-left rectangle contract.
+
 The top edge of any top-left ground collider is:
 
 ```text
@@ -170,7 +174,8 @@ player hitbox bottom must equal playerSpawn.y while grounded
 ```
 
 For the flat baseline, `playerSpawn.y` must always equal that level's
-`main_ground.y`.
+`main_ground.y`. On level 3, `playerSpawn.y` equals the top ground segment Y,
+not the lower dip floor Y.
 
 ## Mentor Position
 
@@ -182,10 +187,10 @@ mentor.position.x = mentorPosition.x
 mentor.position.y = mentorPosition.y - WiseMentor.defaultSize.y
 ```
 
-For the flat baseline:
+For the flat baseline and level 3 top ground:
 
 ```text
-mentorPosition.y must equal that level's main_ground.y
+mentorPosition.y must equal that level's top ground y
 mentorPosition.x must be greater than playerSpawn.x
 ```
 
@@ -231,13 +236,16 @@ background. If `groundTopY` is above the visual ground, the bear and any future
 obstacle will look like they are floating. If `groundTopY` is below the visual
 ground, the bear and obstacles will look sunken into the snow.
 
-The current production flat baseline uses per-level values:
+The current production baseline uses per-level values:
 
 ```text
 main_ground.y = approved level groundTopY
 playerSpawn.y = main_ground.y
 mentorPosition.y = main_ground.y
 ```
+
+Level 3 uses this same top ground Y for spawn and mentor, plus a lower middle
+ground segment for the dip.
 
 Obstacles can only be added after the debug overlay confirms that the ground
 line, hitbox bottom, visual feet line, `playerSpawn`, and `mentorPosition` all
@@ -253,10 +261,10 @@ const bool kLevelGeometryDebugOverlay = false;
 ```
 
 When enabled manually, the overlay draws ground rectangles, ground top lines,
-the active level 1 obstacle, future platform rectangles, calibration obstacle
-preview rectangles, `playerSpawn`, `mentorPosition`, the current player hitbox,
-and the player feet/bottom line. It is render-only and must not change
-collision, physics, coordinates, movement, or level routes. For web
+active obstacles, future platform rectangles, calibration obstacle preview
+rectangles, `playerSpawn`, `mentorPosition`, the current player hitbox, and the
+player feet/bottom line. It is render-only and must not change collision,
+physics, coordinates, movement, or level routes. For web
 calibration, enable it with `debugGeometry=1` in the URL instead of changing
 the default code flag.
 
@@ -265,9 +273,9 @@ the default code flag.
 Before adding future platforms or more obstacles:
 
 1. Keep `platformColliders` empty on every level.
-2. Keep `obstacleColliders` empty on levels 2-10.
-3. Keep only the approved `ice_ridge_1` and `ice_ridge_2` obstacles on level 1
-   until they are manually verified.
+2. Keep `obstacleColliders` empty on levels 3-10.
+3. Keep only the approved level 1 and level 2 obstacles active until the next
+   level is manually verified.
 4. Enable the debug overlay with `debugGeometry=1`.
 5. Confirm that `groundTopY`, `playerSpawn`, `mentorPosition`, and the bear
    bottom line all coincide on the main ground.
