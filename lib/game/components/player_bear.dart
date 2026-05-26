@@ -18,7 +18,16 @@ const List<String> kBearWalkFrameOrder = [
   'walk_06.png',
 ];
 
-enum BearAnimationState { idle, walking, jumping, interacting, sitting }
+enum BearAnimationState {
+  idle,
+  walk,
+  jump,
+  fall,
+  sitDown,
+  sitting,
+  standUp,
+  interacting,
+}
 
 class PlayerBear extends PositionComponent with KeyboardHandler {
   PlayerBear({
@@ -35,7 +44,12 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
       'characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png';
   static const _walkSpriteDirectory = 'characters/bear_cub/animations/walk';
   static const String? _jumpSpritePath = null;
-  static const String? _sitSpritePath = null;
+  // TODO: Replace the idle fallback with the sit_down animation frames.
+  static const String? _sitDownSpritePath = null;
+  // TODO: Replace the idle fallback with the sitting_idle animation frames.
+  static const String? _sittingSpritePath = null;
+  // TODO: Replace the idle fallback with the stand_up animation frames.
+  static const String? _standUpSpritePath = null;
   static const visualWidth = 112.0;
   static const visualHeight = 96.0;
   static const visualSize = Size(visualWidth, visualHeight);
@@ -63,6 +77,9 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   static const _jumpImpulse = -410.0;
   static const _gravity = 820.0;
   static const _idleCycleSpeed = 2.4;
+  static const _idleSitDelay = 3.0;
+  static const _sitDownDuration = 0.35;
+  static const _standUpDuration = 0.35;
 
   final double groundY;
   final double levelWidth;
@@ -70,13 +87,19 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   double _activeGroundY;
   Image? _image;
   Image? _jumpImage;
-  Image? _sitImage;
+  Image? _sitDownImage;
+  Image? _sittingImage;
+  Image? _standUpImage;
   SpriteAnimationTicker? _walkTicker;
   double _animationTime = 0;
+  double _idleTimer = 0;
+  double _postureStateTime = 0;
   BearAnimationState? _previousAnimationState;
+  BearAnimationState _postureState = BearAnimationState.idle;
   bool _facesLeft = false;
   bool _isInteracting = false;
-  bool _isSitting = false;
+  int _pendingMoveDirection = 0;
+  bool _pendingJump = false;
 
   bool get _isOnGround => position.y >= _activeGroundY - size.y - 0.5;
 
@@ -94,17 +117,19 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   }
 
   BearAnimationState get _animationState {
-    if (_isSitting) {
-      return BearAnimationState.sitting;
-    }
     if (_isInteracting) {
       return BearAnimationState.interacting;
     }
+    if (_isSeatedOrTransitioning) {
+      return _postureState;
+    }
     if (!_isOnGround || _velocity.y.abs() > 0.5) {
-      return BearAnimationState.jumping;
+      return _velocity.y < 0
+          ? BearAnimationState.jump
+          : BearAnimationState.fall;
     }
     if (_velocity.x.abs() > 0.5) {
-      return BearAnimationState.walking;
+      return BearAnimationState.walk;
     }
     return BearAnimationState.idle;
   }
@@ -115,11 +140,19 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     _image = await Flame.images.load(_bearSpritePath);
     _jumpImage = await _loadOptionalStateImage(
       _jumpSpritePath,
-      BearAnimationState.jumping,
+      BearAnimationState.jump,
     );
-    _sitImage = await _loadOptionalStateImage(
-      _sitSpritePath,
+    _sitDownImage = await _loadOptionalStateImage(
+      _sitDownSpritePath,
+      BearAnimationState.sitDown,
+    );
+    _sittingImage = await _loadOptionalStateImage(
+      _sittingSpritePath,
       BearAnimationState.sitting,
+    );
+    _standUpImage = await _loadOptionalStateImage(
+      _standUpSpritePath,
+      BearAnimationState.standUp,
     );
     try {
       final walkSprites = <Sprite>[];
@@ -144,6 +177,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   void update(double dt) {
     super.update(dt);
 
+    final wasOnGround = _isOnGround;
     _animationTime += dt;
     _velocity.y += _gravity * dt;
     position += _velocity * dt;
@@ -157,10 +191,12 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     final maxX = levelWidth - size.x;
     position.x = position.x.clamp(0, maxX).toDouble();
 
+    _updatePostureState(dt, wasOnGround: wasOnGround);
+
     final state = _animationState;
-    if (state == BearAnimationState.walking) {
+    if (state == BearAnimationState.walk) {
       _walkTicker?.update(dt);
-    } else if (_previousAnimationState == BearAnimationState.walking) {
+    } else if (_previousAnimationState == BearAnimationState.walk) {
       _walkTicker?.reset();
     }
     _previousAnimationState = state;
@@ -188,7 +224,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
       canvas.scale(transform.scaleX, transform.scaleY);
       canvas.translate(-pivot.dx, -pivot.dy);
       final paint = Paint()..filterQuality = FilterQuality.high;
-      if (state == BearAnimationState.walking && walkTicker != null) {
+      if (state == BearAnimationState.walk && walkTicker != null) {
         walkTicker.getSprite().renderRect(
           canvas,
           destinationRect,
@@ -273,31 +309,34 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   }
 
   void moveLeft() {
-    if (_isInteracting || _isSitting) {
-      stopMoving();
-      return;
-    }
-
-    _velocity.x = -_moveSpeed;
-    _facesLeft = true;
-    _isInteracting = false;
-    _isSitting = false;
+    _requestMove(-1);
   }
 
   void moveRight() {
-    if (_isInteracting || _isSitting) {
+    _requestMove(1);
+  }
+
+  void _requestMove(int direction) {
+    if (_isInteracting) {
       stopMoving();
       return;
     }
 
-    _velocity.x = _moveSpeed;
-    _facesLeft = false;
-    _isInteracting = false;
-    _isSitting = false;
+    _pendingMoveDirection = direction;
+    _facesLeft = direction < 0;
+    _idleTimer = 0;
+    if (_isSeatedOrTransitioning) {
+      _startStandUp();
+      return;
+    }
+
+    _velocity.x = direction * _moveSpeed;
+    _postureState = BearAnimationState.idle;
   }
 
   void stopMoving() {
     _velocity.x = 0;
+    _pendingMoveDirection = 0;
   }
 
   void setActiveGroundY(double value) {
@@ -311,17 +350,19 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   }
 
   void jump() {
-    if (_isInteracting || _isSitting) {
+    if (_isInteracting) {
       stopMoving();
       return;
     }
 
-    if (_isOnGround) {
-      _velocity.y = _jumpImpulse;
-      _walkTicker?.reset();
-      _isInteracting = false;
-      _isSitting = false;
+    _idleTimer = 0;
+    if (_isSeatedOrTransitioning) {
+      _pendingJump = true;
+      _startStandUp();
+      return;
     }
+
+    _performJump();
   }
 
   void startInteracting() {
@@ -335,7 +376,10 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   void setInteracting(bool value) {
     _isInteracting = value;
     if (value) {
-      _isSitting = false;
+      _postureState = BearAnimationState.idle;
+      _pendingMoveDirection = 0;
+      _pendingJump = false;
+      _idleTimer = 0;
       stopMoving();
     }
   }
@@ -349,11 +393,16 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   }
 
   void setSitting(bool value) {
-    _isSitting = value;
     if (value) {
       _isInteracting = false;
+      _enterSitting();
       stopMoving();
+      return;
     }
+
+    _postureState = BearAnimationState.idle;
+    _postureStateTime = 0;
+    _idleTimer = 0;
   }
 
   Future<Image?> _loadOptionalStateImage(
@@ -374,13 +423,19 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
 
   Image? _imageForState(BearAnimationState state) {
     switch (state) {
-      case BearAnimationState.jumping:
+      case BearAnimationState.jump:
+      case BearAnimationState.fall:
         return _jumpImage;
+      case BearAnimationState.sitDown:
+        return _sitDownImage ?? _sittingImage;
       case BearAnimationState.sitting:
+        return _sittingImage;
+      case BearAnimationState.standUp:
+        return _standUpImage ?? _sittingImage;
       case BearAnimationState.interacting:
-        return _sitImage;
+        return _sittingImage;
       case BearAnimationState.idle:
-      case BearAnimationState.walking:
+      case BearAnimationState.walk:
         return null;
     }
   }
@@ -390,7 +445,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     final baseRect = visualOffset & visualSize;
 
     switch (state) {
-      case BearAnimationState.walking:
+      case BearAnimationState.walk:
         return _BearVisualTransform(
           destinationRect: _walkTicker == null
               ? baseRect
@@ -399,7 +454,8 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
           scaleY: 1.0,
           rotation: 0,
         );
-      case BearAnimationState.jumping:
+      case BearAnimationState.jump:
+      case BearAnimationState.fall:
         final rising = _velocity.y < 0;
         return _BearVisualTransform(
           destinationRect: baseRect,
@@ -408,7 +464,24 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
           rotation:
               direction * (rising ? -jumpTiltAmplitude : jumpTiltAmplitude),
         );
+      case BearAnimationState.sitDown:
+        return _seatedTransform(
+          direction: direction,
+          baseRect: baseRect,
+          progress: _sitDownProgress,
+        );
       case BearAnimationState.sitting:
+        return _seatedTransform(
+          direction: direction,
+          baseRect: baseRect,
+          progress: 1,
+        );
+      case BearAnimationState.standUp:
+        return _seatedTransform(
+          direction: direction,
+          baseRect: baseRect,
+          progress: 1 - _standUpProgress,
+        );
       case BearAnimationState.interacting:
       case BearAnimationState.idle:
         final breath = math.sin(_animationTime * _idleCycleSpeed);
@@ -434,11 +507,146 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   }
 
   double _visualPivotY(BearAnimationState state, Rect destinationRect) {
-    if (state == BearAnimationState.walking && _walkTicker != null) {
+    if (state == BearAnimationState.walk && _walkTicker != null) {
       return destinationRect.bottom - _walkVisualGroundInset;
     }
 
     return destinationRect.bottom - visualGroundInset;
+  }
+
+  void _updatePostureState(double dt, {required bool wasOnGround}) {
+    if (_isInteracting) {
+      _idleTimer = 0;
+      return;
+    }
+
+    switch (_postureState) {
+      case BearAnimationState.sitDown:
+        _idleTimer = 0;
+        _postureStateTime += dt;
+        if (_postureStateTime >= _sitDownDuration) {
+          _enterSitting();
+        }
+      case BearAnimationState.sitting:
+        _idleTimer = 0;
+      case BearAnimationState.standUp:
+        _idleTimer = 0;
+        _postureStateTime += dt;
+        if (_postureStateTime >= _standUpDuration) {
+          _finishStandUp();
+        }
+      case BearAnimationState.idle:
+      case BearAnimationState.walk:
+      case BearAnimationState.jump:
+      case BearAnimationState.fall:
+      case BearAnimationState.interacting:
+        if (!_canIdleTimerRun(wasOnGround: wasOnGround)) {
+          _idleTimer = 0;
+          return;
+        }
+
+        _idleTimer += dt;
+        if (_idleTimer >= _idleSitDelay) {
+          _startSitDown();
+        }
+    }
+  }
+
+  bool _canIdleTimerRun({required bool wasOnGround}) {
+    return wasOnGround &&
+        _isOnGround &&
+        _velocity.x.abs() <= 0.5 &&
+        _velocity.y.abs() <= 0.5 &&
+        !_pendingJump &&
+        !_isSeatedOrTransitioning;
+  }
+
+  bool get _isSeatedOrTransitioning {
+    return _postureState == BearAnimationState.sitDown ||
+        _postureState == BearAnimationState.sitting ||
+        _postureState == BearAnimationState.standUp;
+  }
+
+  void _startSitDown() {
+    _postureState = BearAnimationState.sitDown;
+    _postureStateTime = 0;
+    _idleTimer = 0;
+    stopMoving();
+  }
+
+  void _enterSitting() {
+    _postureState = BearAnimationState.sitting;
+    _postureStateTime = 0;
+    _idleTimer = 0;
+    _pendingMoveDirection = 0;
+    _pendingJump = false;
+  }
+
+  void _startStandUp() {
+    if (_postureState == BearAnimationState.standUp) {
+      return;
+    }
+
+    _postureState = BearAnimationState.standUp;
+    _postureStateTime = 0;
+    _idleTimer = 0;
+    _velocity.x = 0;
+  }
+
+  void _finishStandUp() {
+    _postureState = BearAnimationState.idle;
+    _postureStateTime = 0;
+    final moveDirection = _pendingMoveDirection;
+    final shouldJump = _pendingJump;
+    _pendingJump = false;
+
+    if (moveDirection != 0) {
+      _velocity.x = moveDirection * _moveSpeed;
+      _facesLeft = moveDirection < 0;
+    } else {
+      _velocity.x = 0;
+    }
+
+    if (shouldJump) {
+      _performJump();
+    }
+  }
+
+  void _performJump() {
+    if (_isOnGround) {
+      _velocity.y = _jumpImpulse;
+      _walkTicker?.reset();
+      _idleTimer = 0;
+      _postureState = BearAnimationState.idle;
+    }
+  }
+
+  double get _sitDownProgress {
+    return (_postureStateTime / _sitDownDuration).clamp(0.0, 1.0).toDouble();
+  }
+
+  double get _standUpProgress {
+    return (_postureStateTime / _standUpDuration).clamp(0.0, 1.0).toDouble();
+  }
+
+  _BearVisualTransform _seatedTransform({
+    required double direction,
+    required Rect baseRect,
+    required double progress,
+  }) {
+    final breath = math.sin(_animationTime * _idleCycleSpeed);
+    final seatedScaleX = 1.04;
+    final seatedScaleY = 0.92;
+    final scaleX = 1.0 + (seatedScaleX - 1.0) * progress;
+    final scaleY = 1.0 + (seatedScaleY - 1.0) * progress;
+    final verticalOffset = 4.0 * progress;
+
+    return _BearVisualTransform(
+      destinationRect: baseRect.translate(0, verticalOffset),
+      scaleX: direction * (scaleX + breath * idleBreathingAmplitude * 0.25),
+      scaleY: scaleY + breath * idleBreathingAmplitude * 0.5,
+      rotation: 0,
+    );
   }
 
   Rect _toWorldRect(Rect localRect) {
