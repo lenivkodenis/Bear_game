@@ -38,8 +38,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   final LevelGeometryService _levelGeometryService = LevelGeometryService();
   final ProgressService _progressService = ProgressService();
   static final Map<int, double> _calibratedGroundYByLevel = <int, double>{};
-  static final Map<int, LevelGeometryCollider> _calibratedObstacleByLevel =
-      <int, LevelGeometryCollider>{};
+  static final Map<int, List<LevelGeometryCollider>>
+  _calibratedObstaclesByLevel = <int, List<LevelGeometryCollider>>{};
+  static final Map<int, int> _selectedObstacleIndexByLevel = <int, int>{};
   static const double _minCalibrationObstacleWidth = 50;
   static const double _maxCalibrationObstacleWidth = 160;
   static const double _minCalibrationObstacleHeight = 20;
@@ -47,6 +48,8 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   late final LevelGeometry _sourceLevelGeometry;
   late final PlatformComponent _mainGroundComponent;
+  final List<ObstacleVisualComponent> _obstacleVisuals =
+      <ObstacleVisualComponent>[];
   List<LevelGeometry> _sourceGeometries = const <LevelGeometry>[];
   Level? currentLevel;
   PlayerProgress _progress = PlayerProgress.initial();
@@ -234,12 +237,12 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       geometry = geometry.withMainGroundTopY(calibratedGroundY);
     }
 
-    final calibratedObstacle =
-        _calibratedObstacleByLevel[_sourceLevelGeometry.levelId];
-    if (_obstacleCalibrationEnabled && calibratedObstacle != null) {
-      geometry = geometry.withCalibrationObstacles(<LevelGeometryCollider>[
-        _groundLockedObstacle(calibratedObstacle, geometry.mainGround.y),
-      ]);
+    final calibratedObstacles =
+        _calibratedObstaclesByLevel[_sourceLevelGeometry.levelId];
+    if (_obstacleCalibrationEnabled && calibratedObstacles != null) {
+      geometry = geometry.withObstacleColliders(
+        _groundLockedObstacles(calibratedObstacles, geometry.mainGround.y),
+      );
     }
 
     return geometry;
@@ -255,17 +258,18 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   void _seedObstacleCalibrationValue(LevelGeometry geometry) {
-    if (geometry.calibrationObstacles.isEmpty) {
+    final sourceObstacles = geometry.obstacleColliders.isNotEmpty
+        ? geometry.obstacleColliders
+        : geometry.calibrationObstacles;
+    if (sourceObstacles.isEmpty) {
       return;
     }
 
-    _calibratedObstacleByLevel.putIfAbsent(
+    _calibratedObstaclesByLevel.putIfAbsent(
       geometry.levelId,
-      () => _groundLockedObstacle(
-        geometry.calibrationObstacles.first,
-        geometry.mainGround.y,
-      ),
+      () => _groundLockedObstacles(sourceObstacles, geometry.mainGround.y),
     );
+    _selectedObstacleIndexByLevel.putIfAbsent(geometry.levelId, () => 0);
   }
 
   bool _handleObstacleCalibrationKey(
@@ -281,6 +285,23 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
     final key = event.logicalKey;
     final isFineTuning = _isShiftPressed(keysPressed);
+    final numberSelection = _obstacleNumberSelection(key);
+    if (numberSelection != null) {
+      _selectObstacleCalibrationIndex(numberSelection);
+      return true;
+    }
+
+    if (key == LogicalKeyboardKey.bracketLeft) {
+      _selectObstacleCalibrationDelta(-1);
+      return true;
+    }
+
+    if (key == LogicalKeyboardKey.bracketRight ||
+        key == LogicalKeyboardKey.tab) {
+      _selectObstacleCalibrationDelta(1);
+      return true;
+    }
+
     if (key == LogicalKeyboardKey.arrowLeft ||
         key == LogicalKeyboardKey.arrowRight) {
       final step = isFineTuning ? 1.0 : 10.0;
@@ -349,17 +370,92 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   LevelGeometryCollider? get _currentSourceObstacleCandidate {
-    final geometry = _currentSourceGeometry;
-    if (geometry.calibrationObstacles.isEmpty) {
+    final obstacles = _currentSourceObstacleCandidates;
+    if (obstacles == null || obstacles.isEmpty) {
       return null;
     }
 
-    return geometry.calibrationObstacles.first;
+    return obstacles[_selectedObstacleIndex];
+  }
+
+  List<LevelGeometryCollider>? get _currentSourceObstacleCandidates {
+    return _calibratedObstaclesByLevel[_sourceLevelGeometry.levelId];
+  }
+
+  int get _selectedObstacleIndex {
+    final obstacles = _currentSourceObstacleCandidates;
+    if (obstacles == null || obstacles.isEmpty) {
+      return 0;
+    }
+
+    final selected =
+        _selectedObstacleIndexByLevel[_sourceLevelGeometry.levelId] ?? 0;
+    return selected.clamp(0, obstacles.length - 1).toInt();
   }
 
   bool _isShiftPressed(Set<LogicalKeyboardKey> keysPressed) {
     return keysPressed.contains(LogicalKeyboardKey.shiftLeft) ||
         keysPressed.contains(LogicalKeyboardKey.shiftRight);
+  }
+
+  int? _obstacleNumberSelection(LogicalKeyboardKey key) {
+    const digitKeys = <LogicalKeyboardKey>[
+      LogicalKeyboardKey.digit1,
+      LogicalKeyboardKey.digit2,
+      LogicalKeyboardKey.digit3,
+      LogicalKeyboardKey.digit4,
+      LogicalKeyboardKey.digit5,
+      LogicalKeyboardKey.digit6,
+      LogicalKeyboardKey.digit7,
+      LogicalKeyboardKey.digit8,
+      LogicalKeyboardKey.digit9,
+    ];
+    const numpadKeys = <LogicalKeyboardKey>[
+      LogicalKeyboardKey.numpad1,
+      LogicalKeyboardKey.numpad2,
+      LogicalKeyboardKey.numpad3,
+      LogicalKeyboardKey.numpad4,
+      LogicalKeyboardKey.numpad5,
+      LogicalKeyboardKey.numpad6,
+      LogicalKeyboardKey.numpad7,
+      LogicalKeyboardKey.numpad8,
+      LogicalKeyboardKey.numpad9,
+    ];
+
+    final digitIndex = digitKeys.indexOf(key);
+    if (digitIndex != -1) {
+      return digitIndex;
+    }
+
+    final numpadIndex = numpadKeys.indexOf(key);
+    if (numpadIndex != -1) {
+      return numpadIndex;
+    }
+
+    return null;
+  }
+
+  void _selectObstacleCalibrationDelta(int delta) {
+    final obstacles = _currentSourceObstacleCandidates;
+    if (obstacles == null || obstacles.isEmpty) {
+      return;
+    }
+
+    _selectObstacleCalibrationIndex(
+      (_selectedObstacleIndex + delta) % obstacles.length,
+    );
+  }
+
+  void _selectObstacleCalibrationIndex(int index) {
+    final obstacles = _currentSourceObstacleCandidates;
+    if (obstacles == null || obstacles.isEmpty) {
+      return;
+    }
+
+    final normalizedIndex = index.clamp(0, obstacles.length - 1).toInt();
+    _selectedObstacleIndexByLevel[_sourceLevelGeometry.levelId] =
+        normalizedIndex;
+    _obstacleCalibrationExportPrinted = false;
   }
 
   double get _runtimeScaleX {
@@ -404,6 +500,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     final mainGround = levelGeometry.mainGround;
     _mainGroundComponent.position = mainGround.position;
     _mainGroundComponent.size = mainGround.size;
+    _syncObstacleVisuals();
 
     final playerX = player.position.x
         .clamp(0, size.x - PlayerBear.defaultSize.x)
@@ -455,21 +552,33 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   void _resetObstacleCalibration() {
-    if (_sourceLevelGeometry.calibrationObstacles.isEmpty) {
-      return;
-    }
-
-    _setObstacleCalibration(_sourceLevelGeometry.calibrationObstacles.first);
+    _calibratedObstaclesByLevel.remove(_sourceLevelGeometry.levelId);
+    _selectedObstacleIndexByLevel[_sourceLevelGeometry.levelId] = 0;
+    _seedObstacleCalibrationValue(_sourceLevelGeometry);
+    _obstacleCalibrationExportPrinted = false;
+    levelGeometry = _currentSourceGeometry.scaledTo(size);
+    _syncObstacleVisuals();
   }
 
   void _setObstacleCalibration(LevelGeometryCollider candidate) {
+    final obstacles = _currentSourceObstacleCandidates;
+    if (obstacles == null || obstacles.isEmpty) {
+      return;
+    }
+
+    final selectedIndex = _selectedObstacleIndex;
     final lockedCandidate = _boundedGroundLockedObstacle(
       candidate,
       _currentSourceGroundTopY,
     );
-    _calibratedObstacleByLevel[_sourceLevelGeometry.levelId] = lockedCandidate;
+    final updatedObstacles = List<LevelGeometryCollider>.of(obstacles);
+    updatedObstacles[selectedIndex] = lockedCandidate;
+    _calibratedObstaclesByLevel[_sourceLevelGeometry.levelId] =
+        updatedObstacles;
+    _selectedObstacleIndexByLevel[_sourceLevelGeometry.levelId] = selectedIndex;
     _obstacleCalibrationExportPrinted = false;
     levelGeometry = _currentSourceGeometry.scaledTo(size);
+    _syncObstacleVisuals();
   }
 
   double get _currentSourceGroundTopY {
@@ -510,6 +619,15 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     return candidate.copyWith(y: groundTopY - candidate.height);
   }
 
+  List<LevelGeometryCollider> _groundLockedObstacles(
+    Iterable<LevelGeometryCollider> candidates,
+    double groundTopY,
+  ) {
+    return candidates
+        .map((candidate) => _groundLockedObstacle(candidate, groundTopY))
+        .toList(growable: false);
+  }
+
   GroundCalibrationOverlayInfo _buildGroundCalibrationOverlayInfo() {
     final baseGroundY = _sourceLevelGeometry.mainGround.y;
     final calibratedGroundY =
@@ -526,8 +644,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   ObstacleCalibrationOverlayInfo? _buildObstacleCalibrationOverlayInfo() {
+    final obstacles = _currentSourceObstacleCandidates;
     final candidate = _currentSourceObstacleCandidate;
-    if (candidate == null) {
+    if (obstacles == null || obstacles.isEmpty || candidate == null) {
       return null;
     }
 
@@ -536,6 +655,8 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       levelName: currentLevel?.locationName ?? currentLevel?.title,
       groundTopY: _currentSourceGroundTopY,
       candidate: candidate,
+      selectedIndex: _selectedObstacleIndex,
+      obstacleCount: obstacles.length,
       exportPrinted: _obstacleCalibrationExportPrinted,
     );
   }
@@ -558,22 +679,28 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   void _printObstacleCalibrationValues() {
-    final candidate = _currentSourceObstacleCandidate;
-    if (candidate == null) {
+    final obstacles = _currentSourceObstacleCandidates;
+    if (obstacles == null || obstacles.isEmpty) {
       return;
     }
 
     final values = <String, Object>{
-      'id': candidate.id,
-      'x': _jsonNumber(candidate.x),
-      'y': _jsonNumber(candidate.y),
-      'width': _jsonNumber(candidate.width),
-      'height': _jsonNumber(candidate.height),
+      'obstacleColliders': obstacles
+          .map(
+            (obstacle) => <String, Object>{
+              'id': obstacle.id,
+              'x': _jsonNumber(obstacle.x),
+              'y': _jsonNumber(obstacle.y),
+              'width': _jsonNumber(obstacle.width),
+              'height': _jsonNumber(obstacle.height),
+            },
+          )
+          .toList(growable: false),
       'groundTopY': _jsonNumber(_currentSourceGroundTopY),
       'formula': 'y = groundTopY - height',
     };
     final json = const JsonEncoder.withIndent('  ').convert(values);
-    debugPrint('Obstacle calibration preview:\n$json');
+    debugPrint('Obstacle layout calibration:\n$json');
     _obstacleCalibrationExportPrinted = true;
   }
 
@@ -702,12 +829,30 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   void _addObstacleVisuals() {
     for (final obstacle in levelGeometry.obstacleColliders) {
-      add(
-        ObstacleVisualComponent(
-          position: obstacle.position,
-          size: obstacle.size,
-        ),
+      final visual = ObstacleVisualComponent(
+        position: obstacle.position,
+        size: obstacle.size,
       );
+      _obstacleVisuals.add(visual);
+      add(visual);
+    }
+  }
+
+  void _syncObstacleVisuals() {
+    if (_obstacleVisuals.length != levelGeometry.obstacleColliders.length) {
+      for (final visual in _obstacleVisuals) {
+        visual.removeFromParent();
+      }
+      _obstacleVisuals.clear();
+      _addObstacleVisuals();
+      return;
+    }
+
+    for (var index = 0; index < _obstacleVisuals.length; index += 1) {
+      final obstacle = levelGeometry.obstacleColliders[index];
+      final visual = _obstacleVisuals[index];
+      visual.position = obstacle.position;
+      visual.size = obstacle.size;
     }
   }
 

@@ -29,6 +29,8 @@ class ObstacleCalibrationOverlayInfo {
     required this.levelId,
     required this.groundTopY,
     required this.candidate,
+    required this.selectedIndex,
+    required this.obstacleCount,
     this.levelName,
     this.exportPrinted = false,
   });
@@ -37,6 +39,8 @@ class ObstacleCalibrationOverlayInfo {
   final String? levelName;
   final double groundTopY;
   final LevelGeometryCollider candidate;
+  final int selectedIndex;
+  final int obstacleCount;
   final bool exportPrinted;
 }
 
@@ -83,6 +87,8 @@ class LevelGeometryDebugOverlay extends PositionComponent {
 
     final geometry = _geometryProvider();
     final player = _playerProvider();
+    final groundCalibrationInfo = _calibrationInfoProvider?.call();
+    final obstacleCalibrationInfo = _obstacleCalibrationInfoProvider?.call();
 
     _drawColliders(
       canvas,
@@ -117,6 +123,7 @@ class LevelGeometryDebugOverlay extends PositionComponent {
       drawTopLine: true,
       drawBottomLine: true,
     );
+    _drawSelectedObstacle(canvas, geometry, obstacleCalibrationInfo);
     _drawPoint(
       canvas,
       geometry.playerSpawn.toVector2(),
@@ -130,8 +137,6 @@ class LevelGeometryDebugOverlay extends PositionComponent {
       'mentor',
     );
     _drawPlayerHitbox(canvas, player);
-    final groundCalibrationInfo = _calibrationInfoProvider?.call();
-    final obstacleCalibrationInfo = _obstacleCalibrationInfoProvider?.call();
     _drawCalibrationInfo(canvas, groundCalibrationInfo);
     _drawObstacleCalibrationInfo(
       canvas,
@@ -186,6 +191,38 @@ class LevelGeometryDebugOverlay extends PositionComponent {
         strokeColor,
       );
     }
+  }
+
+  void _drawSelectedObstacle(
+    Canvas canvas,
+    LevelGeometry geometry,
+    ObstacleCalibrationOverlayInfo? info,
+  ) {
+    if (info == null ||
+        info.selectedIndex < 0 ||
+        info.selectedIndex >= geometry.obstacleColliders.length) {
+      return;
+    }
+
+    final collider = geometry.obstacleColliders[info.selectedIndex];
+    final rect = Rect.fromLTWH(
+      collider.x,
+      collider.y,
+      collider.width,
+      collider.height,
+    );
+    final selectionPaint = Paint()
+      ..color = _candidateColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+
+    canvas.drawRect(rect.inflate(3), selectionPaint);
+    _drawLabel(
+      canvas,
+      'selected obstacle ${info.selectedIndex + 1}',
+      Offset(rect.left + 4, rect.bottom + 6),
+      _candidateColor,
+    );
   }
 
   void _drawPlayerHitbox(Canvas canvas, PlayerBear player) {
@@ -286,19 +323,22 @@ class LevelGeometryDebugOverlay extends PositionComponent {
       'levelId: ${info.levelId}',
       if (levelName != null && levelName.isNotEmpty) 'level: $levelName',
       'groundTopY: ${_formatNumber(info.groundTopY)}',
-      'candidate: ${candidate.id}',
+      'selected: ${info.selectedIndex + 1}/${info.obstacleCount}',
+      'obstacle: ${candidate.id}',
       'x: ${_formatNumber(candidate.x)}',
       'y: ${_formatNumber(candidate.y)}',
       'width: ${_formatNumber(candidate.width)}',
       'height: ${_formatNumber(candidate.height)}',
+      '1-9: select obstacle',
+      '[/]: previous/next obstacle',
       'ArrowLeft/ArrowRight: x 10 px',
       'Shift+Arrow: x 1 px',
       'A/D: width 5 px',
       'W/S: height 5 px',
       'Shift+A/D/W/S: 1 px',
-      'C: print JSON',
+      'C: print obstacleColliders JSON',
       'R: reset',
-      'Preview only — no collision',
+      'Debug layout — copy JSON to save',
       if (info.exportPrinted) 'last export printed to console',
     ];
 

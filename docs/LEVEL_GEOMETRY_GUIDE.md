@@ -51,15 +51,16 @@ Level 1 currently has two active obstacles:
 
 ```json
 [
-  { "id": "ice_ridge_1", "x": 300, "y": 459, "width": 90, "height": 30 },
-  { "id": "ice_ridge_2", "x": 500, "y": 459, "width": 90, "height": 30 }
+  { "id": "ice_ridge_1", "x": 170, "y": 446.25, "width": 90, "height": 42.75 },
+  { "id": "ice_ridge_2", "x": 528.74, "y": 442, "width": 92.87, "height": 47 }
 ]
 ```
 
 Both obstacles are ground-locked:
 
 ```text
-y = 489 - 30 = 459
+ice_ridge_1: y = 489 - 42.75 = 446.25
+ice_ridge_2: y = 489 - 47 = 442
 ```
 
 These active obstacles exist only on level 1. Levels 2-10 remain on the flat
@@ -256,8 +257,8 @@ All levels currently use the same main ground shape, with a per-level
   ],
   "platformColliders": [],
   "obstacleColliders": [
-    { "id": "ice_ridge_1", "x": 300, "y": 459, "width": 90, "height": 30 },
-    { "id": "ice_ridge_2", "x": 500, "y": 459, "width": 90, "height": 30 }
+    { "id": "ice_ridge_1", "x": 170, "y": 446.25, "width": 90, "height": 42.75 },
+    { "id": "ice_ridge_2", "x": 528.74, "y": 442, "width": 92.87, "height": 47 }
   ],
   "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
 }

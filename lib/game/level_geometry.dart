@@ -348,6 +348,23 @@ class LevelGeometry {
     );
   }
 
+  LevelGeometry withObstacleColliders(
+    List<LevelGeometryCollider> obstacleColliders,
+  ) {
+    return LevelGeometry(
+      levelId: levelId,
+      world: world,
+      backgroundAsset: backgroundAsset,
+      playerSpawn: playerSpawn,
+      mentorPosition: mentorPosition,
+      groundColliders: groundColliders,
+      platformColliders: platformColliders,
+      obstacleColliders: obstacleColliders,
+      calibrationObstacles: calibrationObstacles,
+      notes: notes,
+    );
+  }
+
   LevelGeometry scaledTo(Vector2 targetSize) {
     final scaleX = targetSize.x / world.width;
     final scaleY = targetSize.y / world.height;

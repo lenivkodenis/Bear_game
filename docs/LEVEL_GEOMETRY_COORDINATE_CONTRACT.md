@@ -100,8 +100,10 @@ The active obstacles on level 1 follow the same formula:
 
 ```text
 groundTopY = 489
-obstacle.height = 30
-obstacle.y = 489 - 30 = 459
+ice_ridge_1.height = 42.75
+ice_ridge_1.y = 489 - 42.75 = 446.25
+ice_ridge_2.height = 47
+ice_ridge_2.y = 489 - 47 = 442
 ```
 
 Active solid-block obstacles block horizontal movement only when the player
