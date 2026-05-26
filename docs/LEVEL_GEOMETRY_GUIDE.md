@@ -6,8 +6,8 @@ The manual ground calibration pass is complete. The approved per-level
 `groundY` values are now written to `assets/data/level_geometry.json`.
 
 Complex geometry is still limited. All 10 levels use visually calibrated
-ground, with no platforms and no multi-level routes. Levels 1 and 2 each have
-two calibrated active obstacles. Level 3 has one calibrated ground dip.
+ground, with no platforms and no multi-level routes. Levels 1, 2, and 4 each
+have two calibrated active obstacles. Level 3 has one calibrated ground dip.
 
 The goal of this baseline is gameplay stability:
 
@@ -39,8 +39,8 @@ Do not add obstacles by visual guessing. Before the next attempt:
 - keep future obstacle work scoped to one manually verified collider at a time.
 
 The ground line is now calibrated per level in production. Obstacle rollout is
-currently limited to two active obstacles on level 1 and two active obstacles
-on level 2. Level 3 has an active segmented ground dip.
+currently limited to two active obstacles on levels 1, 2, and 4. Level 3 has an
+active segmented ground dip.
 
 # Active obstacles on level 1
 
@@ -64,7 +64,7 @@ ice_ridge_1: y = 489 - 42.75 = 446.25
 ice_ridge_2: y = 489 - 47 = 442
 ```
 
-Level 1 active obstacles are part of the production geometry. Levels 4-10
+Level 1 active obstacles are part of the production geometry. Levels 5-10
 remain on the flat baseline with `obstacleColliders: []` and
 `platformColliders: []`.
 
@@ -111,6 +111,27 @@ dip depth = 500 - 460 = 40
 The bear can walk off the top ground and fall to the dip floor. Moving from the
 dip floor into the raised left or right ground is blocked unless the bear jumps
 high enough to clear the upper ledge.
+
+# Active obstacles on level 4
+
+Level 4 currently has two active obstacles:
+
+```json
+[
+  { "id": "forest_log", "x": 267.99, "y": 449, "width": 125.75, "height": 49 },
+  { "id": "snow_stump", "x": 498.51, "y": 428, "width": 50, "height": 70 }
+]
+```
+
+Both obstacles are ground-locked to level 4:
+
+```text
+forest_log: y = 498 - 49 = 449
+snow_stump: y = 498 - 70 = 428
+```
+
+Level 4 `calibrationObstacles` is empty after activation; collider behavior
+comes only from `obstacleColliders`.
 
 # Obstacle collision stabilization
 
@@ -162,6 +183,12 @@ Open level 2 with obstacle calibration enabled:
 
 ```text
 http://127.0.0.1:8099/?debugGeometry=1&calibrateObstacle=1&levelId=2#/game
+```
+
+Open level 4 with obstacle calibration enabled:
+
+```text
+http://127.0.0.1:8099/?debugGeometry=1&calibrateObstacle=1&levelId=4#/game
 ```
 
 Open level 3 with ground dip calibration enabled:
@@ -332,7 +359,7 @@ Most levels currently use one main ground shape, with a per-level
 }
 ```
 
-Levels 1 and 2 each have two active obstacles. Levels 3-10 keep
+Levels 1, 2, and 4 each have two active obstacles. Levels 3 and 5-10 keep
 `obstacleColliders: []`.
 Levels 1-10 keep `platformColliders: []`.
 
@@ -372,8 +399,8 @@ Current rollout requires every level to have:
 
 - `platformColliders: []`
 
-Levels 3-10 must also have `obstacleColliders: []`. Levels 1 and 2 each have
-exactly two active obstacles.
+Levels 3 and 5-10 must also have `obstacleColliders: []`. Levels 1, 2, and 4
+each have exactly two active obstacles.
 
 `calibrationObstacles` may contain preview rectangles for debug overlay
 calibration only. They are not production gameplay colliders and should be
@@ -415,7 +442,8 @@ Run:
 python3 tools/validate_level_geometry.py
 ```
 
-The validator checks all 10 levels, per-level backgrounds, one main ground,
-approved per-level `groundY` values, empty platforms, active obstacle layouts
-on levels 1 and 2, empty obstacle lists on levels 3-10, sane coordinates,
-mentor to the right of the spawn, and both contact points on the main ground.
+The validator checks all 10 levels, per-level backgrounds, flat or segmented
+ground, approved per-level `groundY` values, empty platforms, active obstacle
+layouts on levels 1, 2, and 4, empty obstacle lists on levels 3 and 5-10, sane
+coordinates, mentor to the right of the spawn, and both contact points on the
+main ground.

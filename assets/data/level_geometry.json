@@ -57,7 +57,10 @@
         { "id": "main_ground", "x": 0, "y": 498, "width": 800, "height": 102 }
       ],
       "platformColliders": [],
-      "obstacleColliders": [],
+      "obstacleColliders": [
+        { "id": "forest_log", "x": 267.99, "y": 449, "width": 125.75, "height": 49 },
+        { "id": "snow_stump", "x": 498.51, "y": 428, "width": 50, "height": 70 }
+      ],
       "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {

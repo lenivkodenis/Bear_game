@@ -100,7 +100,7 @@ obstacle.y = groundTopY - obstacle.height
 obstacle.y = 460 - 45 = 415
 ```
 
-The active obstacles on level 1 follow the same formula:
+The active obstacles on manually verified levels follow the same formula:
 
 ```text
 groundTopY = 489
@@ -273,9 +273,9 @@ the default code flag.
 Before adding future platforms or more obstacles:
 
 1. Keep `platformColliders` empty on every level.
-2. Keep `obstacleColliders` empty on levels 3-10.
-3. Keep only the approved level 1 and level 2 obstacles active until the next
-   level is manually verified.
+2. Keep `obstacleColliders` empty on levels 3 and 5-10.
+3. Keep only the approved level 1, level 2, and level 4 obstacles active until
+   the next level is manually verified.
 4. Enable the debug overlay with `debugGeometry=1`.
 5. Confirm that `groundTopY`, `playerSpawn`, `mentorPosition`, and the bear
    bottom line all coincide on the main ground.

@@ -94,6 +94,22 @@ EXPECTED_LEVEL_THREE_GROUND_SEGMENTS = [
         "height": 140,
     },
 ]
+EXPECTED_LEVEL_FOUR_OBSTACLES = [
+    {
+        "id": "forest_log",
+        "x": 267.99,
+        "y": 449,
+        "width": 125.75,
+        "height": 49,
+    },
+    {
+        "id": "snow_stump",
+        "x": 498.51,
+        "y": 428,
+        "width": 50,
+        "height": 70,
+    },
+]
 
 
 class GeometryError(Exception):
@@ -133,7 +149,7 @@ def main() -> None:
     print(
         "level_geometry.json OK: 10 per-level calibrated levels, "
         "two active level 1 obstacles, two active level 2 obstacles, level 3 "
-        "ground dip, no platforms."
+        "ground dip, two active level 4 obstacles, no platforms."
     )
 
 
@@ -187,6 +203,17 @@ def validate_level(
         validate_expected_obstacles(
             obstacles,
             expected=EXPECTED_LEVEL_TWO_OBSTACLES,
+            context=context,
+            ground=grounds[0],
+            player_spawn=player_spawn,
+            mentor_position=mentor_position,
+            world_width=world_width,
+            world_height=world_height,
+        )
+    elif level_id == 4:
+        validate_expected_obstacles(
+            obstacles,
+            expected=EXPECTED_LEVEL_FOUR_OBSTACLES,
             context=context,
             ground=grounds[0],
             player_spawn=player_spawn,
@@ -392,6 +419,33 @@ def validate_calibration_obstacles(
             fail(f"{preview_context}: preview must not intersect playerSpawn.")
         if point_intersects_rect(mentor_x, mentor_y, preview):
             fail(f"{preview_context}: preview must not intersect mentorPosition.")
+
+
+def validate_expected_calibration_obstacles(
+    calibration_obstacles: list[dict[str, float | str]],
+    *,
+    expected: list[dict[str, float | str]],
+    context: str,
+) -> None:
+    if len(calibration_obstacles) != len(expected):
+        fail(
+            f"{context}: expected {len(expected)} calibration obstacle "
+            f"previews, found {len(calibration_obstacles)}."
+        )
+
+    for index, (preview, expected_preview) in enumerate(
+        zip(calibration_obstacles, expected),
+        start=1,
+    ):
+        preview_context = f"{context} calibration preview {index}"
+        if preview["id"] != expected_preview["id"]:
+            fail(f"{preview_context}: id must be {expected_preview['id']}.")
+        for key in ("x", "y", "width", "height"):
+            if not same_number(float(preview[key]), float(expected_preview[key])):
+                fail(
+                    f"{preview_context}: {key} must equal "
+                    f"{expected_preview[key]}."
+                )
 
 
 def validate_point(
