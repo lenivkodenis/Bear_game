@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show KeyEventResult;
 
+import 'components/distant_birds_component.dart';
 import 'components/level_geometry_debug_overlay.dart';
 import 'components/platform_component.dart';
 import 'components/player_bear.dart';
@@ -130,6 +131,10 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     final groundY = mainGround.y;
 
     add(SnowyBackground(size: size, assetPath: levelGeometry.backgroundAsset));
+    if (currentLevel!.id == 1) {
+      add(DistantBirdsComponent(size: size));
+    }
+
     _mainGroundComponent = PlatformComponent(
       position: mainGround.position,
       size: mainGround.size,
