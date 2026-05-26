@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate production per-level geometry and the first active obstacle."""
+"""Validate production per-level geometry and active level 1 obstacles."""
 
 from __future__ import annotations
 
@@ -39,13 +39,22 @@ MIN_PREVIEW_WIDTH = 50
 MAX_PREVIEW_WIDTH = 160
 MIN_PREVIEW_HEIGHT = 20
 MAX_PREVIEW_HEIGHT = 70
-EXPECTED_LEVEL_ONE_OBSTACLE = {
-    "id": "ice_ridge_1",
-    "x": 537.70,
-    "y": 459,
-    "width": 90,
-    "height": 30,
-}
+EXPECTED_LEVEL_ONE_OBSTACLES = [
+    {
+        "id": "ice_ridge_1",
+        "x": 300,
+        "y": 459,
+        "width": 90,
+        "height": 30,
+    },
+    {
+        "id": "ice_ridge_2",
+        "x": 500,
+        "y": 459,
+        "width": 90,
+        "height": 30,
+    },
+]
 
 
 class GeometryError(Exception):
@@ -84,7 +93,7 @@ def main() -> None:
 
     print(
         "level_geometry.json OK: 10 per-level calibrated levels, "
-        "one active level 1 obstacle, no platforms."
+        "two active level 1 obstacles, no platforms."
     )
 
 
@@ -194,38 +203,45 @@ def validate_level_one_obstacle(
     world_width: float,
     world_height: float,
 ) -> None:
-    if len(obstacles) != 1:
-        fail(f"{context}: level 1 must contain exactly one obstacleCollider.")
-
-    obstacle = obstacles[0]
-    obstacle_context = f"{context} obstacle"
-    if obstacle["id"] != EXPECTED_LEVEL_ONE_OBSTACLE["id"]:
-        fail(f"{obstacle_context}: id must be ice_ridge_1.")
-    for key in ("x", "y", "width", "height"):
-        if not same_number(float(obstacle[key]), EXPECTED_LEVEL_ONE_OBSTACLE[key]):
-            fail(
-                f"{obstacle_context}: {key} must equal "
-                f"{EXPECTED_LEVEL_ONE_OBSTACLE[key]}."
-            )
-
-    validate_collider_bounds(obstacle, obstacle_context, world_width, world_height)
-    expected_y = float(ground["y"]) - float(obstacle["height"])
-    if not same_number(float(obstacle["y"]), expected_y):
-        fail(f"{obstacle_context}: y must equal main_ground.y - height.")
+    if len(obstacles) != len(EXPECTED_LEVEL_ONE_OBSTACLES):
+        fail(
+            f"{context}: level 1 must contain exactly "
+            f"{len(EXPECTED_LEVEL_ONE_OBSTACLES)} obstacleColliders."
+        )
 
     player_x = required_number(player_spawn, "x", f"{context}.playerSpawn")
     player_y = required_number(player_spawn, "y", f"{context}.playerSpawn")
     mentor_x = required_number(mentor_position, "x", f"{context}.mentorPosition")
     mentor_y = required_number(mentor_position, "y", f"{context}.mentorPosition")
 
-    obstacle_left = float(obstacle["x"])
-    obstacle_right = obstacle_left + float(obstacle["width"])
-    if obstacle_left <= player_x or obstacle_right >= mentor_x:
-        fail(f"{obstacle_context}: obstacle must be between spawn and mentor.")
-    if point_intersects_rect(player_x, player_y, obstacle):
-        fail(f"{obstacle_context}: obstacle must not intersect playerSpawn.")
-    if point_intersects_rect(mentor_x, mentor_y, obstacle):
-        fail(f"{obstacle_context}: obstacle must not intersect mentorPosition.")
+    previous_right: float | None = None
+    for index, (obstacle, expected) in enumerate(
+        zip(obstacles, EXPECTED_LEVEL_ONE_OBSTACLES),
+        start=1,
+    ):
+        obstacle_context = f"{context} obstacle {index}"
+        if obstacle["id"] != expected["id"]:
+            fail(f"{obstacle_context}: id must be {expected['id']}.")
+        for key in ("x", "y", "width", "height"):
+            if not same_number(float(obstacle[key]), expected[key]):
+                fail(f"{obstacle_context}: {key} must equal {expected[key]}.")
+
+        validate_collider_bounds(obstacle, obstacle_context, world_width, world_height)
+        expected_y = float(ground["y"]) - float(obstacle["height"])
+        if not same_number(float(obstacle["y"]), expected_y):
+            fail(f"{obstacle_context}: y must equal main_ground.y - height.")
+
+        obstacle_left = float(obstacle["x"])
+        obstacle_right = obstacle_left + float(obstacle["width"])
+        if obstacle_left <= player_x or obstacle_right >= mentor_x:
+            fail(f"{obstacle_context}: obstacle must be between spawn and mentor.")
+        if previous_right is not None and obstacle_left <= previous_right:
+            fail(f"{obstacle_context}: obstacles must be ordered left to right.")
+        previous_right = obstacle_right
+        if point_intersects_rect(player_x, player_y, obstacle):
+            fail(f"{obstacle_context}: obstacle must not intersect playerSpawn.")
+        if point_intersects_rect(mentor_x, mentor_y, obstacle):
+            fail(f"{obstacle_context}: obstacle must not intersect mentorPosition.")
 
 
 def validate_calibration_obstacles(

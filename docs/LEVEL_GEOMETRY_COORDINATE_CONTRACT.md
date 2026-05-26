@@ -96,7 +96,7 @@ obstacle.y = groundTopY - obstacle.height
 obstacle.y = 460 - 45 = 415
 ```
 
-The first active obstacle on level 1 follows the same formula:
+The active obstacles on level 1 follow the same formula:
 
 ```text
 groundTopY = 489
@@ -264,8 +264,8 @@ Before adding future platforms or more obstacles:
 
 1. Keep `platformColliders` empty on every level.
 2. Keep `obstacleColliders` empty on levels 2-10.
-3. Keep only the approved `ice_ridge_1` obstacle on level 1 until it is
-   manually verified.
+3. Keep only the approved `ice_ridge_1` and `ice_ridge_2` obstacles on level 1
+   until they are manually verified.
 4. Enable the debug overlay with `debugGeometry=1`.
 5. Confirm that `groundTopY`, `playerSpawn`, `mentorPosition`, and the bear
    bottom line all coincide on the main ground.

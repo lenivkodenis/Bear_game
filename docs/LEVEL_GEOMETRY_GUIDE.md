@@ -7,7 +7,7 @@ The manual ground calibration pass is complete. The approved per-level
 
 Complex geometry is still limited. All 10 levels use one visually calibrated
 flat ground collider per level, with no platforms, no gaps, and no multi-level
-routes. Level 1 has one calibrated active obstacle.
+routes. Level 1 has two calibrated active obstacles.
 
 The goal of this baseline is gameplay stability:
 
@@ -20,8 +20,8 @@ The goal of this baseline is gameplay stability:
 
 Do not add complex geometry back to all 10 levels at once. Future obstacles and
 platforms should be added one level at a time, with coordinate calibration and
-manual playtesting after each level. No second obstacle should be added until
-the first active level 1 obstacle is manually verified.
+manual playtesting after each level. Keep additional obstacle changes scoped to
+one manually verified level-design pass at a time.
 
 # Obstacle rollout history
 
@@ -39,46 +39,40 @@ Do not add obstacles by visual guessing. Before the next attempt:
 - keep future obstacle work scoped to one manually verified collider at a time.
 
 The ground line is now calibrated per level in production. Obstacle rollout is
-limited to one active level 1 obstacle.
+currently limited to two active level 1 obstacles.
 
-# First active obstacle on level 1
+# Active obstacles on level 1
 
-The first obstacle was calibrated through the debug-only preview workflow and
-then moved into `obstacleColliders` after manual approval.
+The first obstacle was calibrated through the debug-only preview workflow. The
+second obstacle reuses the same solid-block mechanics and temporary Canvas
+visual to verify that multiple `obstacleColliders` work on one level.
 
-Level 1 currently has one active obstacle:
+Level 1 currently has two active obstacles:
 
 ```json
-{
-  "id": "ice_ridge_1",
-  "x": 537.70,
-  "y": 459,
-  "width": 90,
-  "height": 30
-}
+[
+  { "id": "ice_ridge_1", "x": 300, "y": 459, "width": 90, "height": 30 },
+  { "id": "ice_ridge_2", "x": 500, "y": 459, "width": 90, "height": 30 }
+]
 ```
 
-The obstacle is ground-locked:
+Both obstacles are ground-locked:
 
 ```text
 y = 489 - 30 = 459
 ```
 
-This active obstacle exists only on level 1. Levels 2-10 remain on the flat
+These active obstacles exist only on level 1. Levels 2-10 remain on the flat
 baseline with `obstacleColliders: []` and `platformColliders: []`.
-
-Do not add another obstacle until this first active obstacle is manually checked
-in normal and debug modes.
 
 # Obstacle collision stabilization
 
-The production snowdrift visual is temporarily disabled. The active level 1
-obstacle remains in `obstacleColliders`, but ordinary gameplay does not draw a
-custom obstacle shape until side collision is manually verified.
+The active level 1 obstacles remain in `obstacleColliders`, and ordinary
+gameplay draws the shared temporary Canvas obstacle visual for each collider.
 
-With `debugGeometry=1`, the obstacle is still visible as a debug rectangle with
-the `obstacle: ice_ridge_1` label. Use that overlay to compare the active
-collider with the player hitbox, visual feet, and ground line.
+With `debugGeometry=1`, both obstacles are visible as debug rectangles with
+`obstacle:` labels. Use that overlay to compare the active colliders with the
+player hitbox, visual feet, and ground line.
 
 The obstacle is now treated as a solid block. It blocks horizontal movement
 from both sides, catches the player when the hitbox lands on its top face, keeps
@@ -86,8 +80,8 @@ that top face as the active ground while the player's feet remain within the
 obstacle width, and falls back to the main ground after the player walks off an
 edge. The resolver must not alter jump force, gravity, speed, or hitbox values.
 
-The visual obstacle can return in a separate step after the collider behavior is
-confirmed in normal and debug modes.
+The temporary Canvas visual is production-visible for now and must remain
+decorative; collider behavior still comes only from `obstacleColliders`.
 
 # Obstacle preview after ground calibration
 
@@ -262,13 +256,14 @@ All levels currently use the same main ground shape, with a per-level
   ],
   "platformColliders": [],
   "obstacleColliders": [
-    { "id": "ice_ridge_1", "x": 537.70, "y": 459, "width": 90, "height": 30 }
+    { "id": "ice_ridge_1", "x": 300, "y": 459, "width": 90, "height": 30 },
+    { "id": "ice_ridge_2", "x": 500, "y": 459, "width": 90, "height": 30 }
   ],
   "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
 }
 ```
 
-Level 1 has one active obstacle. Levels 2-10 keep `obstacleColliders: []`.
+Level 1 has two active obstacles. Levels 2-10 keep `obstacleColliders: []`.
 Levels 1-10 keep `platformColliders: []`.
 
 ## Ground
@@ -305,15 +300,15 @@ Current rollout requires every level to have:
 
 - `platformColliders: []`
 
-Levels 2-10 must also have `obstacleColliders: []`. Level 1 has exactly one
-active obstacle.
+Levels 2-10 must also have `obstacleColliders: []`. Level 1 has exactly two
+active obstacles.
 
 `calibrationObstacles` may contain preview rectangles for debug overlay
 calibration only. They are not gameplay colliders.
 
 No steps, gaps, crystals, logs, or blocked routes should be present until a
-later coordinate-calibrated tuning pass. Keep the level 1 ice ridge as the only
-active obstacle until it passes manual verification.
+later coordinate-calibrated tuning pass. Keep the level 1 ice ridges as the only
+active obstacles until they pass manual verification.
 
 ## Runtime
 
