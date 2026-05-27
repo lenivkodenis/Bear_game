@@ -64,16 +64,17 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   static const _sitFrameStepTime = 0.07;
   static const _walkFrameSourceWidth = 359.0;
   static const _walkFrameSourceHeight = 268.0;
-  static const _sitFrameSourceWidth = 1254.0;
-  static const _sitFrameSourceHeight = 1254.0;
+  static const _sitFrameSourceWidth = 445.0;
+  static const _sitFrameSourceHeight = 376.0;
   static const _walkVisualHeight = 112.0;
   static const _walkVisualWidth =
       _walkVisualHeight * _walkFrameSourceWidth / _walkFrameSourceHeight;
   static const _walkVisualGroundInset = 10.0;
-  static const _sitVisualHeight = 108.0;
+  static const _sitVisualHeight = 124.0;
   static const _sitVisualWidth =
       _sitVisualHeight * _sitFrameSourceWidth / _sitFrameSourceHeight;
-  static const _sitVisualGroundInset = 2.0;
+  static const _sitVisualGroundInset =
+      _sitVisualHeight * 17.0 / _sitFrameSourceHeight;
   static const visualGroundInset = 1.25;
   static const feetToGroundOffset = 0.0;
   static const visualFeetAnchor = Offset(
