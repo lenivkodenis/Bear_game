@@ -15,7 +15,15 @@ STATE_REQUIREMENTS = {
     "walk": 6,
     "jump": 1,
     "sit": 1,
+    "sit_down": 9,
 }
+REQUIRED_FRAME_SEQUENCES = {
+    "walk": [f"walk_{index:02d}.png" for index in range(1, 7)],
+    "sit_down": [
+        f"bear_sit_down_{index:02d}.png" for index in range(1, 10)
+    ],
+}
+STABLE_BOTTOM_STATES = {"sit_down"}
 SNAKE_CASE_PNG = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*\.png$")
 
 
@@ -26,6 +34,7 @@ class FrameInfo:
     mode: str
     has_alpha_channel: bool
     has_transparent_pixels: bool
+    alpha_bbox: tuple[int, int, int, int] | None
 
 
 def main() -> int:
@@ -68,6 +77,8 @@ def main() -> int:
 
     for state, frames in frames_by_state.items():
         validate_state_sizes(state, frames, errors)
+        validate_required_sequence(state, frames, errors)
+        validate_stable_alpha_bottom(state, frames, errors)
 
     walk_frames = frames_by_state.get("walk", [])
     validate_walk_sizes(walk_frames, errors)
@@ -94,6 +105,9 @@ def inspect_png(path: Path, image_module, errors: list[str]) -> FrameInfo | None
             if has_alpha_channel:
                 alpha = image.convert("RGBA").getchannel("A")
                 has_transparent_pixels = alpha.getextrema()[0] < 255
+                alpha_bbox = alpha.point(lambda value: 255 if value > 14 else 0).getbbox()
+            else:
+                alpha_bbox = None
 
             if not has_alpha_channel:
                 errors.append(f"No alpha channel: {relative(path)}")
@@ -106,6 +120,7 @@ def inspect_png(path: Path, image_module, errors: list[str]) -> FrameInfo | None
                 mode=image.mode,
                 has_alpha_channel=has_alpha_channel,
                 has_transparent_pixels=has_transparent_pixels,
+                alpha_bbox=alpha_bbox,
             )
     except Exception as exc:
         errors.append(f"Cannot read PNG: {relative(path)} ({exc})")
@@ -140,6 +155,40 @@ def validate_walk_sizes(frames: list[FrameInfo], errors: list[str]) -> None:
         errors.append(f"walk: all frames must have one canvas size. Found: {formatted_sizes}.")
 
 
+def validate_required_sequence(
+    state: str,
+    frames: list[FrameInfo],
+    errors: list[str],
+) -> None:
+    expected = REQUIRED_FRAME_SEQUENCES.get(state)
+    if expected is None:
+        return
+
+    actual = [frame.path.name for frame in frames]
+    if actual != expected:
+        errors.append(
+            f"{state}: expected exact frame sequence {expected}, found {actual}."
+        )
+
+
+def validate_stable_alpha_bottom(
+    state: str,
+    frames: list[FrameInfo],
+    errors: list[str],
+) -> None:
+    if state not in STABLE_BOTTOM_STATES or len(frames) < 2:
+        return
+
+    bottoms = {
+        frame.alpha_bbox[3]
+        for frame in frames
+        if frame.alpha_bbox is not None
+    }
+    if len(bottoms) > 1:
+        formatted = ", ".join(str(bottom) for bottom in sorted(bottoms))
+        errors.append(f"{state}: alpha bottom line must stay fixed. Found: {formatted}.")
+
+
 def print_report(
     frames_by_state: dict[str, list[FrameInfo]],
     warnings: list[str],
@@ -160,7 +209,8 @@ def print_report(
             )
             print(
                 f"  {frame.path.name}: {format_size(frame.size)}, "
-                f"mode={frame.mode}, {alpha_status}"
+                f"mode={frame.mode}, {alpha_status}, "
+                f"alpha_bbox={frame.alpha_bbox}"
             )
         print()
 

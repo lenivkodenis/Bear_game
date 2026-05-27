@@ -99,7 +99,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   static const _jumpImpulse = -410.0;
   static const _gravity = 820.0;
   static const _idleCycleSpeed = 2.4;
-  static const _idleSitDelay = 3.0;
   static const _sitDownDuration = _sitFrameStepTime * 8;
   static const _standUpDuration = _sitFrameStepTime * 8;
 
@@ -113,7 +112,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   List<Sprite> _sitSprites = const [];
   Sprite? _sittingSprite;
   double _animationTime = 0;
-  double _idleTimer = 0;
   double _postureStateTime = 0;
   BearAnimationState? _previousAnimationState;
   BearAnimationState _postureState = BearAnimationState.idle;
@@ -200,7 +198,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   void update(double dt) {
     super.update(dt);
 
-    final wasOnGround = _isOnGround;
     _animationTime += dt;
     _velocity.y += _gravity * dt;
     position += _velocity * dt;
@@ -214,7 +211,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     final maxX = levelWidth - size.x;
     position.x = position.x.clamp(0, maxX).toDouble();
 
-    _updatePostureState(dt, wasOnGround: wasOnGround);
+    _updatePostureState(dt);
 
     final state = _animationState;
     if (state == BearAnimationState.walk) {
@@ -374,7 +371,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
 
     _pendingMoveDirection = direction;
     _facesLeft = direction < 0;
-    _idleTimer = 0;
     if (_isSeatedOrTransitioning) {
       _startStandUp();
       return;
@@ -405,7 +401,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
       return;
     }
 
-    _idleTimer = 0;
     if (_isSeatedOrTransitioning) {
       _pendingJump = true;
       _startStandUp();
@@ -429,7 +424,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
       _postureState = BearAnimationState.idle;
       _pendingMoveDirection = 0;
       _pendingJump = false;
-      _idleTimer = 0;
       stopMoving();
     }
   }
@@ -443,16 +437,9 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   }
 
   void setSitting(bool value) {
-    if (value) {
-      _isInteracting = false;
-      _enterSitting();
-      stopMoving();
-      return;
-    }
-
+    _isInteracting = false;
     _postureState = BearAnimationState.idle;
     _postureStateTime = 0;
-    _idleTimer = 0;
   }
 
   Future<Image?> _loadOptionalStateImage(
@@ -569,23 +556,19 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     return destinationRect.bottom - visualGroundInset;
   }
 
-  void _updatePostureState(double dt, {required bool wasOnGround}) {
+  void _updatePostureState(double dt) {
     if (_isInteracting) {
-      _idleTimer = 0;
       return;
     }
 
     switch (_postureState) {
       case BearAnimationState.sitDown:
-        _idleTimer = 0;
         _postureStateTime += dt;
         if (_postureStateTime >= _sitDownDuration) {
           _enterSitting();
         }
       case BearAnimationState.sitting:
-        _idleTimer = 0;
       case BearAnimationState.standUp:
-        _idleTimer = 0;
         _postureStateTime += dt;
         if (_postureStateTime >= _standUpDuration) {
           _finishStandUp();
@@ -595,25 +578,8 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
       case BearAnimationState.jump:
       case BearAnimationState.fall:
       case BearAnimationState.interacting:
-        if (!_canIdleTimerRun(wasOnGround: wasOnGround)) {
-          _idleTimer = 0;
-          return;
-        }
-
-        _idleTimer += dt;
-        if (_idleTimer >= _idleSitDelay) {
-          _startSitDown();
-        }
+        return;
     }
-  }
-
-  bool _canIdleTimerRun({required bool wasOnGround}) {
-    return wasOnGround &&
-        _isOnGround &&
-        _velocity.x.abs() <= 0.5 &&
-        _velocity.y.abs() <= 0.5 &&
-        !_pendingJump &&
-        !_isSeatedOrTransitioning;
   }
 
   bool get _isSeatedOrTransitioning {
@@ -625,14 +591,12 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   void _startSitDown() {
     _postureState = BearAnimationState.sitDown;
     _postureStateTime = 0;
-    _idleTimer = 0;
     stopMoving();
   }
 
   void _enterSitting() {
     _postureState = BearAnimationState.sitting;
     _postureStateTime = 0;
-    _idleTimer = 0;
     _pendingMoveDirection = 0;
     _pendingJump = false;
   }
@@ -644,7 +608,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
 
     _postureState = BearAnimationState.standUp;
     _postureStateTime = 0;
-    _idleTimer = 0;
     _velocity.x = 0;
   }
 
@@ -671,7 +634,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     if (_isOnGround) {
       _velocity.y = _jumpImpulse;
       _walkTicker?.reset();
-      _idleTimer = 0;
       _postureState = BearAnimationState.idle;
     }
   }

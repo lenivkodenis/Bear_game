@@ -121,6 +121,65 @@ Assets still needed:
 - `assets/images/characters/bear_cub/animations/jump/jump_01.png`;
 - `assets/images/characters/bear_cub/animations/sit/sit_01.png`.
 
+# Sit-down v4 connected
+
+The active sitting transition now uses a new generated and locally aligned
+`sit_down_v4` sequence instead of the earlier mismatched `sit_down` draft.
+
+Runtime frames:
+
+```text
+assets/images/characters/bear_cub/animations/sit_down_v4/bear_sit_down_v4_01.png
+assets/images/characters/bear_cub/animations/sit_down_v4/bear_sit_down_v4_02.png
+assets/images/characters/bear_cub/animations/sit_down_v4/bear_sit_down_v4_03.png
+assets/images/characters/bear_cub/animations/sit_down_v4/bear_sit_down_v4_04.png
+assets/images/characters/bear_cub/animations/sit_down_v4/bear_sit_down_v4_05.png
+assets/images/characters/bear_cub/animations/sit_down_v4/bear_sit_down_v4_06.png
+assets/images/characters/bear_cub/animations/sit_down_v4/bear_sit_down_v4_07.png
+assets/images/characters/bear_cub/animations/sit_down_v4/bear_sit_down_v4_08.png
+assets/images/characters/bear_cub/animations/sit_down_v4/bear_sit_down_v4_09.png
+```
+
+Source and generated previews:
+
+```text
+assets/_incoming/bear_cub/sit_down_v4/source_sheet_green.png
+assets/_incoming/bear_cub/sit_down_v4/source_sheet_alpha_contract1.png
+docs/bear_sit_down_v4_preview.png
+docs/bear_sit_down_v4_motion.gif
+docs/bear_sit_down_v4_runtime_scale.png
+```
+
+The frames are built with:
+
+```text
+.venv-tools/bin/python tools/build_bear_sit_down_animation.py
+```
+
+Build policy:
+
+- source artwork stays in `assets/_incoming`;
+- runtime frames live in a versioned animation folder;
+- generated frames are component-split instead of fixed-grid-sliced, so a pose
+  crossing a nominal sheet cell boundary is not cut;
+- each frame is placed on one `350x302` transparent canvas;
+- alpha bottom line is fixed at `y=285`;
+- front paw contact is used as the horizontal anchor;
+- edge pixels are lightly neutralized to reduce chroma-key color spill.
+
+Runtime calibration:
+
+```text
+stepTime: 0.085 seconds
+sit visual canvas: 350x302 source px
+rendered sit visual height: 124 px
+rendered sit visual ground inset: 7.4 px
+soft blend max alpha: 0.64
+```
+
+The old per-frame alignment compensation is disabled for v4 because the build
+tool already normalizes canvas, baseline, and contact anchor.
+
 ## Current static sprite
 
 The first level currently uses one cleaned RGBA PNG:

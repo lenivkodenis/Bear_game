@@ -28,6 +28,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   BearMathGame({required this.levelId});
 
   static const mentorDialogOverlay = 'mentorDialog';
+  static const _mentorInteractionRadius = 132.0;
 
   final int levelId;
   late PlayerBear player;
@@ -1060,6 +1061,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     if (!_mentorDialogWasShown && _isPlayerNearMentor) {
       _mentorDialogWasShown = true;
       _mentorDialogOpen = true;
+      mentor.setWaitingForPlayer(false);
       player.stopMoving();
       player.startInteracting();
       overlays.add(mentorDialogOverlay);
@@ -1077,7 +1079,8 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   bool get _isPlayerNearMentor {
     final playerCenter = player.position + player.size / 2;
-    return playerCenter.distanceTo(mentor.interactionPoint) < 92;
+    return playerCenter.distanceTo(mentor.interactionPoint) <
+        _mentorInteractionRadius;
   }
 
   void _resolveObstacleCollisions(Rect previousPlayerRect) {
