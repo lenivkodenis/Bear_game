@@ -23,7 +23,7 @@ void main() {
     bear.update(3.0);
     expect(bear.animationState, BearAnimationState.sitDown);
 
-    bear.update(0.56);
+    bear.update(0.68);
     expect(bear.animationState, BearAnimationState.sitting);
   }
 
@@ -89,7 +89,7 @@ void main() {
       bear.moveRight();
       expect(bear.animationState, BearAnimationState.standUp);
 
-      bear.update(0.56);
+      bear.update(0.68);
       expect(bear.animationState, BearAnimationState.walk);
     });
 
@@ -100,7 +100,7 @@ void main() {
       bear.jump();
       expect(bear.animationState, BearAnimationState.standUp);
 
-      bear.update(0.56);
+      bear.update(0.68);
       expect(bear.animationState, BearAnimationState.jump);
     });
 
@@ -112,10 +112,10 @@ void main() {
     });
 
     test('sitting animation frames are ordered from standing to sitting', () {
-      for (var index = 1; index <= kBearSitFrameOrder.length; index += 1) {
+      for (final frameName in kBearSitFrameOrder) {
         expect(
           File(
-            'assets/images/characters/bear_cub/animations/sit_down/bear_sit_down_${index.toString().padLeft(2, '0')}.png',
+            'assets/images/characters/bear_cub/animations/sit_down/$frameName',
           ).existsSync(),
           isTrue,
         );

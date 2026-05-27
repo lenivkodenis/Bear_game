@@ -61,11 +61,13 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   static const visualHeight = 96.0;
   static const visualSize = Size(visualWidth, visualHeight);
   static const _walkFrameStepTime = 0.14;
-  static const _sitFrameStepTime = 0.07;
+  static const _sitFrameStepTime = 0.085;
+  static const _walkFrameBlendMaxAlpha = 0.42;
+  static const _sitFrameBlendMaxAlpha = 0.64;
   static const _walkFrameSourceWidth = 359.0;
   static const _walkFrameSourceHeight = 268.0;
-  static const _sitFrameSourceWidth = 445.0;
-  static const _sitFrameSourceHeight = 376.0;
+  static const _sitFrameSourceWidth = 1043.0;
+  static const _sitFrameSourceHeight = 911.0;
   static const _walkVisualHeight = 112.0;
   static const _walkVisualWidth =
       _walkVisualHeight * _walkFrameSourceWidth / _walkFrameSourceHeight;
@@ -74,7 +76,10 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   static const _sitVisualWidth =
       _sitVisualHeight * _sitFrameSourceWidth / _sitFrameSourceHeight;
   static const _sitVisualGroundInset =
-      _sitVisualHeight * 17.0 / _sitFrameSourceHeight;
+      _sitVisualHeight * 8.0 / _sitFrameSourceHeight;
+  static const _sitFrameReferenceCenterX = 0.0;
+  static const _sitFrameReferenceBottomMargin = 0.0;
+  static const List<_BearFrameAlignment> _sitFrameAlignments = [];
   static const visualGroundInset = 1.25;
   static const feetToGroundOffset = 0.0;
   static const visualFeetAnchor = Offset(
@@ -87,6 +92,8 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   );
   static const idleBreathingAmplitude = 0.01;
   static const jumpTiltAmplitude = math.pi / 90;
+  static const walkCarryScaleAmplitude = 0.006;
+  static const walkCarryTiltAmplitude = math.pi / 240;
 
   static const _moveSpeed = 160.0;
   static const _jumpImpulse = -410.0;
@@ -103,8 +110,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   Image? _image;
   Image? _jumpImage;
   SpriteAnimationTicker? _walkTicker;
-  SpriteAnimationTicker? _sitDownTicker;
-  SpriteAnimationTicker? _standUpTicker;
+  List<Sprite> _sitSprites = const [];
   Sprite? _sittingSprite;
   double _animationTime = 0;
   double _idleTimer = 0;
@@ -180,25 +186,11 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
         final path = '$_sitSpriteDirectory/$frameName';
         sitSprites.add(Sprite(await Flame.images.load(path)));
       }
+      _sitSprites = sitSprites;
       _sittingSprite = sitSprites.last;
-      _sitDownTicker = SpriteAnimationTicker(
-        SpriteAnimation.spriteList(
-          sitSprites,
-          stepTime: _sitFrameStepTime,
-          loop: false,
-        ),
-      );
-      _standUpTicker = SpriteAnimationTicker(
-        SpriteAnimation.spriteList(
-          sitSprites.reversed.toList(growable: false),
-          stepTime: _sitFrameStepTime,
-          loop: false,
-        ),
-      );
     } catch (error) {
+      _sitSprites = const [];
       _sittingSprite = null;
-      _sitDownTicker = null;
-      _standUpTicker = null;
       // Keep the static bear visible if any sit frame is missing or invalid.
       debugPrint('Failed to load bear sitting animation: $error');
     }
@@ -230,16 +222,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     } else if (_previousAnimationState == BearAnimationState.walk) {
       _walkTicker?.reset();
     }
-    if (state == BearAnimationState.sitDown) {
-      _sitDownTicker?.update(dt);
-    } else if (_previousAnimationState == BearAnimationState.sitDown) {
-      _sitDownTicker?.reset();
-    }
-    if (state == BearAnimationState.standUp) {
-      _standUpTicker?.update(dt);
-    } else if (_previousAnimationState == BearAnimationState.standUp) {
-      _standUpTicker?.reset();
-    }
     _previousAnimationState = state;
   }
 
@@ -250,8 +232,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     final state = _animationState;
     final image = _image;
     final walkTicker = _walkTicker;
-    final sitDownTicker = _sitDownTicker;
-    final standUpTicker = _standUpTicker;
     if (image != null) {
       final stateImage = _imageForState(state);
       final transform = _visualTransform(state);
@@ -268,29 +248,37 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
       canvas.scale(transform.scaleX, transform.scaleY);
       canvas.translate(-pivot.dx, -pivot.dy);
       if (state == BearAnimationState.walk && walkTicker != null) {
-        walkTicker.getSprite().renderRect(
+        _renderWalkTransition(
           canvas,
           destinationRect,
-          overridePaint: paint,
+          basePaint: paint,
+          ticker: walkTicker,
         );
-      } else if (state == BearAnimationState.sitDown && sitDownTicker != null) {
-        sitDownTicker.getSprite().renderRect(
+      } else if (state == BearAnimationState.sitDown &&
+          _sitSprites.isNotEmpty) {
+        _renderSitTransition(
           canvas,
           destinationRect,
-          overridePaint: paint,
+          basePaint: paint,
+          reversed: false,
         );
       } else if (state == BearAnimationState.sitting &&
           _sittingSprite != null) {
         _sittingSprite!.renderRect(
           canvas,
-          destinationRect,
+          _sitFrameDestinationRect(
+            destinationRect,
+            kBearSitFrameOrder.length - 1,
+          ),
           overridePaint: paint,
         );
-      } else if (state == BearAnimationState.standUp && standUpTicker != null) {
-        standUpTicker.getSprite().renderRect(
+      } else if (state == BearAnimationState.standUp &&
+          _sitSprites.isNotEmpty) {
+        _renderSitTransition(
           canvas,
           destinationRect,
-          overridePaint: paint,
+          basePaint: paint,
+          reversed: true,
         );
       } else {
         canvas.drawImageRect(
@@ -504,13 +492,17 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
 
     switch (state) {
       case BearAnimationState.walk:
+        final walkPhase = _walkCyclePhase();
+        final strideCarry = math.sin(walkPhase * math.pi * 2);
+        final stepPulse = math.sin(walkPhase * math.pi * 4);
         return _BearVisualTransform(
           destinationRect: _walkTicker == null
               ? baseRect
               : _walkDestinationRect(),
-          scaleX: direction,
-          scaleY: 1.0,
-          rotation: 0,
+          scaleX:
+              direction * (1.0 - stepPulse * walkCarryScaleAmplitude * 0.45),
+          scaleY: 1.0 + stepPulse * walkCarryScaleAmplitude,
+          rotation: direction * strideCarry * walkCarryTiltAmplitude,
         );
       case BearAnimationState.jump:
       case BearAnimationState.fall:
@@ -523,9 +515,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
               direction * (rising ? -jumpTiltAmplitude : jumpTiltAmplitude),
         );
       case BearAnimationState.sitDown:
-        return _seatedTransform(direction: direction);
       case BearAnimationState.sitting:
-        return _seatedTransform(direction: direction);
       case BearAnimationState.standUp:
         return _seatedTransform(direction: direction);
       case BearAnimationState.interacting:
@@ -550,6 +540,20 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
       _walkVisualWidth,
       _walkVisualHeight,
     );
+  }
+
+  double _walkCyclePhase() {
+    final walkTicker = _walkTicker;
+    if (walkTicker == null) {
+      return 0;
+    }
+
+    final cycleDuration = _walkFrameStepTime * kBearWalkFrameOrder.length;
+    if (cycleDuration <= 0) {
+      return 0;
+    }
+
+    return (walkTicker.elapsed / cycleDuration) % 1.0;
   }
 
   double _visualPivotY(BearAnimationState state, Rect destinationRect) {
@@ -622,7 +626,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     _postureState = BearAnimationState.sitDown;
     _postureStateTime = 0;
     _idleTimer = 0;
-    _sitDownTicker?.reset();
     stopMoving();
   }
 
@@ -643,7 +646,6 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
     _postureStateTime = 0;
     _idleTimer = 0;
     _velocity.x = 0;
-    _standUpTicker?.reset();
   }
 
   void _finishStandUp() {
@@ -675,20 +677,182 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   }
 
   _BearVisualTransform _seatedTransform({required double direction}) {
-    final bottom = visualFeetAnchor.dy + _sitVisualGroundInset;
-    final left = _hitboxWidth / 2 - _sitVisualWidth / 2;
-
     return _BearVisualTransform(
-      destinationRect: Rect.fromLTWH(
-        left,
-        bottom - _sitVisualHeight,
-        _sitVisualWidth,
-        _sitVisualHeight,
-      ),
+      destinationRect: _seatedDestinationRect(),
       scaleX: direction,
       scaleY: 1,
       rotation: 0,
     );
+  }
+
+  Rect _seatedDestinationRect() {
+    final bottom = visualFeetAnchor.dy + _sitVisualGroundInset;
+    final left = _hitboxWidth / 2 - _sitVisualWidth / 2;
+
+    return Rect.fromLTWH(
+      left,
+      bottom - _sitVisualHeight,
+      _sitVisualWidth,
+      _sitVisualHeight,
+    );
+  }
+
+  void _renderSitTransition(
+    Canvas canvas,
+    Rect destinationRect, {
+    required Paint basePaint,
+    required bool reversed,
+  }) {
+    final frameCount = _sitSprites.length;
+    if (frameCount == 1) {
+      _sitSprites.first.renderRect(
+        canvas,
+        destinationRect,
+        overridePaint: basePaint,
+      );
+      return;
+    }
+
+    final duration = reversed ? _standUpDuration : _sitDownDuration;
+    final progress = (_postureStateTime / duration).clamp(0.0, 1.0).toDouble();
+    final easedProgress = progress * progress * (3 - 2 * progress);
+    final framePosition = easedProgress * (frameCount - 1);
+    final frameIndex = framePosition.floor().clamp(0, frameCount - 1).toInt();
+    final nextFrameIndex = (frameIndex + 1).clamp(0, frameCount - 1).toInt();
+    final blend = (framePosition - frameIndex).clamp(0.0, 1.0).toDouble();
+
+    final currentSourceIndex = _sitSourceIndexAt(
+      frameIndex,
+      reversed: reversed,
+    );
+    final nextSourceIndex = _sitSourceIndexAt(
+      nextFrameIndex,
+      reversed: reversed,
+    );
+
+    _renderSoftFrameTransition(
+      canvas,
+      _sitFrameDestinationRect(destinationRect, currentSourceIndex),
+      basePaint: basePaint,
+      currentSprite: _sitSprites[currentSourceIndex],
+      nextSprite: _sitSprites[nextSourceIndex],
+      nextDestinationRect: _sitFrameDestinationRect(
+        destinationRect,
+        nextSourceIndex,
+      ),
+      blend: blend,
+      maxOverlayAlpha: _sitFrameBlendMaxAlpha,
+    );
+  }
+
+  int _sitSourceIndexAt(int index, {required bool reversed}) {
+    if (!reversed) {
+      return index;
+    }
+
+    return _sitSprites.length - 1 - index;
+  }
+
+  Rect _sitFrameDestinationRect(Rect baseRect, int sourceIndex) {
+    if (sourceIndex < 0 || sourceIndex >= _sitFrameAlignments.length) {
+      return baseRect;
+    }
+
+    final alignment = _sitFrameAlignments[sourceIndex];
+    final scaleX = baseRect.width / _sitFrameSourceWidth;
+    final scaleY = baseRect.height / _sitFrameSourceHeight;
+    final offsetX = (_sitFrameReferenceCenterX - alignment.centerX) * scaleX;
+    final offsetY =
+        (alignment.bottomMargin - _sitFrameReferenceBottomMargin) * scaleY;
+
+    return baseRect.shift(Offset(offsetX, offsetY));
+  }
+
+  void _renderWalkTransition(
+    Canvas canvas,
+    Rect destinationRect, {
+    required Paint basePaint,
+    required SpriteAnimationTicker ticker,
+  }) {
+    final frames = ticker.spriteAnimation.frames;
+    if (frames.length == 1) {
+      ticker.getSprite().renderRect(
+        canvas,
+        destinationRect,
+        overridePaint: basePaint,
+      );
+      return;
+    }
+
+    final currentIndex = ticker.currentIndex
+        .clamp(0, frames.length - 1)
+        .toInt();
+    final nextIndex = currentIndex == frames.length - 1 ? 0 : currentIndex + 1;
+    final frameProgress = (ticker.clock / ticker.currentFrame.stepTime)
+        .clamp(0.0, 1.0)
+        .toDouble();
+
+    _renderSoftFrameTransition(
+      canvas,
+      destinationRect,
+      basePaint: basePaint,
+      currentSprite: frames[currentIndex].sprite,
+      nextSprite: frames[nextIndex].sprite,
+      blend: _smoothStep(frameProgress),
+      maxOverlayAlpha: _walkFrameBlendMaxAlpha,
+    );
+  }
+
+  void _renderSoftFrameTransition(
+    Canvas canvas,
+    Rect destinationRect, {
+    required Paint basePaint,
+    required Sprite currentSprite,
+    required Sprite nextSprite,
+    Rect? nextDestinationRect,
+    required double blend,
+    required double maxOverlayAlpha,
+  }) {
+    final normalizedBlend = blend.clamp(0.0, 1.0).toDouble();
+    final useNextAsBase = normalizedBlend >= 0.5;
+    final baseSprite = useNextAsBase ? nextSprite : currentSprite;
+    final overlaySprite = useNextAsBase ? currentSprite : nextSprite;
+    final overlayDestinationRect = nextDestinationRect ?? destinationRect;
+    final baseDestinationRect = useNextAsBase
+        ? overlayDestinationRect
+        : destinationRect;
+    final secondaryDestinationRect = useNextAsBase
+        ? destinationRect
+        : overlayDestinationRect;
+    final overlayProgress = useNextAsBase
+        ? (1.0 - normalizedBlend) * 2
+        : normalizedBlend * 2;
+    final overlayAlpha =
+        _smoothStep(overlayProgress.clamp(0.0, 1.0)) * maxOverlayAlpha;
+
+    baseSprite.renderRect(
+      canvas,
+      baseDestinationRect,
+      overridePaint: basePaint,
+    );
+
+    if (overlayAlpha <= 0.01 || identical(baseSprite, overlaySprite)) {
+      return;
+    }
+
+    final overlayPaint = Paint()
+      ..filterQuality = basePaint.filterQuality
+      ..color = const Color(0xFFFFFFFF).withValues(alpha: overlayAlpha);
+    overlaySprite.renderRect(
+      canvas,
+      secondaryDestinationRect,
+      overridePaint: overlayPaint,
+    );
+  }
+
+  double _smoothStep(double progress) {
+    final t = progress.clamp(0.0, 1.0).toDouble();
+    return t * t * (3 - 2 * t);
   }
 
   Rect _toWorldRect(Rect localRect) {
@@ -748,6 +912,16 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   double distance(PositionComponent other) {
     return position.distanceTo(other.position);
   }
+}
+
+class _BearFrameAlignment {
+  const _BearFrameAlignment({
+    required this.centerX,
+    required this.bottomMargin,
+  });
+
+  final double centerX;
+  final double bottomMargin;
 }
 
 class _BearVisualTransform {
