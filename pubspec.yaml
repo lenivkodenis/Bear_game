@@ -26,7 +26,6 @@ flutter:
     - assets/images/bear_cub/bear_cub_base.png
     - assets/images/characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png
     - assets/images/characters/bear_cub/animations/walk/
-    - assets/images/characters/bear_cub/animations/sit_down/
     - assets/images/characters/mentors/level_01_ice_floe/mentor.png
     - assets/images/characters/mentors/level_02_icy_river/mentor.png
     - assets/images/characters/mentors/level_03_snowy_shore/mentor.png

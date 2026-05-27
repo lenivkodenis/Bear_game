@@ -2,6 +2,10 @@
 
 Date: 2026-05-24
 
+Cleanup note, 2026-05-28: the bear sitting experiment is disabled and the
+runtime contract is now tracked in `docs/TASK_STATE.md`. Older sitting notes in
+this document are historical context, not active gameplay requirements.
+
 # Next step: real sprite frames
 
 The current procedural animation on one PNG is temporary. It can make the static sprite breathe, tilt, bob, and squash/stretch, but it cannot create real walking: paws, shoulders, body weight, and snow contact do not change as independent drawn poses.
