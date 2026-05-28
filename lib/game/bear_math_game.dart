@@ -139,8 +139,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     if (ambientEffect != null) {
       add(ambientEffect);
     }
-    if (currentLevel!.id == 1) {
-      add(DistantBirdsComponent(size: size));
+    final distantBirdsConfig = DistantBirdsConfig.forLevel(currentLevel!.id);
+    if (distantBirdsConfig != null) {
+      add(DistantBirdsComponent(size: size, config: distantBirdsConfig));
     }
 
     _mainGroundComponent = PlatformComponent(
