@@ -114,27 +114,58 @@ class IceRiverAmbientEffect extends _CycledAmbientEffectComponent {
   IceRiverAmbientEffect({required super.size})
     : super(randomSeed: 2002, initialPause: 3.0);
 
-  static const double duration = 16.0;
-  static const double minPause = 6.0;
-  static const double maxPause = 14.0;
+  static const double duration = 32.0;
+  static const double minPause = 5.0;
+  static const double maxPause = 11.0;
   static const double opacity = 0.30;
-  static const double effectScale = 0.018;
-  static const double speed = 0.055;
-  static const double fadeInDuration = 2.4;
-  static const double fadeOutDuration = 3.2;
-  static const int particleCount = 4;
-  static const Offset startPositionNormalized = Offset(-0.08, 0.53);
-  static const Offset endPositionNormalized = Offset(1.08, 0.49);
+  static const double effectScale = 0.016;
+  static const double speed = 1.0;
+  static const double fadeInDuration = 4.0;
+  static const double fadeOutDuration = 5.0;
+  static const int particleCount = 5;
+  static const Offset startPositionNormalized = Offset(-0.10, 0.60);
+  static const Offset endPositionNormalized = Offset(1.10, 0.56);
 
   static const List<_DriftingFloeSpec> _floes = <_DriftingFloeSpec>[
-    _DriftingFloeSpec(offset: 0.00, yOffset: 0.00, size: 1.00, wobble: 0.00),
-    _DriftingFloeSpec(offset: 0.18, yOffset: 0.018, size: 0.70, wobble: 1.70),
-    _DriftingFloeSpec(offset: 0.41, yOffset: -0.012, size: 0.82, wobble: 3.10),
-    _DriftingFloeSpec(offset: 0.66, yOffset: 0.010, size: 0.58, wobble: 4.45),
+    _DriftingFloeSpec(
+      offset: 0.00,
+      yNormalized: 0.57,
+      size: 0.78,
+      wobble: 0.00,
+      drift: 0.00,
+    ),
+    _DriftingFloeSpec(
+      offset: 0.17,
+      yNormalized: 0.62,
+      size: 0.56,
+      wobble: 1.70,
+      drift: 0.03,
+    ),
+    _DriftingFloeSpec(
+      offset: 0.36,
+      yNormalized: 0.53,
+      size: 0.48,
+      wobble: 3.10,
+      drift: -0.02,
+    ),
+    _DriftingFloeSpec(
+      offset: 0.58,
+      yNormalized: 0.66,
+      size: 0.86,
+      wobble: 4.45,
+      drift: 0.04,
+    ),
+    _DriftingFloeSpec(
+      offset: 0.79,
+      yNormalized: 0.59,
+      size: 0.62,
+      wobble: 5.70,
+      drift: -0.03,
+    ),
   ];
 
   @override
-  double get cycleDuration => IceRiverAmbientEffect.duration;
+  double get cycleDuration => IceRiverAmbientEffect.duration / speed;
 
   @override
   double get minimumPause => IceRiverAmbientEffect.minPause;
@@ -160,94 +191,96 @@ class IceRiverAmbientEffect extends _CycledAmbientEffectComponent {
       return;
     }
 
-    final floePaint = Paint()
-      ..color = const Color(0xFFEFF8FF).withValues(alpha: opacity * fade)
+    final icePaint = Paint()
+      ..color = const Color(0xFFE5F2F6).withValues(alpha: opacity * fade)
       ..style = PaintingStyle.fill;
-    final edgePaint = Paint()
-      ..color = const Color(0xFFBFD9E6).withValues(alpha: 0.18 * fade)
+    final snowPaint = Paint()
+      ..color = const Color(0xFFF8FCFF).withValues(alpha: 0.12 * fade)
+      ..style = PaintingStyle.fill;
+    final shadePaint = Paint()
+      ..color = const Color(0xFF9DBEC9).withValues(alpha: 0.08 * fade)
+      ..style = PaintingStyle.fill;
+    final reflectionPaint = Paint()
+      ..color = const Color(0xFFD8EEF4).withValues(alpha: 0.08 * fade)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = math.max(0.45, viewportUnit * 0.0011);
-    final glintPaint = Paint()
-      ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.16 * fade)
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = math.max(0.35, viewportUnit * 0.0008);
+      ..strokeWidth = math.max(0.35, viewportUnit * 0.0006);
 
     for (final floe in _floes) {
-      final localProgress = (progress + floe.offset * speed)
-          .clamp(0.0, 1.0)
-          .toDouble();
-      final center = _lerpOffset(
-        pointFromNormalized(startPositionNormalized),
-        pointFromNormalized(endPositionNormalized),
-        _easeInOutSine(localProgress),
+      final localProgress = (progress + floe.offset) % 1.0;
+      final pathProgress = _easeInOutSine(localProgress);
+      final x = _lerp(
+        startPositionNormalized.dx,
+        endPositionNormalized.dx,
+        pathProgress,
+      );
+      final y = _lerp(
+        floe.yNormalized,
+        floe.yNormalized + floe.drift,
+        pathProgress,
       );
       final wobble =
-          math.sin((progress * 2.0 + floe.wobble) * math.pi) *
+          math.sin((progress * 1.2 + floe.wobble) * math.pi) *
           viewportUnit *
-          0.004;
+          0.0025;
       final floeSize = viewportUnit * effectScale * floe.size;
+      final center = pointFromNormalized(Offset(x, y)) + Offset(0, wobble);
 
-      _drawIceFloe(
+      _drawDistantRiverFloe(
         canvas,
-        center + Offset(0, size.y * floe.yOffset + wobble),
+        center,
         floeSize,
-        floePaint,
-        edgePaint,
+        icePaint,
+        snowPaint,
+        shadePaint,
+        reflectionPaint,
       );
     }
-
-    _drawRiverGlint(
-      canvas,
-      Offset(size.x * 0.36, size.y * 0.515),
-      viewportUnit * 0.020,
-      (0.55 + math.sin(progress * math.pi * 2) * 0.45) * fade,
-      glintPaint,
-    );
-    _drawRiverGlint(
-      canvas,
-      Offset(size.x * 0.68, size.y * 0.485),
-      viewportUnit * 0.016,
-      (0.35 + math.sin((progress * 2.2 + 0.4) * math.pi) * 0.25) * fade,
-      glintPaint,
-    );
   }
 
-  void _drawIceFloe(
+  void _drawDistantRiverFloe(
     Canvas canvas,
     Offset center,
     double floeSize,
-    Paint fillPaint,
-    Paint edgePaint,
+    Paint icePaint,
+    Paint snowPaint,
+    Paint shadePaint,
+    Paint reflectionPaint,
   ) {
-    final path = Path()
-      ..moveTo(center.dx - floeSize * 0.70, center.dy - floeSize * 0.10)
-      ..lineTo(center.dx - floeSize * 0.26, center.dy - floeSize * 0.36)
-      ..lineTo(center.dx + floeSize * 0.42, center.dy - floeSize * 0.29)
-      ..lineTo(center.dx + floeSize * 0.72, center.dy + floeSize * 0.05)
-      ..lineTo(center.dx + floeSize * 0.20, center.dy + floeSize * 0.34)
-      ..lineTo(center.dx - floeSize * 0.48, center.dy + floeSize * 0.24)
+    final width = floeSize * 2.2;
+    final height = floeSize * 0.64;
+    final bodyPath = Path()
+      ..moveTo(center.dx - width * 0.50, center.dy - height * 0.02)
+      ..lineTo(center.dx - width * 0.34, center.dy - height * 0.30)
+      ..lineTo(center.dx - width * 0.05, center.dy - height * 0.25)
+      ..lineTo(center.dx + width * 0.20, center.dy - height * 0.42)
+      ..lineTo(center.dx + width * 0.48, center.dy - height * 0.08)
+      ..lineTo(center.dx + width * 0.33, center.dy + height * 0.25)
+      ..lineTo(center.dx - width * 0.15, center.dy + height * 0.32)
+      ..lineTo(center.dx - width * 0.42, center.dy + height * 0.16)
       ..close();
-    canvas.drawPath(path, fillPaint);
-    canvas.drawPath(path, edgePaint);
-  }
+    final snowCapPath = Path()
+      ..moveTo(center.dx - width * 0.36, center.dy - height * 0.10)
+      ..lineTo(center.dx - width * 0.06, center.dy - height * 0.20)
+      ..lineTo(center.dx + width * 0.22, center.dy - height * 0.18)
+      ..lineTo(center.dx + width * 0.08, center.dy - height * 0.02)
+      ..lineTo(center.dx - width * 0.24, center.dy + height * 0.02)
+      ..close();
+    final undersidePath = Path()
+      ..moveTo(center.dx - width * 0.39, center.dy + height * 0.10)
+      ..lineTo(center.dx - width * 0.12, center.dy + height * 0.24)
+      ..lineTo(center.dx + width * 0.30, center.dy + height * 0.18)
+      ..lineTo(center.dx + width * 0.19, center.dy + height * 0.32)
+      ..lineTo(center.dx - width * 0.17, center.dy + height * 0.36)
+      ..close();
 
-  void _drawRiverGlint(
-    Canvas canvas,
-    Offset center,
-    double width,
-    double alphaMultiplier,
-    Paint paint,
-  ) {
-    if (alphaMultiplier <= 0) {
-      return;
-    }
-
-    final glintPaint = paint
-      ..color = paint.color.withValues(alpha: paint.color.a * alphaMultiplier);
+    canvas.drawPath(bodyPath, icePaint);
+    canvas.drawPath(snowCapPath, snowPaint);
+    canvas.drawPath(undersidePath, shadePaint);
     canvas.drawLine(
-      Offset(center.dx - width * 0.5, center.dy),
-      Offset(center.dx + width * 0.5, center.dy - width * 0.08),
-      glintPaint,
+      Offset(center.dx - width * 0.30, center.dy + height * 0.58),
+      Offset(center.dx + width * 0.26, center.dy + height * 0.54),
+      reflectionPaint,
     );
   }
 }
@@ -1094,15 +1127,17 @@ class NorthernOceanSplashEffect extends _CycledAmbientEffectComponent {
 class _DriftingFloeSpec {
   const _DriftingFloeSpec({
     required this.offset,
-    required this.yOffset,
+    required this.yNormalized,
     required this.size,
     required this.wobble,
+    required this.drift,
   });
 
   final double offset;
-  final double yOffset;
+  final double yNormalized;
   final double size;
   final double wobble;
+  final double drift;
 }
 
 class _DripState {
