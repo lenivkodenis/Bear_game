@@ -132,13 +132,6 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     final groundY = mainGround.y;
 
     add(SnowyBackground(size: size, assetPath: levelGeometry.backgroundAsset));
-    final ambientEffect = AmbientEffectsFactory.forLevel(
-      levelId: currentLevel!.id,
-      size: size,
-    );
-    if (ambientEffect != null) {
-      add(ambientEffect);
-    }
     final distantBirdsConfig = DistantBirdsConfig.forLevel(currentLevel!.id);
     if (distantBirdsConfig != null) {
       add(DistantBirdsComponent(size: size, config: distantBirdsConfig));
@@ -167,6 +160,15 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
     add(player);
     add(mentor);
+    final ambientEffect = AmbientEffectsFactory.forLevel(
+      levelId: currentLevel!.id,
+      size: size,
+      groundY: groundY,
+      isActive: _isPlayerPastFirstObstacle,
+    );
+    if (ambientEffect != null) {
+      add(ambientEffect);
+    }
     if (isLevelGeometryDebugOverlayEnabled) {
       add(
         LevelGeometryDebugOverlay(
@@ -186,6 +188,18 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     _sceneReady = true;
+  }
+
+  bool _isPlayerPastFirstObstacle() {
+    final obstacles = levelGeometry.obstacleColliders;
+    if (obstacles.isEmpty) {
+      return true;
+    }
+
+    final firstObstacle = obstacles.reduce(
+      (leftmost, obstacle) => obstacle.x < leftmost.x ? obstacle : leftmost,
+    );
+    return player.position.x > firstObstacle.x + firstObstacle.width + 8;
   }
 
   @override

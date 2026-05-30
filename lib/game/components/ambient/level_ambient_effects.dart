@@ -3,17 +3,24 @@ import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
+import 'snow_bunny_ambient.dart';
+
 class AmbientEffectsFactory {
   const AmbientEffectsFactory._();
 
-  static LevelAmbientEffectComponent? forLevel({
+  static PositionComponent? forLevel({
     required int levelId,
     required Vector2 size,
+    double? groundY,
+    bool Function()? isActive,
   }) {
     return switch (levelId) {
-      2 => IceRiverAmbientEffect(size: size),
       3 => SnowyShoreSealAmbientEffect(size: size),
-      4 => ForestBunnyAmbientEffect(size: size),
+      4 => SnowBunnyAmbient(
+        size: size,
+        groundY: groundY ?? size.y * 0.83,
+        isActive: isActive,
+      ),
       5 => CaveDripsAmbientEffect(size: size),
       6 => SnowValleyWindAmbientEffect(size: size),
       7 => MountainPassSnowPlumeEffect(size: size),
@@ -532,34 +539,53 @@ class CaveDripsAmbientEffect extends LevelAmbientEffectComponent {
   CaveDripsAmbientEffect({required super.size});
 
   static const double duration = 1.35;
-  static const double minPause = 2.0;
-  static const double maxPause = 6.0;
+  static const double minPause = 0.8;
+  static const double maxPause = 2.8;
   static const double opacity = 0.34;
-  static const double effectScale = 0.006;
+  static const double effectScale = 0.009;
+  static const double rippleScale = 0.039;
   static const double speed = 1.0;
   static const double fadeInDuration = 0.10;
   static const double fadeOutDuration = 0.35;
   static const int particleCount = 3;
+  static const double fireFlickerMultiplier = 4.0;
   static const Offset startPositionNormalized = Offset(0.22, 0.18);
   static const Offset endPositionNormalized = Offset(0.22, 0.38);
+  static const double _caveBackgroundWidth = 1672;
+  static const double _caveBackgroundHeight = 941;
+  static const Offset _fireBaseSourceNormalized = Offset(
+    1071 / _caveBackgroundWidth,
+    508 / _caveBackgroundHeight,
+  );
+  static const int _waterDripIndex = 2;
+  static const Offset _waterDripStartSourceNormalized = Offset(
+    650 / _caveBackgroundWidth,
+    330 / _caveBackgroundHeight,
+  );
+  static const Offset _waterDripEndSourceNormalized = Offset(
+    650 / _caveBackgroundWidth,
+    640 / _caveBackgroundHeight,
+  );
 
   static const List<Offset> _dripStartPositions = <Offset>[
     Offset(0.22, 0.18),
     Offset(0.48, 0.15),
-    Offset(0.73, 0.21),
+    Offset(0.58, 0.21),
   ];
-  static const double _dropDistanceNormalized = 0.20;
+  static const double _groundYNormalized = 0.68;
 
   final math.Random _random = math.Random(5005);
+  double _fireElapsed = 0;
   late final List<_DripState> _drips = List<_DripState>.generate(
     _dripStartPositions.length,
-    (index) => _DripState(wait: _randomPause() + index * 0.8),
+    (index) => _DripState(wait: _randomPause() + index * 0.35),
   );
 
   @override
   void update(double dt) {
     super.update(dt);
 
+    _fireElapsed += dt;
     for (final drip in _drips) {
       if (drip.active) {
         drip.elapsed += dt * speed;
@@ -588,6 +614,8 @@ class CaveDripsAmbientEffect extends LevelAmbientEffectComponent {
       return;
     }
 
+    _drawCaveFire(canvas);
+
     for (var index = 0; index < _drips.length; index += 1) {
       final drip = _drips[index];
       if (!drip.active) {
@@ -595,10 +623,14 @@ class CaveDripsAmbientEffect extends LevelAmbientEffectComponent {
       }
 
       final p = (drip.elapsed / duration).clamp(0.0, 1.0).toDouble();
-      final start = pointFromNormalized(_dripStartPositions[index]);
-      final end = pointFromNormalized(
-        _dripStartPositions[index] + const Offset(0, _dropDistanceNormalized),
-      );
+      final start = index == _waterDripIndex
+          ? _pointFromSourceImage(_waterDripStartSourceNormalized)
+          : pointFromNormalized(_dripStartPositions[index]);
+      final end = index == _waterDripIndex
+          ? _pointFromSourceImage(_waterDripEndSourceNormalized)
+          : pointFromNormalized(
+              Offset(_dripStartPositions[index].dx, _groundYNormalized),
+            );
       final dropAlpha =
           opacity *
           _fadeFor(
@@ -627,7 +659,7 @@ class CaveDripsAmbientEffect extends LevelAmbientEffectComponent {
         _drawRipples(
           canvas,
           end,
-          viewportUnit * 0.026,
+          viewportUnit * rippleScale,
           rippleProgress,
           opacity * (1 - rippleProgress) * 0.62,
         );
@@ -637,6 +669,102 @@ class CaveDripsAmbientEffect extends LevelAmbientEffectComponent {
 
   double _randomPause() {
     return minPause + _random.nextDouble() * (maxPause - minPause);
+  }
+
+  void _drawCaveFire(Canvas canvas) {
+    final base = _pointFromSourceImage(_fireBaseSourceNormalized);
+    final margin = viewportUnit * 0.06;
+    if (base.dx < -margin ||
+        base.dx > size.x + margin ||
+        base.dy < -margin ||
+        base.dy > size.y + margin) {
+      return;
+    }
+
+    final baseFlicker =
+        math.sin(_fireElapsed * 8.6) * 0.104 +
+        math.sin(_fireElapsed * 13.4 + 1.2) * 0.065;
+    final flicker = baseFlicker * fireFlickerMultiplier;
+    final sway = math.sin(_fireElapsed * 5.2) * viewportUnit * 0.00072;
+    final flameSize = viewportUnit * 0.0078;
+    final glowRadius = flameSize * (2.35 + flicker * 2.0);
+    final glowCenter = base + Offset(sway * 0.30, -flameSize * 0.85);
+
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        colors: <Color>[
+          const Color(0xFFFFF0A6).withValues(alpha: 0.26),
+          const Color(0xFFFFA53D).withValues(alpha: 0.12),
+          const Color(0xFFFF7A24).withValues(alpha: 0),
+        ],
+      ).createShader(Rect.fromCircle(center: glowCenter, radius: glowRadius))
+      ..blendMode = BlendMode.plus;
+    canvas.drawCircle(glowCenter, glowRadius, glowPaint);
+
+    final outerHeight = flameSize * (1.55 + flicker);
+    final outerWidth = flameSize * (0.78 - flicker * 0.25);
+    final outerPaint = Paint()
+      ..color = const Color(0xFFFF9B2F).withValues(alpha: 0.62)
+      ..style = PaintingStyle.fill
+      ..blendMode = BlendMode.plus;
+    canvas.drawPath(
+      _flamePath(base, outerWidth, outerHeight, sway),
+      outerPaint,
+    );
+
+    final innerPaint = Paint()
+      ..color = const Color(0xFFFFF2B0).withValues(alpha: 0.78)
+      ..style = PaintingStyle.fill
+      ..blendMode = BlendMode.plus;
+    canvas.drawPath(
+      _flamePath(
+        base + Offset(sway * 0.18, -outerHeight * 0.05),
+        outerWidth * 0.46,
+        outerHeight * 0.68,
+        -sway * 0.35,
+      ),
+      innerPaint,
+    );
+  }
+
+  Offset _pointFromSourceImage(Offset normalized) {
+    final scale = math.max(
+      size.x / _caveBackgroundWidth,
+      size.y / _caveBackgroundHeight,
+    );
+    final fittedWidth = _caveBackgroundWidth * scale;
+    final fittedHeight = _caveBackgroundHeight * scale;
+    final offset = Offset(
+      (size.x - fittedWidth) * 0.5,
+      (size.y - fittedHeight) * 0.5,
+    );
+
+    return offset +
+        Offset(
+          normalized.dx * _caveBackgroundWidth * scale,
+          normalized.dy * _caveBackgroundHeight * scale,
+        );
+  }
+
+  Path _flamePath(Offset base, double width, double height, double sway) {
+    return Path()
+      ..moveTo(base.dx, base.dy)
+      ..cubicTo(
+        base.dx - width * 0.85,
+        base.dy - height * 0.28,
+        base.dx - width * 0.32 + sway,
+        base.dy - height * 0.78,
+        base.dx + sway,
+        base.dy - height,
+      )
+      ..cubicTo(
+        base.dx + width * 0.46 + sway,
+        base.dy - height * 0.76,
+        base.dx + width * 0.84,
+        base.dy - height * 0.28,
+        base.dx,
+        base.dy,
+      );
   }
 }
 

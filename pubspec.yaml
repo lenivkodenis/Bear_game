@@ -23,6 +23,7 @@ flutter:
   assets:
     - public/assets/main_screen/main_screen_bear_bg.png
     - assets/images/map/progression_map.png
+    - assets/images/map/locked_level_padlock.png
     - assets/images/bear_cub/bear_cub_base.png
     - assets/images/characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png
     - assets/images/characters/bear_cub/animations/walk/
@@ -36,6 +37,7 @@ flutter:
     - assets/images/characters/mentors/level_08_polar_night/mentor.png
     - assets/images/characters/mentors/level_09_northern_lights/mentor.png
     - assets/images/characters/mentors/level_10_northern_ocean/mentor.png
+    - assets/images/characters/snow_bunny/animations/hop_turn/alpha/
     - assets/images/locations/snowy_clearing/01_sky.png
     - assets/images/locations/snowy_clearing/02_far_hills.png
     - assets/images/locations/snowy_clearing/03_mid_forest.png
