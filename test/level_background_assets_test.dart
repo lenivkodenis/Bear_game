@@ -33,12 +33,41 @@ void main() {
       );
     });
 
+    test('keeps level 2 full background as layered fallback', () {
+      expect(
+        LevelBackgroundAssets.forLevelId(2),
+        LevelBackgroundAssets.level2IcyRiverBackgroundAsset,
+      );
+
+      final layers = LevelBackgroundAssets.layersForBackground(
+        LevelBackgroundAssets.level2IcyRiverBackgroundAsset,
+      );
+
+      expect(layers, isNotNull);
+      expect(
+        layers!.backLayerAssetPath,
+        LevelBackgroundAssets.level2IcyRiverBackLayerAsset,
+      );
+      expect(
+        layers.foregroundOverlayAssetPath,
+        LevelBackgroundAssets.level2IcyRiverForegroundOverlayAsset,
+      );
+      expect(File(layers.backLayerAssetPath).existsSync(), isTrue);
+      expect(File(layers.foregroundOverlayAssetPath).existsSync(), isTrue);
+    });
+
     test('converts Flutter asset paths to Flame image keys', () {
       expect(
         LevelBackgroundAssets.flameImageKey(
           'assets/images/levels/level_01_ice_floe/background.png',
         ),
         'levels/level_01_ice_floe/background.png',
+      );
+      expect(
+        LevelBackgroundAssets.flameImageKey(
+          LevelBackgroundAssets.level2IcyRiverBackLayerAsset,
+        ),
+        'backgrounds/levels/level_2_background_backlayer_realistic_v2.png',
       );
     });
   });
