@@ -31,7 +31,7 @@ EXPECTED_GROUND_Y = {
     6: 506,
     7: 464,
     8: 485,
-    9: 477,
+    9: 410,
     10: 519,
 }
 
@@ -94,6 +94,43 @@ EXPECTED_LEVEL_THREE_GROUND_SEGMENTS = [
         "height": 140,
     },
 ]
+EXPECTED_LEVEL_NINE_GROUND_SEGMENTS = [
+    {
+        "id": "ground_left_ice_shelf",
+        "x": 0,
+        "y": 410,
+        "width": 190,
+        "height": 190,
+    },
+    {
+        "id": "ground_left_lower_passage",
+        "x": 190,
+        "y": 475,
+        "width": 124,
+        "height": 125,
+    },
+    {
+        "id": "ground_center_ice_floe",
+        "x": 314,
+        "y": 410,
+        "width": 174,
+        "height": 190,
+    },
+    {
+        "id": "ground_right_lower_passage",
+        "x": 488,
+        "y": 475,
+        "width": 133,
+        "height": 125,
+    },
+    {
+        "id": "ground_right_ice_shelf",
+        "x": 621,
+        "y": 410,
+        "width": 179,
+        "height": 190,
+    },
+]
 EXPECTED_LEVEL_FOUR_OBSTACLES = [
     {
         "id": "forest_log",
@@ -149,7 +186,8 @@ def main() -> None:
     print(
         "level_geometry.json OK: 10 per-level calibrated levels, "
         "two active level 1 obstacles, two active level 2 obstacles, level 3 "
-        "ground dip, two active level 4 obstacles, no platforms."
+        "ground dip, two active level 4 obstacles, level 9 segmented ice "
+        "shelves, no platforms."
     )
 
 
@@ -174,12 +212,24 @@ def validate_level(
     calibration_obstacles = read_calibration_obstacles(level, context)
     notes = required_string(level, "notes", context)
 
-    if "flat baseline" not in notes and "Segmented ground dip" not in notes:
+    if (
+        "flat baseline" not in notes
+        and "Segmented ground dip" not in notes
+        and "Segmented ice shelves" not in notes
+    ):
         fail(f"{context}: notes must identify the current geometry baseline.")
     if level_id == 3:
         validate_expected_ground_segments(
             grounds,
             expected=EXPECTED_LEVEL_THREE_GROUND_SEGMENTS,
+            context=context,
+            world_width=world_width,
+            world_height=world_height,
+        )
+    elif level_id == 9:
+        validate_expected_ground_segments(
+            grounds,
+            expected=EXPECTED_LEVEL_NINE_GROUND_SEGMENTS,
             context=context,
             world_width=world_width,
             world_height=world_height,
@@ -227,16 +277,18 @@ def validate_level(
         fail(f"{context}: calibration previews must be removed after activation.")
 
     ground = grounds[0]
-    if level_id != 3 and ground["id"] != "main_ground":
+    if level_id not in (3, 9) and ground["id"] != "main_ground":
         fail(f"{context}: baseline ground id must be main_ground.")
     validate_collider_bounds(ground, context, world_width, world_height)
-    if level_id != 3 and (ground["x"] != 0 or ground["width"] != world_width):
+    if level_id not in (3, 9) and (
+        ground["x"] != 0 or ground["width"] != world_width
+    ):
         fail(f"{context}: main ground must span the full world width.")
 
     expected_ground_y = EXPECTED_GROUND_Y.get(level_id)
     if expected_ground_y is None:
         fail(f"{context}: missing expected per-level groundY.")
-    if not same_number(ground["y"], expected_ground_y):
+    if level_id not in (3, 9) and not same_number(ground["y"], expected_ground_y):
         fail(
             f"{context}: main_ground.y must equal approved per-level "
             f"groundY {expected_ground_y}."
@@ -259,10 +311,24 @@ def validate_level(
 
     if mentor_x <= player_x:
         fail(f"{context}: mentorPosition.x must be greater than playerSpawn.x.")
-    if not same_number(player_y, ground["y"]):
-        fail(f"{context}: playerSpawn.y must equal main_ground.y.")
-    if not same_number(mentor_y, ground["y"]):
-        fail(f"{context}: mentorPosition.y must equal main_ground.y.")
+    if level_id in (3, 9):
+        validate_point_on_ground_surface(
+            point=player_spawn,
+            point_name="playerSpawn",
+            grounds=grounds,
+            context=context,
+        )
+        validate_point_on_ground_surface(
+            point=mentor_position,
+            point_name="mentorPosition",
+            grounds=grounds,
+            context=context,
+        )
+    else:
+        if not same_number(player_y, ground["y"]):
+            fail(f"{context}: playerSpawn.y must equal main_ground.y.")
+        if not same_number(mentor_y, ground["y"]):
+            fail(f"{context}: mentorPosition.y must equal main_ground.y.")
 
     validate_calibration_obstacles(
         calibration_obstacles,
@@ -314,6 +380,30 @@ def validate_expected_ground_segments(
 
     if not same_number(previous_right, world_width):
         fail(f"{context}: ground segments must span the full world width.")
+
+
+def validate_point_on_ground_surface(
+    *,
+    point: dict[str, object],
+    point_name: str,
+    grounds: list[dict[str, float | str]],
+    context: str,
+) -> None:
+    point_x = required_number(point, "x", f"{context}.{point_name}")
+    point_y = required_number(point, "y", f"{context}.{point_name}")
+    matching_surfaces = [
+        float(ground["y"])
+        for ground in grounds
+        if float(ground["x"])
+        <= point_x
+        <= float(ground["x"]) + float(ground["width"])
+    ]
+    if not matching_surfaces:
+        fail(f"{context}: {point_name} must sit above a ground segment.")
+
+    surface_y = min(matching_surfaces)
+    if not same_number(point_y, surface_y):
+        fail(f"{context}: {point_name}.y must equal its ground segment surface.")
 
 
 def validate_expected_obstacles(

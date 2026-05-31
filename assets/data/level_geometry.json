@@ -114,14 +114,18 @@
     {
       "levelId": 9,
       "backgroundAsset": "assets/images/levels/level_09_northern_lights/background.png",
-      "playerSpawn": { "x": 72, "y": 477 },
-      "mentorPosition": { "x": 688, "y": 477 },
+      "playerSpawn": { "x": 72, "y": 410 },
+      "mentorPosition": { "x": 688, "y": 410 },
       "groundColliders": [
-        { "id": "main_ground", "x": 0, "y": 477, "width": 800, "height": 123 }
+        { "id": "ground_left_ice_shelf", "x": 0, "y": 410, "width": 190, "height": 190 },
+        { "id": "ground_left_lower_passage", "x": 190, "y": 475, "width": 124, "height": 125 },
+        { "id": "ground_center_ice_floe", "x": 314, "y": 410, "width": 174, "height": 190 },
+        { "id": "ground_right_lower_passage", "x": 488, "y": 475, "width": 133, "height": 125 },
+        { "id": "ground_right_ice_shelf", "x": 621, "y": 410, "width": 179, "height": 190 }
       ],
       "platformColliders": [],
       "obstacleColliders": [],
-      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
+      "notes": "Segmented ice shelves and lower passages. Per-level ground lines visually calibrated to the northern ocean foreground snow surfaces."
     },
     {
       "levelId": 10,
