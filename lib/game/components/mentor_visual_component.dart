@@ -9,12 +9,14 @@ class MentorVisualSpec {
     required this.targetHeight,
     this.offsetX = 0,
     this.offsetY = 0,
+    this.interactionRadius = 92,
   });
 
   final String assetPath;
   final double targetHeight;
   final double offsetX;
   final double offsetY;
+  final double interactionRadius;
 }
 
 const Map<int, MentorVisualSpec>
@@ -72,9 +74,10 @@ mentorVisualSpecsByLevelId = <int, MentorVisualSpec>{
   ),
   10: MentorVisualSpec(
     assetPath:
-        'assets/images/characters/mentors/level_10_northern_ocean/mentor.png',
-    targetHeight: 135,
-    offsetX: 14,
+        'assets/images/characters/mentors/level_10_northern_ocean/seal_mentor_on_crate.png',
+    targetHeight: 229.5,
+    offsetX: 28,
+    interactionRadius: 150,
   ),
 };
 

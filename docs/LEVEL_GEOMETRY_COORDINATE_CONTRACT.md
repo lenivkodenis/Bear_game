@@ -126,6 +126,11 @@ becomes the active ground. After the player walks off the left or right edge,
 active ground returns to the main ground so normal gravity can handle the fall.
 This must not change jump force, gravity, speed, or hitbox.
 
+Sloped obstacles use the same enclosing rectangle plus `surfaceYAtLeft` and
+`surfaceYAtRight` for the walkable top line. The rectangle bottom stays
+ground-locked, while support height follows the surface line at the bear's feet
+X position. This avoids stair-step side walls on sloped snow shapes.
+
 Calibration obstacle previews use the same top-left math, but they are not
 gameplay colliders:
 
@@ -273,9 +278,9 @@ the default code flag.
 Before adding future platforms or more obstacles:
 
 1. Keep `platformColliders` empty on every level.
-2. Keep `obstacleColliders` empty on levels 3 and 5-10.
-3. Keep only the approved level 1, level 2, and level 4 obstacles active until
-   the next level is manually verified.
+2. Keep `obstacleColliders` empty on levels 3, 5-7, 9, and 10.
+3. Keep only the approved level 1, level 2, level 4, and level 8 obstacles
+   active until the next level is manually verified.
 4. Enable the debug overlay with `debugGeometry=1`.
 5. Confirm that `groundTopY`, `playerSpawn`, `mentorPosition`, and the bear
    bottom line all coincide on the main ground.

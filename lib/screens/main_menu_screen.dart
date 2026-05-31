@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -155,88 +155,212 @@ class _MainMenuPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: const Color(0xFF071B32).withValues(alpha: 0.52),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: AppTheme.iceBlue.withValues(alpha: 0.34),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.34),
-                blurRadius: 30,
-                offset: const Offset(0, 18),
-              ),
-              BoxShadow(
-                color: AppTheme.iceBlue.withValues(alpha: 0.18),
-                blurRadius: 24,
-                spreadRadius: -8,
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _MainMenuTitle(),
+          const SizedBox(height: 20),
+          _NorthSignButton(
+            label: 'Начать игру',
+            icon: _NorthSignIcon.play,
+            primary: true,
+            onPressed: onStart,
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Медвежонок и таблица умножения',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppTheme.snowWhite,
-                    fontWeight: FontWeight.w900,
-                    height: 1.08,
-                    shadows: const [
-                      Shadow(
-                        color: Color(0xB0001026),
-                        blurRadius: 12,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
+          const SizedBox(height: 12),
+          _NorthSignButton(
+            label: 'Карта',
+            icon: _NorthSignIcon.map,
+            onPressed: onMap,
+          ),
+          const SizedBox(height: 12),
+          _NorthSignButton(
+            label: 'Прогресс',
+            icon: _NorthSignIcon.snowflake,
+            onPressed: onProgress,
+          ),
+          const SizedBox(height: 12),
+          _NorthSignButton(
+            label: 'Родителям',
+            icon: _NorthSignIcon.lantern,
+            onPressed: onParents,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MainMenuTitle extends StatelessWidget {
+  const _MainMenuTitle();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: const _TitleSnowDustPainter(),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Медвежонок и таблица умножения',
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: AppTheme.snowWhite,
+                fontWeight: FontWeight.w900,
+                height: 1.08,
+                shadows: const [
+                  Shadow(
+                    color: Color(0xC0001026),
+                    blurRadius: 12,
+                    offset: Offset(0, 2),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Доброе северное путешествие',
-                  textAlign: TextAlign.center,
-                  style: AppTheme.helperStyle.copyWith(
-                    color: AppTheme.iceBlue.withValues(alpha: 0.92),
-                    fontSize: 15,
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Доброе северное путешествие',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTheme.helperStyle.copyWith(
+                color: AppTheme.frostBlue,
+                fontSize: 15,
+                shadows: const [
+                  Shadow(
+                    color: Color(0x99001026),
+                    blurRadius: 8,
+                    offset: Offset(0, 1),
                   ),
-                ),
-                const SizedBox(height: 24),
-                _FrostedMenuButton(
-                  label: 'Начать игру',
-                  icon: Icons.play_arrow_rounded,
-                  primary: true,
-                  onPressed: onStart,
-                ),
-                const SizedBox(height: 12),
-                _FrostedMenuButton(
-                  label: 'Карта',
-                  icon: Icons.map_rounded,
-                  onPressed: onMap,
-                ),
-                const SizedBox(height: 12),
-                _FrostedMenuButton(
-                  label: 'Прогресс',
-                  icon: Icons.emoji_events_rounded,
-                  onPressed: onProgress,
-                ),
-                const SizedBox(height: 12),
-                _FrostedMenuButton(
-                  label: 'Родителям',
-                  icon: Icons.family_restroom_rounded,
-                  onPressed: onParents,
-                ),
-              ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum _NorthSignIcon { play, map, snowflake, lantern }
+
+class _NorthSignButton extends StatefulWidget {
+  const _NorthSignButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.primary = false,
+  });
+
+  final String label;
+  final _NorthSignIcon icon;
+  final VoidCallback onPressed;
+  final bool primary;
+
+  @override
+  State<_NorthSignButton> createState() => _NorthSignButtonState();
+}
+
+class _NorthSignButtonState extends State<_NorthSignButton> {
+  bool _isPressed = false;
+
+  void _setPressed(bool value) {
+    if (_isPressed == value) {
+      return;
+    }
+
+    setState(() {
+      _isPressed = value;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final height = widget.primary ? 72.0 : 58.0;
+    final foreground = widget.primary
+        ? const Color(0xFF12384F)
+        : const Color(0xFF173F58);
+    final iconSize = widget.primary ? 34.0 : 28.0;
+
+    return Semantics(
+      button: true,
+      label: widget.label,
+      onTap: widget.onPressed,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => _setPressed(true),
+        onTapUp: (_) => _setPressed(false),
+        onTapCancel: () => _setPressed(false),
+        onTap: widget.onPressed,
+        child: AnimatedSlide(
+          duration: const Duration(milliseconds: 90),
+          curve: Curves.easeOutCubic,
+          offset: Offset(0, _isPressed ? 0.035 : 0),
+          child: AnimatedScale(
+            duration: const Duration(milliseconds: 90),
+            curve: Curves.easeOutCubic,
+            scale: _isPressed ? 0.985 : 1,
+            child: SizedBox(
+              height: height,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CustomPaint(
+                    painter: _NorthSignPainter(
+                      primary: widget.primary,
+                      pressed: _isPressed,
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      widget.primary ? 22 : 18,
+                      widget.primary ? 12 : 9,
+                      widget.primary ? 22 : 18,
+                      widget.primary ? 8 : 6,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CustomPaint(
+                          size: Size.square(iconSize),
+                          painter: _NorthSignIconPainter(
+                            icon: widget.icon,
+                            color: foreground,
+                            primary: widget.primary,
+                          ),
+                        ),
+                        SizedBox(width: widget.primary ? 13 : 10),
+                        Flexible(
+                          child: Text(
+                            widget.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: foreground,
+                              fontSize: widget.primary ? 20 : 17,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0,
+                              shadows: const [
+                                Shadow(
+                                  color: Color(0x4DFFFFFF),
+                                  blurRadius: 2,
+                                  offset: Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -245,94 +369,302 @@ class _MainMenuPanel extends StatelessWidget {
   }
 }
 
-class _FrostedMenuButton extends StatelessWidget {
-  const _FrostedMenuButton({
-    required this.label,
+class _TitleSnowDustPainter extends CustomPainter {
+  const _TitleSnowDustPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = AppTheme.snowWhite.withValues(alpha: 0.18);
+    canvas.drawCircle(
+      Offset(size.width * 0.18, size.height * 0.28),
+      2.4,
+      paint,
+    );
+    canvas.drawCircle(Offset(size.width * 0.82, size.height * 0.2), 2.8, paint);
+    canvas.drawCircle(
+      Offset(size.width * 0.72, size.height * 0.82),
+      1.8,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _NorthSignPainter extends CustomPainter {
+  const _NorthSignPainter({required this.primary, required this.pressed});
+
+  final bool primary;
+  final bool pressed;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final signRect = Rect.fromLTWH(3, 8, size.width - 6, size.height - 12);
+    final signRadius = Radius.circular(primary ? 24 : 20);
+    final signRRect = RRect.fromRectAndRadius(signRect, signRadius);
+    final shadowPaint = Paint()
+      ..color = const Color(
+        0xFF001426,
+      ).withValues(alpha: pressed ? 0.12 : (primary ? 0.26 : 0.18))
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, pressed ? 5 : 8);
+    canvas.drawRRect(
+      signRRect.shift(Offset(0, pressed ? 2.5 : 5)),
+      shadowPaint,
+    );
+
+    final basePaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: primary
+            ? const [Color(0xFFFDF9ED), Color(0xFFD7F1FF), Color(0xFF8FCFEC)]
+            : const [Color(0xFFF7EBD4), Color(0xFFE6D4B4), Color(0xFFD3E9EF)],
+        stops: primary ? const [0, 0.55, 1] : const [0, 0.62, 1],
+      ).createShader(signRect);
+    canvas.drawRRect(signRRect, basePaint);
+
+    final edgePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = primary ? 2.2 : 1.8
+      ..color = primary
+          ? AppTheme.snowWhite.withValues(alpha: 0.92)
+          : const Color(0xFFFFFAF0).withValues(alpha: 0.88);
+    canvas.drawRRect(signRRect.deflate(1.1), edgePaint);
+
+    final lowEdgePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..color = const Color(0xFF2C6C89).withValues(alpha: 0.18);
+    canvas.drawRRect(signRRect.deflate(3.8), lowEdgePaint);
+
+    final snowPath = Path()
+      ..moveTo(signRect.left + signRadius.x * 0.55, signRect.top + 1)
+      ..lineTo(signRect.right - signRadius.x * 0.55, signRect.top + 1)
+      ..quadraticBezierTo(
+        signRect.right - 12,
+        signRect.top + 8,
+        signRect.right - 22,
+        signRect.top + 14,
+      )
+      ..cubicTo(
+        signRect.right - 70,
+        signRect.top + (primary ? 22 : 18),
+        signRect.left + 92,
+        signRect.top + (primary ? 9 : 8),
+        signRect.left + 54,
+        signRect.top + (primary ? 18 : 15),
+      )
+      ..quadraticBezierTo(
+        signRect.left + 20,
+        signRect.top + 16,
+        signRect.left + signRadius.x * 0.55,
+        signRect.top + 1,
+      )
+      ..close();
+    final snowPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFFFFFFF), Color(0xFFE9F8FF)],
+      ).createShader(snowPath.getBounds());
+    canvas.drawPath(snowPath, snowPaint);
+
+    final snowEdgePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.1
+      ..color = const Color(0xFF8CCBE6).withValues(alpha: 0.35);
+    canvas.drawPath(snowPath, snowEdgePaint);
+
+    if (primary) {
+      final glowPaint = Paint()
+        ..color = AppTheme.iceBlue.withValues(alpha: 0.42)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
+      canvas.drawRRect(signRRect.deflate(7), glowPaint);
+      canvas.drawRRect(signRRect, basePaint);
+      canvas.drawPath(snowPath, snowPaint);
+      canvas.drawPath(snowPath, snowEdgePaint);
+      canvas.drawRRect(signRRect.deflate(1.1), edgePaint);
+    }
+
+    final grainPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(
+        0xFF7B6B50,
+      ).withValues(alpha: primary ? 0.12 : 0.16);
+    final grainY = signRect.top + size.height * 0.62;
+    canvas.drawLine(
+      Offset(signRect.left + 22, grainY),
+      Offset(signRect.left + size.width * 0.34, grainY - 2),
+      grainPaint,
+    );
+    canvas.drawLine(
+      Offset(signRect.right - size.width * 0.34, grainY + 2),
+      Offset(signRect.right - 24, grainY),
+      grainPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _NorthSignPainter oldDelegate) {
+    return oldDelegate.primary != primary || oldDelegate.pressed != pressed;
+  }
+}
+
+class _NorthSignIconPainter extends CustomPainter {
+  const _NorthSignIconPainter({
     required this.icon,
-    required this.onPressed,
-    this.primary = false,
+    required this.color,
+    required this.primary,
   });
 
-  final String label;
-  final IconData icon;
-  final VoidCallback onPressed;
+  final _NorthSignIcon icon;
+  final Color color;
   final bool primary;
 
   @override
-  Widget build(BuildContext context) {
-    final borderColor = primary
-        ? AppTheme.snowWhite.withValues(alpha: 0.78)
-        : AppTheme.iceBlue.withValues(alpha: 0.58);
-    final gradientColors = primary
-        ? const [Color(0xFFEAFBFF), Color(0xFF9FDAF6)]
-        : [
-            AppTheme.snowWhite.withValues(alpha: 0.24),
-            AppTheme.iceBlue.withValues(alpha: 0.16),
-          ];
-    final foreground = primary ? AppTheme.deepBlue : AppTheme.snowWhite;
+  void paint(Canvas canvas, Size size) {
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = primary ? 3.1 : 2.5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final fill = Paint()
+      ..color = color.withValues(alpha: 0.15)
+      ..style = PaintingStyle.fill;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: onPressed,
-        child: Ink(
-          height: 58,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: gradientColors,
-            ),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: borderColor, width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: primary ? 0.24 : 0.16),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
-              ),
-              if (primary)
-                BoxShadow(
-                  color: AppTheme.iceBlue.withValues(alpha: 0.35),
-                  blurRadius: 22,
-                  spreadRadius: -6,
-                ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: foreground, size: 24),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    label,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: foreground,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                      shadows: primary
-                          ? null
-                          : const [
-                              Shadow(
-                                color: Color(0x99001026),
-                                blurRadius: 8,
-                                offset: Offset(0, 1),
-                              ),
-                            ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    switch (icon) {
+      case _NorthSignIcon.play:
+        _paintPlay(canvas, size, stroke, fill);
+      case _NorthSignIcon.map:
+        _paintMap(canvas, size, stroke, fill);
+      case _NorthSignIcon.snowflake:
+        _paintSnowflake(canvas, size, stroke);
+      case _NorthSignIcon.lantern:
+        _paintLantern(canvas, size, stroke, fill);
+    }
+  }
+
+  void _paintPlay(Canvas canvas, Size size, Paint stroke, Paint fill) {
+    final w = size.width;
+    final h = size.height;
+    final path = Path()
+      ..moveTo(w * 0.29, h * 0.2)
+      ..lineTo(w * 0.76, h * 0.5)
+      ..lineTo(w * 0.29, h * 0.8)
+      ..close();
+    canvas.drawPath(path, fill);
+    canvas.drawPath(path, stroke);
+    canvas.drawLine(
+      Offset(w * 0.18, h * 0.86),
+      Offset(w * 0.82, h * 0.86),
+      stroke,
     );
+  }
+
+  void _paintMap(Canvas canvas, Size size, Paint stroke, Paint fill) {
+    final w = size.width;
+    final h = size.height;
+    final path = Path()
+      ..moveTo(w * 0.14, h * 0.24)
+      ..quadraticBezierTo(w * 0.28, h * 0.14, w * 0.42, h * 0.23)
+      ..quadraticBezierTo(w * 0.57, h * 0.32, w * 0.72, h * 0.22)
+      ..quadraticBezierTo(w * 0.82, h * 0.16, w * 0.88, h * 0.25)
+      ..lineTo(w * 0.84, h * 0.76)
+      ..quadraticBezierTo(w * 0.67, h * 0.86, w * 0.51, h * 0.75)
+      ..quadraticBezierTo(w * 0.36, h * 0.64, w * 0.16, h * 0.78)
+      ..close();
+    canvas.drawPath(path, fill);
+    canvas.drawPath(path, stroke);
+    canvas.drawLine(
+      Offset(w * 0.4, h * 0.24),
+      Offset(w * 0.37, h * 0.72),
+      stroke,
+    );
+    canvas.drawLine(
+      Offset(w * 0.66, h * 0.26),
+      Offset(w * 0.63, h * 0.76),
+      stroke,
+    );
+    canvas.drawCircle(
+      Offset(w * 0.53, h * 0.5),
+      w * 0.045,
+      Paint()..color = color,
+    );
+  }
+
+  void _paintSnowflake(Canvas canvas, Size size, Paint stroke) {
+    final center = Offset(size.width * 0.5, size.height * 0.5);
+    final radius = size.shortestSide * 0.36;
+    for (var i = 0; i < 6; i++) {
+      final angle = i * 1.0471975512;
+      final end =
+          center + Offset(radius * math.cos(angle), radius * math.sin(angle));
+      canvas.drawLine(center, end, stroke);
+      final branch = radius * 0.23;
+      final branchCenter =
+          center +
+          Offset(
+            radius * 0.66 * math.cos(angle),
+            radius * 0.66 * math.sin(angle),
+          );
+      canvas.drawLine(
+        branchCenter,
+        branchCenter +
+            Offset(
+              branch * math.cos(angle + 0.75),
+              branch * math.sin(angle + 0.75),
+            ),
+        stroke,
+      );
+      canvas.drawLine(
+        branchCenter,
+        branchCenter +
+            Offset(
+              branch * math.cos(angle - 0.75),
+              branch * math.sin(angle - 0.75),
+            ),
+        stroke,
+      );
+    }
+    canvas.drawCircle(center, size.shortestSide * 0.07, Paint()..color = color);
+  }
+
+  void _paintLantern(Canvas canvas, Size size, Paint stroke, Paint fill) {
+    final w = size.width;
+    final h = size.height;
+    final body = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.28, h * 0.32, w * 0.44, h * 0.45),
+      Radius.circular(w * 0.09),
+    );
+    canvas.drawRRect(body, fill);
+    canvas.drawRRect(body, stroke);
+    canvas.drawArc(
+      Rect.fromLTWH(w * 0.32, h * 0.13, w * 0.36, h * 0.28),
+      3.14159,
+      3.14159,
+      false,
+      stroke,
+    );
+    canvas.drawLine(
+      Offset(w * 0.22, h * 0.82),
+      Offset(w * 0.78, h * 0.82),
+      stroke,
+    );
+    final flame = Path()
+      ..moveTo(w * 0.5, h * 0.43)
+      ..cubicTo(w * 0.39, h * 0.53, w * 0.45, h * 0.65, w * 0.5, h * 0.68)
+      ..cubicTo(w * 0.58, h * 0.61, w * 0.62, h * 0.52, w * 0.5, h * 0.43);
+    canvas.drawPath(flame, Paint()..color = color.withValues(alpha: 0.32));
+  }
+
+  @override
+  bool shouldRepaint(covariant _NorthSignIconPainter oldDelegate) {
+    return oldDelegate.icon != icon ||
+        oldDelegate.color != color ||
+        oldDelegate.primary != primary;
   }
 }

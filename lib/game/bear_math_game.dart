@@ -169,6 +169,13 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     if (ambientEffect != null) {
       add(ambientEffect);
     }
+    final foregroundAmbientEffect = AmbientEffectsFactory.foregroundForLevel(
+      levelId: currentLevel!.id,
+      size: size,
+    );
+    if (foregroundAmbientEffect != null) {
+      add(foregroundAmbientEffect);
+    }
     if (isLevelGeometryDebugOverlayEnabled) {
       add(
         LevelGeometryDebugOverlay(
@@ -1100,7 +1107,8 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   bool get _isPlayerNearMentor {
     final playerCenter = player.position + player.size / 2;
-    return playerCenter.distanceTo(mentor.interactionPoint) < 92;
+    return playerCenter.distanceTo(mentor.interactionPoint) <
+        mentor.spec.interactionRadius;
   }
 
   void _resolveObstacleCollisions(Rect previousPlayerRect) {
@@ -1109,7 +1117,17 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     final currentRect = _playerRect;
-    final obstacleRects = _obstacleRects;
+    final slopedContactY = findSlopedObstacleSurfaceContact(
+      previousPlayerRect: previousPlayerRect,
+      futurePlayerRect: currentRect,
+      slopedSurfaces: _slopedObstacleSurfaces,
+    );
+    if (slopedContactY != null) {
+      player.landOnSurface(slopedContactY);
+      return;
+    }
+
+    final obstacleRects = _flatObstacleRects;
     final landingObstacle = findObstacleTopLanding(
       previousPlayerRect: previousPlayerRect,
       futurePlayerRect: currentRect,
@@ -1120,10 +1138,17 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       return;
     }
 
-    final resolvedRect = resolveObstacleSideCollision(
+    final resolvedFlatRect = resolveObstacleSideCollision(
       previousPlayerRect: previousPlayerRect,
       futurePlayerRect: currentRect,
       obstacleRects: obstacleRects,
+      minX: 0,
+      maxX: size.x - player.size.x,
+    );
+    final resolvedRect = resolveSlopedObstacleSideCollision(
+      previousPlayerRect: previousPlayerRect,
+      futurePlayerRect: resolvedFlatRect,
+      slopedSurfaces: _slopedObstacleSurfaces,
       minX: 0,
       maxX: size.x - player.size.x,
     );
@@ -1150,9 +1175,19 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   void _updatePlayerActiveGround() {
+    final slopedSupportY = findSlopedObstacleTopSupport(
+      playerRect: _playerRect,
+      slopedSurfaces: _slopedObstacleSurfaces,
+      horizontalVelocityX: player.horizontalVelocityX,
+    );
+    if (slopedSupportY != null) {
+      player.setActiveGroundY(slopedSupportY);
+      return;
+    }
+
     final supportObstacle = findObstacleTopSupport(
       playerRect: _playerRect,
-      obstacleRects: _obstacleRects,
+      obstacleRects: _flatObstacleRects,
     );
     if (supportObstacle == null) {
       player.setActiveGroundY(
@@ -1177,14 +1212,34 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
         .toList(growable: false);
   }
 
-  List<Rect> get _obstacleRects {
+  List<Rect> get _flatObstacleRects {
     return levelGeometry.obstacleColliders
+        .where((obstacle) => !obstacle.hasSlopedSurface)
         .map(
           (obstacle) => Rect.fromLTWH(
             obstacle.x,
             obstacle.y,
             obstacle.width,
             obstacle.height,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<SlopedObstacleSurface> get _slopedObstacleSurfaces {
+    return levelGeometry.obstacleColliders
+        .where((obstacle) => obstacle.hasSlopedSurface)
+        .map(
+          (obstacle) => SlopedObstacleSurface(
+            bounds: Rect.fromLTWH(
+              obstacle.x,
+              obstacle.y,
+              obstacle.width,
+              obstacle.height,
+            ),
+            surfaceYAtLeft: obstacle.surfaceYAtLeft!,
+            surfaceYAtRight: obstacle.surfaceYAtRight!,
+            edgeCapture: obstacle.edgeCapture ?? slopedObstacleEdgeCapture,
           ),
         )
         .toList(growable: false);

@@ -6,6 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   const obstacle = Rect.fromLTWH(537.70, 459, 90, 30);
+  const slope = SlopedObstacleSurface(
+    bounds: Rect.fromLTWH(425, 398, 136, 87),
+    surfaceYAtLeft: 398,
+    surfaceYAtRight: 428,
+  );
 
   group('obstacle solid block collision', () {
     test('blocks a grounded player moving into the obstacle from the left', () {
@@ -197,6 +202,206 @@ void main() {
     });
   });
 
+  group('sloped obstacle collision', () {
+    test('snaps support upward while walking up the slope', () {
+      final previousSurfaceY = slope.surfaceYAt(535);
+      final futureSurfaceY = slope.surfaceYAt(520);
+      final previous = _playerRect(feetX: 535, bottom: previousSurfaceY);
+      final future = _playerRect(feetX: 520, bottom: previousSurfaceY);
+
+      final contactY = findSlopedObstacleSurfaceContact(
+        previousPlayerRect: previous,
+        futurePlayerRect: future,
+        slopedSurfaces: const <SlopedObstacleSurface>[slope],
+      );
+
+      expect(futureSurfaceY, lessThan(previousSurfaceY));
+      expect(contactY, futureSurfaceY);
+    });
+
+    test('does not side-block a player already on the slope surface', () {
+      final previousSurfaceY = slope.surfaceYAt(535);
+      final previous = _playerRect(feetX: 535, bottom: previousSurfaceY);
+      final future = _playerRect(feetX: 520, bottom: previousSurfaceY);
+
+      final resolved = resolveSlopedObstacleSideCollision(
+        previousPlayerRect: previous,
+        futurePlayerRect: future,
+        slopedSurfaces: const <SlopedObstacleSurface>[slope],
+        minX: 0,
+        maxX: 722,
+      );
+
+      expect(resolved, future);
+    });
+
+    test('does not side-snap when jumping from the slope surface', () {
+      final surfaceY = slope.surfaceYAt(520);
+      final previous = _playerRect(feetX: 520, bottom: surfaceY);
+      final future = _playerRect(feetX: 520, bottom: surfaceY - 10);
+
+      final resolved = resolveSlopedObstacleSideCollision(
+        previousPlayerRect: previous,
+        futurePlayerRect: future,
+        slopedSurfaces: const <SlopedObstacleSurface>[slope],
+        minX: 0,
+        maxX: 722,
+      );
+
+      expect(future.overlaps(slope.bounds), isTrue);
+      expect(resolved, future);
+    });
+
+    test('does not side-snap while above the slope surface', () {
+      final surfaceY = slope.surfaceYAt(520);
+      final previous = _playerRect(feetX: 520, bottom: surfaceY - 14);
+      final future = _playerRect(feetX: 520, bottom: surfaceY - 20);
+
+      final resolved = resolveSlopedObstacleSideCollision(
+        previousPlayerRect: previous,
+        futurePlayerRect: future,
+        slopedSurfaces: const <SlopedObstacleSurface>[slope],
+        minX: 0,
+        maxX: 722,
+      );
+
+      expect(future.overlaps(slope.bounds), isTrue);
+      expect(resolved, future);
+    });
+
+    test('allows airborne approach onto the slope from the right', () {
+      final previous = _playerRect(
+        feetX: 585,
+        bottom: slope.surfaceYAt(561) - 4,
+      );
+      final future = _playerRect(feetX: 575, bottom: slope.surfaceYAt(561) + 2);
+
+      final resolved = resolveSlopedObstacleSideCollision(
+        previousPlayerRect: previous,
+        futurePlayerRect: future,
+        slopedSurfaces: const <SlopedObstacleSurface>[slope],
+        minX: 0,
+        maxX: 722,
+      );
+
+      expect(future.center.dx, greaterThan(slope.bounds.right));
+      expect(future.overlaps(slope.bounds), isTrue);
+      expect(resolved, future);
+    });
+
+    test(
+      'lands on the slope edge from the right before feet center enters',
+      () {
+        final previous = _playerRect(
+          feetX: 585,
+          bottom: slope.surfaceYAt(561) - 4,
+        );
+        final future = _playerRect(
+          feetX: 575,
+          bottom: slope.surfaceYAt(561) + 2,
+        );
+
+        final contactY = findSlopedObstacleSurfaceContact(
+          previousPlayerRect: previous,
+          futurePlayerRect: future,
+          slopedSurfaces: const <SlopedObstacleSurface>[slope],
+        );
+
+        expect(future.center.dx, greaterThan(slope.bounds.right));
+        expect(contactY, slope.surfaceYAt(561));
+      },
+    );
+
+    test('does not keep slope support while feet center is outside edge', () {
+      final player = _playerRect(
+        feetX: 575,
+        bottom: slope.surfaceYAt(slope.bounds.right),
+      );
+
+      final supportY = findSlopedObstacleTopSupport(
+        playerRect: player,
+        slopedSurfaces: const <SlopedObstacleSurface>[slope],
+      );
+
+      expect(player.center.dx, greaterThan(slope.bounds.right));
+      expect(supportY, isNull);
+    });
+
+    test('keeps slope edge support while moving inward from the right', () {
+      final player = _playerRect(
+        feetX: 575,
+        bottom: slope.surfaceYAt(slope.bounds.right),
+      );
+
+      final supportY = findSlopedObstacleTopSupport(
+        playerRect: player,
+        slopedSurfaces: const <SlopedObstacleSurface>[slope],
+        horizontalVelocityX: -160,
+      );
+
+      expect(player.center.dx, greaterThan(slope.bounds.right));
+      expect(supportY, slope.surfaceYAt(slope.bounds.right));
+    });
+
+    test('does not side-snap when walking off the slope edge', () {
+      final previousSurfaceY = slope.surfaceYAt(555);
+      final previous = _playerRect(feetX: 555, bottom: previousSurfaceY);
+      final future = _playerRect(feetX: 565, bottom: previousSurfaceY + 2);
+
+      final resolved = resolveSlopedObstacleSideCollision(
+        previousPlayerRect: previous,
+        futurePlayerRect: future,
+        slopedSurfaces: const <SlopedObstacleSurface>[slope],
+        minX: 0,
+        maxX: 722,
+      );
+
+      expect(future.center.dx, greaterThan(slope.bounds.right));
+      expect(future.overlaps(slope.bounds), isTrue);
+      expect(resolved, future);
+    });
+
+    test('keeps falling away after leaving the slope edge', () {
+      final previous = _playerRect(
+        feetX: 565,
+        bottom: slope.surfaceYAt(565) + 9,
+      );
+      final future = _playerRect(
+        feetX: 575,
+        bottom: slope.surfaceYAt(575) + 15,
+      );
+
+      final resolved = resolveSlopedObstacleSideCollision(
+        previousPlayerRect: previous,
+        futurePlayerRect: future,
+        slopedSurfaces: const <SlopedObstacleSurface>[slope],
+        minX: 0,
+        maxX: 722,
+      );
+
+      expect(previous.center.dx, greaterThan(slope.bounds.right));
+      expect(future.center.dx, greaterThan(slope.bounds.right));
+      expect(future.overlaps(slope.bounds), isTrue);
+      expect(resolved, future);
+    });
+
+    test('blocks walking into the slope body from the ground', () {
+      const previous = Rect.fromLTWH(340, 393, 78, 92);
+      const future = Rect.fromLTWH(350, 393, 78, 92);
+
+      final resolved = resolveSlopedObstacleSideCollision(
+        previousPlayerRect: previous,
+        futurePlayerRect: future,
+        slopedSurfaces: const <SlopedObstacleSurface>[slope],
+        minX: 0,
+        maxX: 722,
+      );
+
+      expect(resolved.left, slope.bounds.left - future.width);
+      expect(resolved.top, future.top);
+    });
+  });
+
   test('player physics constants stay unchanged', () {
     final source = File(
       'lib/game/components/player_bear.dart',
@@ -208,6 +413,10 @@ void main() {
     expect(source, contains('static const _hitboxWidth = 78.0;'));
     expect(source, contains('static const _hitboxHeight = 92.0;'));
   });
+}
+
+Rect _playerRect({required double feetX, required double bottom}) {
+  return Rect.fromLTWH(feetX - 39, bottom - 92, 78, 92);
 }
 
 bool feetXOutsideRightEdge(Rect playerRect, Rect obstacleRect) {

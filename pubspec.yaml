@@ -36,7 +36,8 @@ flutter:
     - assets/images/characters/mentors/level_07_mountain_pass/mentor.png
     - assets/images/characters/mentors/level_08_polar_night/mentor.png
     - assets/images/characters/mentors/level_09_northern_lights/mentor.png
-    - assets/images/characters/mentors/level_10_northern_ocean/mentor.png
+    - assets/images/characters/mentors/level_10_northern_ocean/seal_mentor_on_crate.png
+    - assets/images/characters/mountain_eagle/animations/fly_land_takeoff/
     - assets/images/characters/snow_bunny/animations/hop_turn/alpha/
     - assets/images/locations/snowy_clearing/01_sky.png
     - assets/images/locations/snowy_clearing/02_far_hills.png

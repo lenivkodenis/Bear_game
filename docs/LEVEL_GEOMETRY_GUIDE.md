@@ -6,8 +6,9 @@ The manual ground calibration pass is complete. The approved per-level
 `groundY` values are now written to `assets/data/level_geometry.json`.
 
 Complex geometry is still limited. All 10 levels use visually calibrated
-ground, with no platforms and no multi-level routes. Levels 1, 2, and 4 each
-have two calibrated active obstacles. Level 3 has one calibrated ground dip.
+ground, with no platforms and no multi-level routes. Levels 1, 2, 4, and 8
+each have two calibrated active obstacles. Level 8 includes one sloped snow
+surface. Level 3 has one calibrated ground dip.
 
 The goal of this baseline is gameplay stability:
 
@@ -39,7 +40,7 @@ Do not add obstacles by visual guessing. Before the next attempt:
 - keep future obstacle work scoped to one manually verified collider at a time.
 
 The ground line is now calibrated per level in production. Obstacle rollout is
-currently limited to two active obstacles on levels 1, 2, and 4. Level 3 has an
+currently limited to active obstacles on levels 1, 2, 4, and 8. Level 3 has an
 active segmented ground dip.
 
 # Active obstacles on level 1
@@ -64,8 +65,8 @@ ice_ridge_1: y = 489 - 42.75 = 446.25
 ice_ridge_2: y = 489 - 47 = 442
 ```
 
-Level 1 active obstacles are part of the production geometry. Levels 5-10
-remain on the flat baseline with `obstacleColliders: []` and
+Level 1 active obstacles are part of the production geometry. Levels without
+approved obstacle gameplay keep `obstacleColliders: []` and all levels keep
 `platformColliders: []`.
 
 # Active obstacles on level 2
@@ -132,6 +133,31 @@ snow_stump: y = 498 - 70 = 428
 
 Level 4 `calibrationObstacles` is empty after activation; collider behavior
 comes only from `obstacleColliders`.
+
+# Active obstacles on level 8
+
+Level 8 uses the completed background's snow shapes as active obstacle
+surfaces. The left snow mound is one taller flat collider, and the right ridge
+is one sloped collider with a calibrated top surface:
+
+```json
+[
+  { "id": "snow_mound_left", "x": 279, "y": 409, "width": 84, "height": 76 },
+  { "id": "snow_ridge_slope", "x": 425, "y": 398, "width": 136, "height": 87, "surfaceYAtLeft": 398, "surfaceYAtRight": 428 }
+]
+```
+
+Both colliders are ground-locked to level 8:
+
+```text
+snow_mound_left: y = 485 - 76 = 409
+snow_ridge_slope: y = 485 - 87 = 398
+```
+
+For sloped obstacles, `surfaceYAtLeft` and `surfaceYAtRight` describe the
+walkable top line. The enclosing rectangle still blocks the obstacle body, but
+the player support height follows the sloped top while the bear's feet remain
+inside the obstacle width.
 
 # Obstacle collision stabilization
 
@@ -359,8 +385,8 @@ Most levels currently use one main ground shape, with a per-level
 }
 ```
 
-Levels 1, 2, and 4 each have two active obstacles. Levels 3 and 5-10 keep
-`obstacleColliders: []`.
+Levels 1, 2, 4, and 8 each have two active obstacles. Levels 3, 5-7, 9, and 10
+keep `obstacleColliders: []`.
 Levels 1-10 keep `platformColliders: []`.
 
 ## Ground
@@ -399,8 +425,8 @@ Current rollout requires every level to have:
 
 - `platformColliders: []`
 
-Levels 3 and 5-10 must also have `obstacleColliders: []`. Levels 1, 2, and 4
-each have exactly two active obstacles.
+Levels 3, 5-7, 9, and 10 must also have `obstacleColliders: []`. Levels 1, 2,
+4, and 8 each have exactly two active obstacles.
 
 `calibrationObstacles` may contain preview rectangles for debug overlay
 calibration only. They are not production gameplay colliders and should be
@@ -444,6 +470,6 @@ python3 tools/validate_level_geometry.py
 
 The validator checks all 10 levels, per-level backgrounds, flat or segmented
 ground, approved per-level `groundY` values, empty platforms, active obstacle
-layouts on levels 1, 2, and 4, empty obstacle lists on levels 3 and 5-10, sane
-coordinates, mentor to the right of the spawn, and both contact points on the
-main ground.
+layouts on levels 1, 2, 4, and 8, empty obstacle lists on levels 3, 5-7, 9, and
+10, sane coordinates, mentor to the right of the spawn, and both contact points
+on the main ground.

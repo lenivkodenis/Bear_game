@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../game/level_geometry.dart';
 import '../models/map_location.dart';
 import '../models/player_progress.dart';
 import '../services/progress_service.dart';
@@ -33,70 +34,54 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
     _MapStop(
       location: MapLocation(id: 1, name: 'Льдина'),
       center: Offset(0.12, 0.33),
-      indicatorCenter: Offset(0.118, 0.335),
       hitboxSize: Size(0.17, 0.12),
     ),
     _MapStop(
       location: MapLocation(id: 2, name: 'Ледяная река'),
       center: Offset(0.32, 0.35),
-      indicatorCenter: Offset(0.303, 0.318),
-      lockedIndicatorCenter: Offset(0.284, 0.356),
       hitboxSize: Size(0.18, 0.12),
     ),
     _MapStop(
       location: MapLocation(id: 3, name: 'Заснеженный берег'),
       center: Offset(0.50, 0.33),
-      indicatorCenter: Offset(0.492, 0.306),
-      lockedIndicatorCenter: Offset(0.470, 0.346),
+      statusCenter: Offset(0.47, 0.354),
       hitboxSize: Size(0.20, 0.12),
     ),
     _MapStop(
       location: MapLocation(id: 4, name: 'Северный лес'),
       center: Offset(0.70, 0.33),
-      indicatorCenter: Offset(0.690, 0.306),
-      lockedIndicatorCenter: Offset(0.666, 0.346),
       hitboxSize: Size(0.18, 0.12),
     ),
     _MapStop(
       location: MapLocation(id: 5, name: 'Ледяная пещера'),
       center: Offset(0.77, 0.58),
-      indicatorCenter: Offset(0.758, 0.548),
-      lockedIndicatorCenter: Offset(0.736, 0.588),
       hitboxSize: Size(0.20, 0.12),
     ),
     _MapStop(
       location: MapLocation(id: 6, name: 'Снежная долина'),
       center: Offset(0.46, 0.61),
-      indicatorCenter: Offset(0.446, 0.584),
-      lockedIndicatorCenter: Offset(0.420, 0.626),
       hitboxSize: Size(0.20, 0.12),
     ),
     _MapStop(
       location: MapLocation(id: 7, name: 'Горный перевал'),
       center: Offset(0.13, 0.60),
-      indicatorCenter: Offset(0.122, 0.565),
-      lockedIndicatorCenter: Offset(0.100, 0.606),
       hitboxSize: Size(0.20, 0.12),
     ),
     _MapStop(
       location: MapLocation(id: 8, name: 'Полярная ночь'),
       center: Offset(0.09, 0.88),
-      indicatorCenter: Offset(0.079, 0.872),
-      lockedIndicatorCenter: Offset(0.056, 0.916),
       hitboxSize: Size(0.19, 0.12),
     ),
     _MapStop(
       location: MapLocation(id: 9, name: 'Северное сияние'),
       center: Offset(0.35, 0.92),
-      indicatorCenter: Offset(0.365, 0.864),
-      lockedIndicatorCenter: Offset(0.328, 0.934),
+      statusCenter: Offset(0.328, 0.934),
       hitboxSize: Size(0.21, 0.12),
     ),
     _MapStop(
       location: MapLocation(id: 10, name: 'Северный океан'),
       center: Offset(0.63, 0.90),
-      indicatorCenter: Offset(0.646, 0.844),
-      lockedIndicatorCenter: Offset(0.602, 0.900),
+      statusCenter: Offset(0.602, 0.90),
       hitboxSize: Size(0.21, 0.12),
     ),
   ];
@@ -152,8 +137,11 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
 
   Future<_LocationMapData> _loadMapData() async {
     final progress = await _progressService.loadProgress();
+    final visibleProgress = isLocationMapUnlockAllEnabled
+        ? progress.copyWith(unlockedLocation: 10)
+        : progress;
 
-    return _LocationMapData(progress: progress);
+    return _LocationMapData(progress: visibleProgress);
   }
 
   void _openLocation(BuildContext context, MapLocation location) {
@@ -315,8 +303,8 @@ class _MapHotspot extends StatelessWidget {
       stop.center.dy * mapSize.height,
     );
     final indicatorCenter = Offset(
-      _indicatorAnchor(state).dx * mapSize.width,
-      _indicatorAnchor(state).dy * mapSize.height,
+      (stop.statusCenter ?? stop.center).dx * mapSize.width,
+      (stop.statusCenter ?? stop.center).dy * mapSize.height,
     );
     final hitbox = Size(
       stop.hitboxSize.width * mapSize.width,
@@ -358,14 +346,6 @@ class _MapHotspot extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  Offset _indicatorAnchor(_MapStopState state) {
-    if (state == _MapStopState.locked) {
-      return stop.lockedIndicatorCenter ?? stop.indicatorCenter;
-    }
-
-    return stop.indicatorCenter;
   }
 }
 
@@ -775,15 +755,13 @@ class _MapStop {
   const _MapStop({
     required this.location,
     required this.center,
-    required this.indicatorCenter,
     required this.hitboxSize,
-    this.lockedIndicatorCenter,
+    this.statusCenter,
   });
 
   final MapLocation location;
   final Offset center;
-  final Offset indicatorCenter;
-  final Offset? lockedIndicatorCenter;
+  final Offset? statusCenter;
   final Size hitboxSize;
 }
 

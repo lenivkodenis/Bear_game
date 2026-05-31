@@ -8,6 +8,7 @@ import '../widgets/mentor_dialog.dart';
 import '../widgets/score_hud.dart';
 import 'final_screen.dart';
 import 'level_complete_screen.dart';
+import 'location_map_screen.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -60,7 +61,7 @@ class _GameScreenState extends State<GameScreen> {
               top: 12,
               left: 12,
               child: IconButton.filledTonal(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: _leaveLevel,
                 icon: const Icon(Icons.arrow_back_rounded),
                 tooltip: 'Назад',
               ),
@@ -108,6 +109,21 @@ class _GameScreenState extends State<GameScreen> {
         solvedQuestions: game.totalQuestions,
       ),
     );
+  }
+
+  void _leaveLevel() {
+    final game = _game;
+    if (game != null) {
+      game.closeMentorDialog();
+    }
+
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+
+    navigator.pushReplacementNamed(LocationMapScreen.routeName);
   }
 
   int? _levelIdFromUri(Uri uri) {

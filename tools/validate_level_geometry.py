@@ -147,6 +147,24 @@ EXPECTED_LEVEL_FOUR_OBSTACLES = [
         "height": 70,
     },
 ]
+EXPECTED_LEVEL_EIGHT_OBSTACLES = [
+    {
+        "id": "snow_mound_left",
+        "x": 279,
+        "y": 409,
+        "width": 84,
+        "height": 76,
+    },
+    {
+        "id": "snow_ridge_slope",
+        "x": 425,
+        "y": 398,
+        "width": 136,
+        "height": 87,
+        "surfaceYAtLeft": 398,
+        "surfaceYAtRight": 428,
+    },
+]
 
 
 class GeometryError(Exception):
@@ -186,8 +204,8 @@ def main() -> None:
     print(
         "level_geometry.json OK: 10 per-level calibrated levels, "
         "two active level 1 obstacles, two active level 2 obstacles, level 3 "
-        "ground dip, two active level 4 obstacles, level 9 segmented ice "
-        "shelves, no platforms."
+        "ground dip, two active level 4 obstacles, level 8 snow mound and "
+        "sloped ridge obstacles, level 9 segmented ice shelves, no platforms."
     )
 
 
@@ -264,6 +282,17 @@ def validate_level(
         validate_expected_obstacles(
             obstacles,
             expected=EXPECTED_LEVEL_FOUR_OBSTACLES,
+            context=context,
+            ground=grounds[0],
+            player_spawn=player_spawn,
+            mentor_position=mentor_position,
+            world_width=world_width,
+            world_height=world_height,
+        )
+    elif level_id == 8:
+        validate_expected_obstacles(
+            obstacles,
+            expected=EXPECTED_LEVEL_EIGHT_OBSTACLES,
             context=context,
             ground=grounds[0],
             player_spawn=player_spawn,
@@ -442,8 +471,21 @@ def validate_expected_obstacles(
                     f"{obstacle_context}: {key} must equal "
                     f"{expected_obstacle[key]}."
                 )
+        for key in ("surfaceYAtLeft", "surfaceYAtRight"):
+            if key not in expected_obstacle:
+                if key in obstacle:
+                    fail(f"{obstacle_context}: {key} is not expected.")
+                continue
+            if key not in obstacle:
+                fail(f"{obstacle_context}: {key} is required.")
+            if not same_number(float(obstacle[key]), float(expected_obstacle[key])):
+                fail(
+                    f"{obstacle_context}: {key} must equal "
+                    f"{expected_obstacle[key]}."
+                )
 
         validate_collider_bounds(obstacle, obstacle_context, world_width, world_height)
+        validate_obstacle_surface(obstacle, obstacle_context)
         expected_y = float(ground["y"]) - float(obstacle["height"])
         if not same_number(float(obstacle["y"]), expected_y):
             fail(f"{obstacle_context}: y must equal main_ground.y - height.")
@@ -452,7 +494,7 @@ def validate_expected_obstacles(
         obstacle_right = obstacle_left + float(obstacle["width"])
         if obstacle_left <= player_x or obstacle_right >= mentor_x:
             fail(f"{obstacle_context}: obstacle must be between spawn and mentor.")
-        if previous_right is not None and obstacle_left <= previous_right:
+        if previous_right is not None and obstacle_left < previous_right:
             fail(f"{obstacle_context}: obstacles must be ordered left to right.")
         previous_right = obstacle_right
         if point_intersects_rect(player_x, player_y, obstacle):
@@ -569,6 +611,28 @@ def validate_collider_bounds(
         fail(f"{context}: collider {collider['id']} exceeds world height.")
 
 
+def validate_obstacle_surface(
+    collider: dict[str, float | str],
+    context: str,
+) -> None:
+    has_left = "surfaceYAtLeft" in collider
+    has_right = "surfaceYAtRight" in collider
+    if has_left != has_right:
+        fail(
+            f"{context}: slope obstacle must define both surfaceYAtLeft and "
+            "surfaceYAtRight."
+        )
+    if not has_left:
+        return
+
+    top = float(collider["y"])
+    bottom = top + float(collider["height"])
+    for key in ("surfaceYAtLeft", "surfaceYAtRight"):
+        value = float(collider[key])
+        if value < top or value > bottom:
+            fail(f"{context}: {key} must be inside the collider bounds.")
+
+
 def assert_no_forbidden_keys(value: object) -> None:
     forbidden = {"wrap", "worldWrap", "teleport", "resetPosition", "fallReset"}
     if isinstance(value, dict):
@@ -597,6 +661,7 @@ def read_colliders(
                 "y": required_number(collider, "y", collider_context),
                 "width": required_number(collider, "width", collider_context),
                 "height": required_number(collider, "height", collider_context),
+                **optional_surface_y(collider, collider_context),
             }
         )
     return colliders
@@ -666,6 +731,26 @@ def required_number(data: dict[str, object], key: str, context: str) -> float:
     if isinstance(value, (int, float)):
         return float(value)
     fail(f"{context}: missing number {key!r}.")
+
+
+def optional_surface_y(
+    data: dict[str, object],
+    context: str,
+) -> dict[str, float]:
+    has_left = "surfaceYAtLeft" in data
+    has_right = "surfaceYAtRight" in data
+    if has_left != has_right:
+        fail(
+            f"{context}: slope obstacle must define both surfaceYAtLeft and "
+            "surfaceYAtRight."
+        )
+    if not has_left:
+        return {}
+
+    return {
+        "surfaceYAtLeft": required_number(data, "surfaceYAtLeft", context),
+        "surfaceYAtRight": required_number(data, "surfaceYAtRight", context),
+    }
 
 
 def same_number(left: float, right: float) -> bool:

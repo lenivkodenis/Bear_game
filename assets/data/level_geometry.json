@@ -67,13 +67,18 @@
       "levelId": 5,
       "backgroundAsset": "assets/images/levels/level_05_ice_cave/background.png",
       "playerSpawn": { "x": 72, "y": 409 },
-      "mentorPosition": { "x": 688, "y": 409 },
+      "mentorPosition": { "x": 688, "y": 405 },
       "groundColliders": [
-        { "id": "main_ground", "x": 0, "y": 409, "width": 800, "height": 191 }
+        { "id": "ground_left_shelf", "x": 0, "y": 409, "width": 239, "height": 191 },
+        { "id": "ground_lower_ice_floor", "x": 239, "y": 493, "width": 167, "height": 107 },
+        { "id": "ground_middle_step", "x": 406, "y": 424, "width": 87, "height": 176 },
+        { "id": "ground_right_shelf", "x": 603, "y": 405, "width": 197, "height": 195 }
       ],
       "platformColliders": [],
-      "obstacleColliders": [],
-      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
+      "obstacleColliders": [
+        { "id": "ice_slab_slope", "x": 493, "y": 378, "width": 110, "height": 46, "surfaceYAtLeft": 378, "surfaceYAtRight": 424, "edgeCapture": 0 }
+      ],
+      "notes": "Segmented ice cave shelves with lower passage and active sloped ice slab obstacle. Per-level ground lines visually calibrated to this background's foreground ice surfaces."
     },
     {
       "levelId": 6,
@@ -96,8 +101,10 @@
         { "id": "main_ground", "x": 0, "y": 464, "width": 800, "height": 136 }
       ],
       "platformColliders": [],
-      "obstacleColliders": [],
-      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
+      "obstacleColliders": [
+        { "id": "fallen_bridge_slope", "x": 274, "y": 386, "width": 146, "height": 78, "surfaceYAtLeft": 386, "surfaceYAtRight": 426, "edgeCapture": 0 }
+      ],
+      "notes": "Stable flat baseline with active fallen bridge sloped obstacle. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {
       "levelId": 8,
@@ -108,8 +115,11 @@
         { "id": "main_ground", "x": 0, "y": 485, "width": 800, "height": 115 }
       ],
       "platformColliders": [],
-      "obstacleColliders": [],
-      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
+      "obstacleColliders": [
+        { "id": "snow_mound_left", "x": 279, "y": 409, "width": 84, "height": 76 },
+        { "id": "snow_ridge_slope", "x": 425, "y": 398, "width": 136, "height": 87, "surfaceYAtLeft": 398, "surfaceYAtRight": 428 }
+      ],
+      "notes": "Stable flat baseline with active snow mound obstacle surfaces. Per-level ground line visually calibrated to this background's foreground snow surface."
     },
     {
       "levelId": 9,
@@ -136,8 +146,10 @@
         { "id": "main_ground", "x": 0, "y": 519, "width": 800, "height": 81 }
       ],
       "platformColliders": [],
-      "obstacleColliders": [],
-      "notes": "Stable flat baseline. Per-level ground line visually calibrated to this background's foreground snow surface."
+      "obstacleColliders": [
+        { "id": "overturned_boat", "x": 293, "y": 462, "width": 180, "height": 57 }
+      ],
+      "notes": "Stable flat baseline with active overturned boat obstacle. Per-level ground line visually calibrated to this background's foreground snow surface."
     }
   ]
 }

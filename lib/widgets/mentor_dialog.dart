@@ -68,7 +68,11 @@ class _MentorDialogState extends State<MentorDialog> {
 
     if (_showIntro) {
       return [
-        _DialogTitle(title: level.mentorName, subtitle: level.locationName),
+        _DialogTitle(
+          title: level.mentorName,
+          subtitle: level.locationName,
+          onClose: widget.onClose,
+        ),
         const SizedBox(height: 12),
         Text(level.introText, style: const TextStyle(fontSize: 18)),
         const SizedBox(height: 20),
@@ -81,7 +85,11 @@ class _MentorDialogState extends State<MentorDialog> {
 
     if (widget.game.isLevelComplete && _answerResult == null) {
       return [
-        _DialogTitle(title: level.mentorName, subtitle: level.locationName),
+        _DialogTitle(
+          title: level.mentorName,
+          subtitle: level.locationName,
+          onClose: widget.onClose,
+        ),
         const SizedBox(height: 12),
         const Text(
           'Все задачи этой льдины решены. Морская чайка показывает путь дальше.',
@@ -95,7 +103,11 @@ class _MentorDialogState extends State<MentorDialog> {
     final result = _answerResult;
     if (result != null && result.isCorrect) {
       return [
-        _DialogTitle(title: level.mentorName, subtitle: level.locationName),
+        _DialogTitle(
+          title: level.mentorName,
+          subtitle: level.locationName,
+          onClose: widget.onClose,
+        ),
         const SizedBox(height: 12),
         Text(result.message, style: const TextStyle(fontSize: 18)),
         const SizedBox(height: 20),
@@ -111,7 +123,11 @@ class _MentorDialogState extends State<MentorDialog> {
     final question = widget.game.currentQuestion;
     if (question == null) {
       return [
-        _DialogTitle(title: level.mentorName, subtitle: level.locationName),
+        _DialogTitle(
+          title: level.mentorName,
+          subtitle: level.locationName,
+          onClose: widget.onClose,
+        ),
         const SizedBox(height: 12),
         const Text('Задачи закончились.', style: TextStyle(fontSize: 18)),
         const SizedBox(height: 20),
@@ -124,6 +140,7 @@ class _MentorDialogState extends State<MentorDialog> {
         title: level.mentorName,
         subtitle:
             'Вопрос ${widget.game.currentQuestionNumber} из ${widget.game.totalQuestions}',
+        onClose: widget.onClose,
       ),
       const SizedBox(height: 12),
       Text(question.questionText, style: const TextStyle(fontSize: 18)),
@@ -189,26 +206,45 @@ class _MentorDialogState extends State<MentorDialog> {
 }
 
 class _DialogTitle extends StatelessWidget {
-  const _DialogTitle({required this.title, required this.subtitle});
+  const _DialogTitle({
+    required this.title,
+    required this.subtitle,
+    required this.onClose,
+  });
 
   final String title;
   final String subtitle;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+        IconButton(
+          onPressed: onClose,
+          icon: const Icon(Icons.close_rounded),
+          tooltip: 'Закрыть',
         ),
       ],
     );

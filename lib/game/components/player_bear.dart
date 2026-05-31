@@ -81,6 +81,7 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   bool get _isOnGround => position.y >= _activeGroundY - size.y - 0.5;
 
   BearAnimationState get animationState => _animationState;
+  double get horizontalVelocityX => _velocity.x;
 
   Rect get visualBounds {
     return _toWorldRect(_visualTransform(_animationState).destinationRect);

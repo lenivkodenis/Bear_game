@@ -22,6 +22,10 @@ bool get isGroundSegmentCalibrationModeEnabled {
   return isGroundSegmentCalibrationModeEnabledForUri(Uri.base);
 }
 
+bool get isLocationMapUnlockAllEnabled {
+  return isLocationMapUnlockAllEnabledForUri(Uri.base);
+}
+
 bool isLevelGeometryDebugOverlayEnabledForUri(Uri uri) {
   return _hasEnabledDebugGeometryFlag(uri.queryParameters) ||
       _hasEnabledDebugGeometryFlag(_fragmentQueryParameters(uri.fragment));
@@ -57,6 +61,14 @@ bool isGroundSegmentCalibrationModeEnabledForUri(Uri uri) {
           _hasEnabledGroundSegmentCalibrationFlag(fragmentParameters));
 }
 
+bool isLocationMapUnlockAllEnabledForUri(Uri uri) {
+  final queryParameters = uri.queryParameters;
+  final fragmentParameters = _fragmentQueryParameters(uri.fragment);
+
+  return _hasEnabledUnlockAllFlag(queryParameters) ||
+      _hasEnabledUnlockAllFlag(fragmentParameters);
+}
+
 bool _hasEnabledDebugGeometryFlag(Map<String, String> parameters) {
   return parameters['debugGeometry'] == '1';
 }
@@ -72,6 +84,10 @@ bool _hasEnabledObstacleCalibrationFlag(Map<String, String> parameters) {
 bool _hasEnabledGroundSegmentCalibrationFlag(Map<String, String> parameters) {
   return parameters['calibrateGroundSegment'] == '1' ||
       parameters['calibratePit'] == '1';
+}
+
+bool _hasEnabledUnlockAllFlag(Map<String, String> parameters) {
+  return parameters['unlockAll'] == '1';
 }
 
 Map<String, String> _fragmentQueryParameters(String fragment) {
@@ -182,18 +198,42 @@ class LevelGeometryCollider {
     required this.y,
     required this.width,
     required this.height,
+    this.surfaceYAtLeft,
+    this.surfaceYAtRight,
+    this.edgeCapture,
   });
 
   factory LevelGeometryCollider.fromJson(
     Map<String, Object?> json, {
     required String context,
   }) {
+    final surfaceYAtLeft = _optionalDouble(
+      json,
+      'surfaceYAtLeft',
+      context: context,
+    );
+    final surfaceYAtRight = _optionalDouble(
+      json,
+      'surfaceYAtRight',
+      context: context,
+    );
+    if ((surfaceYAtLeft == null) != (surfaceYAtRight == null)) {
+      throw FormatException(
+        '$context slope surface must define both surfaceYAtLeft and '
+        'surfaceYAtRight.',
+      );
+    }
+    final edgeCapture = _optionalDouble(json, 'edgeCapture', context: context);
+
     return LevelGeometryCollider(
       id: _requiredString(json, 'id', context: context),
       x: _requiredDouble(json, 'x', context: context),
       y: _requiredDouble(json, 'y', context: context),
       width: _requiredDouble(json, 'width', context: context),
       height: _requiredDouble(json, 'height', context: context),
+      surfaceYAtLeft: surfaceYAtLeft,
+      surfaceYAtRight: surfaceYAtRight,
+      edgeCapture: edgeCapture,
     );
   }
 
@@ -202,9 +242,16 @@ class LevelGeometryCollider {
   final double y;
   final double width;
   final double height;
+  final double? surfaceYAtLeft;
+  final double? surfaceYAtRight;
+  final double? edgeCapture;
 
   Vector2 get position => Vector2(x, y);
   Vector2 get size => Vector2(width, height);
+  bool get hasSlopedSurface =>
+      surfaceYAtLeft != null &&
+      surfaceYAtRight != null &&
+      surfaceYAtLeft != surfaceYAtRight;
 
   LevelGeometryCollider copyWith({
     String? id,
@@ -212,6 +259,9 @@ class LevelGeometryCollider {
     double? y,
     double? width,
     double? height,
+    double? surfaceYAtLeft,
+    double? surfaceYAtRight,
+    double? edgeCapture,
   }) {
     return LevelGeometryCollider(
       id: id ?? this.id,
@@ -219,6 +269,9 @@ class LevelGeometryCollider {
       y: y ?? this.y,
       width: width ?? this.width,
       height: height ?? this.height,
+      surfaceYAtLeft: surfaceYAtLeft ?? this.surfaceYAtLeft,
+      surfaceYAtRight: surfaceYAtRight ?? this.surfaceYAtRight,
+      edgeCapture: edgeCapture ?? this.edgeCapture,
     );
   }
 
@@ -232,6 +285,11 @@ class LevelGeometryCollider {
       y: y * scaleY,
       width: width * scaleX,
       height: height * scaleY,
+      surfaceYAtLeft: surfaceYAtLeft == null ? null : surfaceYAtLeft! * scaleY,
+      surfaceYAtRight: surfaceYAtRight == null
+          ? null
+          : surfaceYAtRight! * scaleY,
+      edgeCapture: edgeCapture == null ? null : edgeCapture! * scaleX,
     );
   }
 }
@@ -550,4 +608,24 @@ double _requiredDouble(
   }
 
   throw FormatException('$context must contain number "$key".');
+}
+
+double? _optionalDouble(
+  Map<String, Object?> json,
+  String key, {
+  required String context,
+}) {
+  if (!json.containsKey(key)) {
+    return null;
+  }
+
+  final value = json[key];
+  if (value is int) {
+    return value.toDouble();
+  }
+  if (value is double) {
+    return value;
+  }
+
+  throw FormatException('$context optional "$key" must be a number.');
 }

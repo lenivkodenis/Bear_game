@@ -218,7 +218,11 @@ class LevelGeometryDebugOverlay extends PositionComponent {
       }
       canvas.drawRect(rect, strokePaint);
       if (drawTopLine) {
-        canvas.drawLine(rect.topLeft, rect.topRight, topLinePaint);
+        canvas.drawLine(
+          Offset(rect.left, collider.surfaceYAtLeft ?? rect.top),
+          Offset(rect.right, collider.surfaceYAtRight ?? rect.top),
+          topLinePaint,
+        );
       }
       if (drawBottomLine) {
         canvas.drawLine(rect.bottomLeft, rect.bottomRight, topLinePaint);

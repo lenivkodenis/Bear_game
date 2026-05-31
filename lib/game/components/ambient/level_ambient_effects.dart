@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
+import 'mountain_eagle_ambient.dart';
 import 'snow_bunny_ambient.dart';
 
 class AmbientEffectsFactory {
@@ -15,25 +16,119 @@ class AmbientEffectsFactory {
     bool Function()? isActive,
   }) {
     return switch (levelId) {
-      3 => SnowyShoreSealAmbientEffect(size: size),
       4 => SnowBunnyAmbient(
         size: size,
         groundY: groundY ?? size.y * 0.83,
         isActive: isActive,
       ),
       5 => CaveDripsAmbientEffect(size: size),
-      6 => SnowValleyWindAmbientEffect(size: size),
-      7 => MountainPassSnowPlumeEffect(size: size),
+      7 => MountainPassAmbientEffect(size: size),
       8 => PolarNightStarsEffect(size: size),
-      9 => AuroraWaveEffect(size: size),
-      10 => NorthernOceanSplashEffect(size: size),
+      _ => null,
+    };
+  }
+
+  static PositionComponent? foregroundForLevel({
+    required int levelId,
+    required Vector2 size,
+  }) {
+    return switch (levelId) {
+      7 => NorthernOceanBlizzardEffect(size: size),
       _ => null,
     };
   }
 }
 
+class MountainPassAmbientEffect extends LevelAmbientEffectComponent {
+  MountainPassAmbientEffect({required super.size})
+    : debugEagleEntryPoint = _eagleEntryPointFor(size),
+      debugEaglePerchPoint = _eaglePerchPointFor(size),
+      debugEagleExitPoint = _eagleExitPointFor(size),
+      debugEagleSize = _eagleSizeFor(size),
+      debugEagleCycleInterval = _eagleCycleInterval,
+      super(
+        children: <Component>[
+          MountainPassSnowPlumeEffect(size: size),
+          MountainEagleAmbient(
+            entryPoint: _eagleEntryPointFor(size),
+            perchPoint: _eaglePerchPointFor(size),
+            exitPoint: _eagleExitPointFor(size),
+            size: _eagleSizeFor(size),
+            cycleInterval: _eagleCycleInterval,
+            perchDuration: 1.8,
+            initialDelay: 0.9,
+            flyInDuration: 1.8,
+            landingDuration: 0.72,
+            takeoffDuration: 1.1,
+            flyOutDuration: 1.45,
+          ),
+        ],
+      );
+
+  static const Size _backgroundSourceSize = Size(1672, 941);
+  static const Offset _eaglePerchSourceRatio = Offset(0.078, 0.445);
+  static const double _eagleCycleInterval = 10.0;
+
+  final Vector2 debugEagleEntryPoint;
+  final Vector2 debugEaglePerchPoint;
+  final Vector2 debugEagleExitPoint;
+  final Vector2 debugEagleSize;
+  final double debugEagleCycleInterval;
+
+  static Vector2 _eagleEntryPointFor(Vector2 viewportSize) {
+    final eagleSize = _eagleSizeFor(viewportSize);
+    final perchPoint = _eaglePerchPointFor(viewportSize);
+
+    return Vector2(
+      -eagleSize.x * 1.4,
+      perchPoint.y - math.min(viewportSize.x, viewportSize.y) * 0.12,
+    );
+  }
+
+  static Vector2 _eaglePerchPointFor(Vector2 viewportSize) {
+    return _coverPointFromSourceRatio(viewportSize, _eaglePerchSourceRatio);
+  }
+
+  static Vector2 _eagleExitPointFor(Vector2 viewportSize) {
+    final eagleSize = _eagleSizeFor(viewportSize);
+    final perchPoint = _eaglePerchPointFor(viewportSize);
+
+    return Vector2(
+      -eagleSize.x * 1.6,
+      perchPoint.y - math.min(viewportSize.x, viewportSize.y) * 0.20,
+    );
+  }
+
+  static Vector2 _coverPointFromSourceRatio(
+    Vector2 viewportSize,
+    Offset sourceRatio,
+  ) {
+    final scale = math.max(
+      viewportSize.x / _backgroundSourceSize.width,
+      viewportSize.y / _backgroundSourceSize.height,
+    );
+    final drawnWidth = _backgroundSourceSize.width * scale;
+    final drawnHeight = _backgroundSourceSize.height * scale;
+    final offsetX = (viewportSize.x - drawnWidth) / 2;
+    final offsetY = (viewportSize.y - drawnHeight) / 2;
+
+    return Vector2(
+      offsetX + _backgroundSourceSize.width * sourceRatio.dx * scale,
+      offsetY + _backgroundSourceSize.height * sourceRatio.dy * scale,
+    );
+  }
+
+  static Vector2 _eagleSizeFor(Vector2 viewportSize) {
+    final side = (math.min(viewportSize.x, viewportSize.y) * 0.10)
+        .clamp(52.0, 68.0)
+        .toDouble();
+
+    return Vector2.all(side);
+  }
+}
+
 abstract class LevelAmbientEffectComponent extends PositionComponent {
-  LevelAmbientEffectComponent({required Vector2 size})
+  LevelAmbientEffectComponent({required Vector2 size, super.children})
     : super(size: size, priority: ambientPriority);
 
   static const int ambientPriority = -900;
@@ -548,23 +643,30 @@ class CaveDripsAmbientEffect extends LevelAmbientEffectComponent {
   static const double fadeInDuration = 0.10;
   static const double fadeOutDuration = 0.35;
   static const int particleCount = 3;
-  static const double fireFlickerMultiplier = 4.0;
   static const Offset startPositionNormalized = Offset(0.22, 0.18);
   static const Offset endPositionNormalized = Offset(0.22, 0.38);
-  static const double _caveBackgroundWidth = 1672;
-  static const double _caveBackgroundHeight = 941;
+  static const double _backgroundSourceWidth = 1672;
+  static const double _backgroundSourceHeight = 941;
+  static const Size _backgroundSourceSize = Size(
+    _backgroundSourceWidth,
+    _backgroundSourceHeight,
+  );
   static const Offset _fireBaseSourceNormalized = Offset(
-    1071 / _caveBackgroundWidth,
-    508 / _caveBackgroundHeight,
+    1071 / _backgroundSourceWidth,
+    508 / _backgroundSourceHeight,
+  );
+  static const _FlickeringFirePainter _firePainter = _FlickeringFirePainter(
+    backgroundSourceSize: _backgroundSourceSize,
+    baseSourceNormalized: _fireBaseSourceNormalized,
   );
   static const int _waterDripIndex = 2;
   static const Offset _waterDripStartSourceNormalized = Offset(
-    650 / _caveBackgroundWidth,
-    330 / _caveBackgroundHeight,
+    650 / _backgroundSourceWidth,
+    330 / _backgroundSourceHeight,
   );
   static const Offset _waterDripEndSourceNormalized = Offset(
-    650 / _caveBackgroundWidth,
-    640 / _caveBackgroundHeight,
+    650 / _backgroundSourceWidth,
+    640 / _backgroundSourceHeight,
   );
 
   static const List<Offset> _dripStartPositions = <Offset>[
@@ -614,7 +716,7 @@ class CaveDripsAmbientEffect extends LevelAmbientEffectComponent {
       return;
     }
 
-    _drawCaveFire(canvas);
+    _firePainter.draw(canvas, viewportSize: size, elapsed: _fireElapsed);
 
     for (var index = 0; index < _drips.length; index += 1) {
       final drip = _drips[index];
@@ -624,10 +726,18 @@ class CaveDripsAmbientEffect extends LevelAmbientEffectComponent {
 
       final p = (drip.elapsed / duration).clamp(0.0, 1.0).toDouble();
       final start = index == _waterDripIndex
-          ? _pointFromSourceImage(_waterDripStartSourceNormalized)
+          ? _pointFromSourceImage(
+              viewportSize: size,
+              backgroundSourceSize: _backgroundSourceSize,
+              normalized: _waterDripStartSourceNormalized,
+            )
           : pointFromNormalized(_dripStartPositions[index]);
       final end = index == _waterDripIndex
-          ? _pointFromSourceImage(_waterDripEndSourceNormalized)
+          ? _pointFromSourceImage(
+              viewportSize: size,
+              backgroundSourceSize: _backgroundSourceSize,
+              normalized: _waterDripEndSourceNormalized,
+            )
           : pointFromNormalized(
               Offset(_dripStartPositions[index].dx, _groundYNormalized),
             );
@@ -669,204 +779,6 @@ class CaveDripsAmbientEffect extends LevelAmbientEffectComponent {
 
   double _randomPause() {
     return minPause + _random.nextDouble() * (maxPause - minPause);
-  }
-
-  void _drawCaveFire(Canvas canvas) {
-    final base = _pointFromSourceImage(_fireBaseSourceNormalized);
-    final margin = viewportUnit * 0.06;
-    if (base.dx < -margin ||
-        base.dx > size.x + margin ||
-        base.dy < -margin ||
-        base.dy > size.y + margin) {
-      return;
-    }
-
-    final baseFlicker =
-        math.sin(_fireElapsed * 8.6) * 0.104 +
-        math.sin(_fireElapsed * 13.4 + 1.2) * 0.065;
-    final flicker = baseFlicker * fireFlickerMultiplier;
-    final sway = math.sin(_fireElapsed * 5.2) * viewportUnit * 0.00072;
-    final flameSize = viewportUnit * 0.0078;
-    final glowRadius = flameSize * (2.35 + flicker * 2.0);
-    final glowCenter = base + Offset(sway * 0.30, -flameSize * 0.85);
-
-    final glowPaint = Paint()
-      ..shader = RadialGradient(
-        colors: <Color>[
-          const Color(0xFFFFF0A6).withValues(alpha: 0.26),
-          const Color(0xFFFFA53D).withValues(alpha: 0.12),
-          const Color(0xFFFF7A24).withValues(alpha: 0),
-        ],
-      ).createShader(Rect.fromCircle(center: glowCenter, radius: glowRadius))
-      ..blendMode = BlendMode.plus;
-    canvas.drawCircle(glowCenter, glowRadius, glowPaint);
-
-    final outerHeight = flameSize * (1.55 + flicker);
-    final outerWidth = flameSize * (0.78 - flicker * 0.25);
-    final outerPaint = Paint()
-      ..color = const Color(0xFFFF9B2F).withValues(alpha: 0.62)
-      ..style = PaintingStyle.fill
-      ..blendMode = BlendMode.plus;
-    canvas.drawPath(
-      _flamePath(base, outerWidth, outerHeight, sway),
-      outerPaint,
-    );
-
-    final innerPaint = Paint()
-      ..color = const Color(0xFFFFF2B0).withValues(alpha: 0.78)
-      ..style = PaintingStyle.fill
-      ..blendMode = BlendMode.plus;
-    canvas.drawPath(
-      _flamePath(
-        base + Offset(sway * 0.18, -outerHeight * 0.05),
-        outerWidth * 0.46,
-        outerHeight * 0.68,
-        -sway * 0.35,
-      ),
-      innerPaint,
-    );
-  }
-
-  Offset _pointFromSourceImage(Offset normalized) {
-    final scale = math.max(
-      size.x / _caveBackgroundWidth,
-      size.y / _caveBackgroundHeight,
-    );
-    final fittedWidth = _caveBackgroundWidth * scale;
-    final fittedHeight = _caveBackgroundHeight * scale;
-    final offset = Offset(
-      (size.x - fittedWidth) * 0.5,
-      (size.y - fittedHeight) * 0.5,
-    );
-
-    return offset +
-        Offset(
-          normalized.dx * _caveBackgroundWidth * scale,
-          normalized.dy * _caveBackgroundHeight * scale,
-        );
-  }
-
-  Path _flamePath(Offset base, double width, double height, double sway) {
-    return Path()
-      ..moveTo(base.dx, base.dy)
-      ..cubicTo(
-        base.dx - width * 0.85,
-        base.dy - height * 0.28,
-        base.dx - width * 0.32 + sway,
-        base.dy - height * 0.78,
-        base.dx + sway,
-        base.dy - height,
-      )
-      ..cubicTo(
-        base.dx + width * 0.46 + sway,
-        base.dy - height * 0.76,
-        base.dx + width * 0.84,
-        base.dy - height * 0.28,
-        base.dx,
-        base.dy,
-      );
-  }
-}
-
-class SnowValleyWindAmbientEffect extends _CycledAmbientEffectComponent {
-  SnowValleyWindAmbientEffect({required super.size})
-    : super(randomSeed: 6006, initialPause: 7.0);
-
-  static const double duration = 6.8;
-  static const double minPause = 12.0;
-  static const double maxPause = 30.0;
-  static const double opacity = 0.24;
-  static const double effectScale = 0.010;
-  static const double speed = 1.0;
-  static const double fadeInDuration = 1.2;
-  static const double fadeOutDuration = 1.9;
-  static const int particleCount = 24;
-  static const Offset startPositionNormalized = Offset(-0.08, 0.55);
-  static const Offset endPositionNormalized = Offset(1.08, 0.50);
-
-  static const List<_SnowParticleSpec> _particles = <_SnowParticleSpec>[
-    _SnowParticleSpec(offset: 0.00, yOffset: -0.20, size: 0.75, wave: 0.0),
-    _SnowParticleSpec(offset: 0.04, yOffset: 0.18, size: 0.52, wave: 1.3),
-    _SnowParticleSpec(offset: 0.08, yOffset: -0.04, size: 0.60, wave: 2.4),
-    _SnowParticleSpec(offset: 0.12, yOffset: 0.28, size: 0.48, wave: 3.2),
-    _SnowParticleSpec(offset: 0.16, yOffset: -0.32, size: 0.70, wave: 4.0),
-    _SnowParticleSpec(offset: 0.20, yOffset: 0.02, size: 0.56, wave: 5.1),
-    _SnowParticleSpec(offset: 0.24, yOffset: 0.22, size: 0.64, wave: 6.2),
-    _SnowParticleSpec(offset: 0.28, yOffset: -0.15, size: 0.44, wave: 7.0),
-    _SnowParticleSpec(offset: 0.32, yOffset: 0.36, size: 0.62, wave: 8.5),
-    _SnowParticleSpec(offset: 0.36, yOffset: -0.28, size: 0.54, wave: 9.1),
-    _SnowParticleSpec(offset: 0.40, yOffset: 0.08, size: 0.76, wave: 10.4),
-    _SnowParticleSpec(offset: 0.44, yOffset: -0.06, size: 0.50, wave: 11.2),
-    _SnowParticleSpec(offset: 0.48, yOffset: 0.30, size: 0.46, wave: 12.3),
-    _SnowParticleSpec(offset: 0.52, yOffset: -0.23, size: 0.68, wave: 13.5),
-    _SnowParticleSpec(offset: 0.56, yOffset: 0.13, size: 0.58, wave: 14.6),
-    _SnowParticleSpec(offset: 0.60, yOffset: 0.35, size: 0.42, wave: 15.8),
-    _SnowParticleSpec(offset: 0.64, yOffset: -0.18, size: 0.64, wave: 16.7),
-    _SnowParticleSpec(offset: 0.68, yOffset: 0.04, size: 0.54, wave: 17.4),
-    _SnowParticleSpec(offset: 0.72, yOffset: 0.24, size: 0.60, wave: 18.1),
-    _SnowParticleSpec(offset: 0.76, yOffset: -0.34, size: 0.46, wave: 19.2),
-    _SnowParticleSpec(offset: 0.80, yOffset: 0.16, size: 0.72, wave: 20.0),
-    _SnowParticleSpec(offset: 0.84, yOffset: -0.10, size: 0.50, wave: 21.4),
-    _SnowParticleSpec(offset: 0.88, yOffset: 0.32, size: 0.56, wave: 22.5),
-    _SnowParticleSpec(offset: 0.92, yOffset: -0.25, size: 0.48, wave: 23.6),
-  ];
-
-  @override
-  double get cycleDuration => SnowValleyWindAmbientEffect.duration;
-
-  @override
-  double get minimumPause => SnowValleyWindAmbientEffect.minPause;
-
-  @override
-  double get maximumPause => SnowValleyWindAmbientEffect.maxPause;
-
-  @override
-  void render(Canvas canvas) {
-    super.render(canvas);
-
-    if (!isAnimating || size.x <= 0 || size.y <= 0) {
-      return;
-    }
-
-    final fade = _fadeFor(
-      progress,
-      duration: duration,
-      fadeInDuration: fadeInDuration,
-      fadeOutDuration: fadeOutDuration,
-    );
-    if (fade <= 0) {
-      return;
-    }
-
-    final baseStart = pointFromNormalized(startPositionNormalized);
-    final baseEnd = pointFromNormalized(endPositionNormalized);
-    final particlePaint = Paint()
-      ..color = const Color(0xFFFFFFFF).withValues(alpha: opacity * fade)
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = math.max(0.4, viewportUnit * 0.0010);
-
-    for (final particle in _particles) {
-      final t = ((progress * 1.18) + particle.offset - 0.10)
-          .clamp(0.0, 1.0)
-          .toDouble();
-      final wave =
-          math.sin((progress * 2.2 + particle.wave) * math.pi) *
-          viewportUnit *
-          0.012;
-      final center =
-          _lerpOffset(baseStart, baseEnd, _easeInOutSine(t)) +
-          Offset(0, particle.yOffset * viewportUnit * 0.035 + wave);
-      final length = viewportUnit * effectScale * particle.size;
-      final alpha = opacity * fade * (1 - (t - 0.5).abs() * 0.7);
-      particlePaint.color = const Color(
-        0xFFFFFFFF,
-      ).withValues(alpha: alpha.clamp(0.0, opacity).toDouble());
-      canvas.drawLine(
-        Offset(center.dx - length * 0.6, center.dy),
-        Offset(center.dx + length * 0.6, center.dy - length * 0.10),
-        particlePaint,
-      );
-    }
   }
 }
 
@@ -965,7 +877,7 @@ class MountainPassSnowPlumeEffect extends _CycledAmbientEffectComponent {
 class PolarNightStarsEffect extends LevelAmbientEffectComponent {
   PolarNightStarsEffect({required super.size});
 
-  static const double duration = 1.25;
+  static const double duration = 1.6;
   static const double minPause = 20.0;
   static const double maxPause = 45.0;
   static const double opacity = 0.48;
@@ -974,8 +886,22 @@ class PolarNightStarsEffect extends LevelAmbientEffectComponent {
   static const double fadeInDuration = 0.18;
   static const double fadeOutDuration = 0.55;
   static const int particleCount = 7;
-  static const Offset startPositionNormalized = Offset(0.22, 0.17);
-  static const Offset endPositionNormalized = Offset(0.52, 0.30);
+  static const Offset startPositionNormalized = Offset(0.10, 0.09);
+  static const Offset endPositionNormalized = Offset(0.78, 0.16);
+  static const double _backgroundSourceWidth = 1672;
+  static const double _backgroundSourceHeight = 941;
+  static const Size _backgroundSourceSize = Size(
+    _backgroundSourceWidth,
+    _backgroundSourceHeight,
+  );
+  static const Offset _campfireBaseSourceNormalized = Offset(
+    365 / _backgroundSourceWidth,
+    522 / _backgroundSourceHeight,
+  );
+  static const _FlickeringFirePainter _campfirePainter = _FlickeringFirePainter(
+    backgroundSourceSize: _backgroundSourceSize,
+    baseSourceNormalized: _campfireBaseSourceNormalized,
+  );
 
   static const List<_TwinkleSpec> _twinkles = <_TwinkleSpec>[
     _TwinkleSpec(position: Offset(0.12, 0.16), size: 0.50, phase: 0.0),
@@ -989,6 +915,7 @@ class PolarNightStarsEffect extends LevelAmbientEffectComponent {
 
   final math.Random _random = math.Random(8008);
   double _twinkleTime = 0;
+  double _fireElapsed = 0;
   double _shootingElapsed = 0;
   double _pauseRemaining = 6.0;
   bool _isShooting = false;
@@ -997,6 +924,7 @@ class PolarNightStarsEffect extends LevelAmbientEffectComponent {
   void update(double dt) {
     super.update(dt);
     _twinkleTime += dt * speed;
+    _fireElapsed += dt;
 
     if (_isShooting) {
       _shootingElapsed += dt * speed;
@@ -1024,6 +952,7 @@ class PolarNightStarsEffect extends LevelAmbientEffectComponent {
     }
 
     _drawTwinkles(canvas);
+    _campfirePainter.draw(canvas, viewportSize: size, elapsed: _fireElapsed);
     if (_isShooting) {
       _drawShootingStar(canvas);
     }
@@ -1057,7 +986,7 @@ class PolarNightStarsEffect extends LevelAmbientEffectComponent {
       pointFromNormalized(endPositionNormalized),
       _easeOutCubic(p),
     );
-    final tailOffset = Offset(-viewportUnit * 0.05, -viewportUnit * 0.022);
+    final tailOffset = Offset(-viewportUnit * 0.075, -viewportUnit * 0.020);
     final paint = Paint()
       ..color = const Color(0xFFFFFFFF).withValues(alpha: opacity * fade)
       ..strokeCap = StrokeCap.round
@@ -1080,27 +1009,25 @@ class PolarNightStarsEffect extends LevelAmbientEffectComponent {
   }
 }
 
-class AuroraWaveEffect extends LevelAmbientEffectComponent {
-  AuroraWaveEffect({required super.size});
+class NorthernOceanBlizzardEffect extends LevelAmbientEffectComponent {
+  NorthernOceanBlizzardEffect({required super.size}) {
+    priority = 25;
+  }
 
-  static const double duration = 18.0;
-  static const double minPause = 0.0;
-  static const double maxPause = 0.0;
-  static const double opacity = 0.115;
-  static const double effectScale = 1.0;
-  static const double speed = 0.055;
-  static const double fadeInDuration = 3.0;
-  static const double fadeOutDuration = 3.0;
-  static const int particleCount = 0;
-  static const Offset startPositionNormalized = Offset(0.12, 0.20);
-  static const Offset endPositionNormalized = Offset(0.92, 0.34);
+  static const int blizzardParticleCount = 179;
+  static const double snowfallSpeedMultiplier = 1.55;
+  static const Color _snowBlue = Color(0xFFE9F8FF);
+  static const Color _snowWhite = Color(0xFFF7FDFF);
 
-  double _elapsed = 0;
+  final List<_BlizzardFlakeSpec> _blizzardFlakes = _buildBlizzardFlakes();
+  double _blizzardElapsed = 0;
+
+  int get debugParticleCount => _blizzardFlakes.length;
 
   @override
   void update(double dt) {
     super.update(dt);
-    _elapsed = (_elapsed + dt * speed) % duration;
+    _blizzardElapsed += dt;
   }
 
   @override
@@ -1111,144 +1038,227 @@ class AuroraWaveEffect extends LevelAmbientEffectComponent {
       return;
     }
 
-    final p = _elapsed / duration;
-    final pulse = 0.55 + math.sin(p * math.pi * 2) * 0.18;
-    final drift = math.sin(p * math.pi * 2) * viewportUnit * 0.018;
-
-    _drawAuroraBand(
-      canvas,
-      verticalOffset: drift,
-      alpha: opacity * pulse,
-      color: const Color(0xFF77F2B6),
-      phase: p,
-      thickness: viewportUnit * 0.090,
-    );
-    _drawAuroraBand(
-      canvas,
-      verticalOffset: -drift * 0.6 + viewportUnit * 0.025,
-      alpha: opacity * pulse * 0.56,
-      color: const Color(0xFF85D7FF),
-      phase: p + 0.32,
-      thickness: viewportUnit * 0.065,
-    );
+    _drawSnowfall(canvas);
   }
 
-  void _drawAuroraBand(
-    Canvas canvas, {
-    required double verticalOffset,
-    required double alpha,
-    required Color color,
-    required double phase,
-    required double thickness,
-  }) {
-    final start = pointFromNormalized(startPositionNormalized);
-    final end = pointFromNormalized(endPositionNormalized);
-    final waveA = math.sin((phase + 0.10) * math.pi * 2) * viewportUnit * 0.025;
-    final waveB = math.sin((phase + 0.45) * math.pi * 2) * viewportUnit * 0.028;
+  static List<_BlizzardFlakeSpec> _buildBlizzardFlakes() {
+    final random = math.Random(20260524);
+    final flakes = <_BlizzardFlakeSpec>[];
 
-    final top = Path()
-      ..moveTo(start.dx, start.dy + verticalOffset)
-      ..cubicTo(
-        size.x * 0.34,
-        size.y * 0.13 + verticalOffset + waveA,
-        size.x * 0.56,
-        size.y * 0.38 + verticalOffset - waveB,
-        end.dx,
-        end.dy + verticalOffset,
-      )
-      ..lineTo(end.dx, end.dy + verticalOffset + thickness)
-      ..cubicTo(
-        size.x * 0.58,
-        size.y * 0.39 + verticalOffset + thickness - waveA,
-        size.x * 0.30,
-        size.y * 0.20 + verticalOffset + thickness + waveB,
-        start.dx,
-        start.dy + verticalOffset + thickness * 0.55,
-      )
-      ..close();
-    final paint = Paint()
-      ..color = color.withValues(alpha: alpha)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawPath(top, paint);
-  }
-}
-
-class NorthernOceanSplashEffect extends _CycledAmbientEffectComponent {
-  NorthernOceanSplashEffect({required super.size})
-    : super(randomSeed: 1010, initialPause: 10.0);
-
-  static const double duration = 3.2;
-  static const double minPause = 15.0;
-  static const double maxPause = 35.0;
-  static const double opacity = 0.33;
-  static const double effectScale = 0.019;
-  static const double speed = 1.0;
-  static const double fadeInDuration = 0.22;
-  static const double fadeOutDuration = 1.25;
-  static const int particleCount = 5;
-  static const Offset startPositionNormalized = Offset(0.64, 0.43);
-  static const Offset endPositionNormalized = Offset(0.64, 0.43);
-
-  @override
-  double get cycleDuration => NorthernOceanSplashEffect.duration;
-
-  @override
-  double get minimumPause => NorthernOceanSplashEffect.minPause;
-
-  @override
-  double get maximumPause => NorthernOceanSplashEffect.maxPause;
-
-  @override
-  void render(Canvas canvas) {
-    super.render(canvas);
-
-    if (!isAnimating || size.x <= 0 || size.y <= 0) {
-      return;
-    }
-
-    final p = progress;
-    final fade = _fadeFor(
-      p,
-      duration: duration,
-      fadeInDuration: fadeInDuration,
-      fadeOutDuration: fadeOutDuration,
-    );
-    if (fade <= 0) {
-      return;
-    }
-
-    final center = pointFromNormalized(startPositionNormalized);
-    final splashPaint = Paint()
-      ..color = const Color(0xFFE7FAFF).withValues(alpha: opacity * fade)
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = math.max(0.6, viewportUnit * 0.0013);
-
-    if (p < 0.34) {
-      final burst = _easeOutCubic(p / 0.34);
-      final height = viewportUnit * effectScale * (0.7 + burst * 0.9);
-      for (var i = -2; i <= 2; i += 1) {
-        final spread = i * viewportUnit * effectScale * 0.36;
-        canvas.drawLine(
-          center + Offset(spread * 0.25, 0),
-          center +
-              Offset(spread, -height * (1 - i.abs() * 0.12)) +
-              Offset(0, height * 0.18 * p),
-          splashPaint,
+    void addLayer({
+      required int count,
+      required int layer,
+      required double minRadius,
+      required double maxRadius,
+      required double minSpeed,
+      required double maxSpeed,
+      required double minOpacity,
+      required double maxOpacity,
+      required double minDrift,
+      required double maxDrift,
+    }) {
+      for (var index = 0; index < count; index += 1) {
+        flakes.add(
+          _BlizzardFlakeSpec(
+            layer: layer,
+            x: random.nextDouble(),
+            y: random.nextDouble(),
+            phase: random.nextDouble(),
+            radius: minRadius + random.nextDouble() * (maxRadius - minRadius),
+            speed: minSpeed + random.nextDouble() * (maxSpeed - minSpeed),
+            opacity:
+                minOpacity + random.nextDouble() * (maxOpacity - minOpacity),
+            drift: minDrift + random.nextDouble() * (maxDrift - minDrift),
+          ),
         );
       }
     }
 
-    final rippleProgress = p < 0.24
-        ? 0.0
-        : ((p - 0.24) / 0.76).clamp(0.0, 1.0).toDouble();
-    _drawRipples(
-      canvas,
-      center,
-      viewportUnit * 0.034,
-      rippleProgress,
-      opacity * fade * (1 - rippleProgress * 0.62),
+    addLayer(
+      count: 91,
+      layer: 0,
+      minRadius: 0.75,
+      maxRadius: 1.45,
+      minSpeed: 0.065,
+      maxSpeed: 0.117,
+      minOpacity: 0.2,
+      maxOpacity: 0.42,
+      minDrift: 2,
+      maxDrift: 9,
     );
+    addLayer(
+      count: 62,
+      layer: 1,
+      minRadius: 1.25,
+      maxRadius: 2.4,
+      minSpeed: 0.117,
+      maxSpeed: 0.208,
+      minOpacity: 0.34,
+      maxOpacity: 0.66,
+      minDrift: 8,
+      maxDrift: 22,
+    );
+    addLayer(
+      count: 26,
+      layer: 2,
+      minRadius: 2.15,
+      maxRadius: 4.2,
+      minSpeed: 0.182,
+      maxSpeed: 0.325,
+      minOpacity: 0.42,
+      maxOpacity: 0.76,
+      minDrift: 14,
+      maxDrift: 34,
+    );
+
+    assert(flakes.length == blizzardParticleCount);
+    return flakes;
+  }
+
+  void _drawSnowfall(Canvas canvas) {
+    final canvasSize = Size(size.x, size.y);
+    final visibleCounts = _visibleLayerCounts(canvasSize);
+    final wind = math.sin(_blizzardElapsed * 0.7) * 7;
+    var farCount = 0;
+    var middleCount = 0;
+    var frontCount = 0;
+
+    for (final flake in _blizzardFlakes) {
+      if (!_shouldDrawFlake(
+        flake,
+        visibleCounts,
+        farCount,
+        middleCount,
+        frontCount,
+      )) {
+        continue;
+      }
+
+      switch (flake.layer) {
+        case 0:
+          farCount += 1;
+        case 1:
+          middleCount += 1;
+        case _:
+          frontCount += 1;
+      }
+
+      final layerWeight = _layerWeight(flake.layer);
+      final fall =
+          (flake.y + _blizzardElapsed * flake.speed * snowfallSpeedMultiplier) %
+          1;
+      final sway = math.sin(
+        _blizzardElapsed * math.pi * 2 * (0.18 + layerWeight * 0.12) +
+            flake.phase,
+      );
+      final diagonalDrift = _blizzardElapsed * flake.drift * 0.1 * layerWeight;
+      final x = _wrapHorizontal(
+        flake.x * canvasSize.width +
+            sway * flake.drift +
+            wind * layerWeight +
+            diagonalDrift,
+        canvasSize.width,
+      );
+      final y =
+          fall * (canvasSize.height + flake.radius * 8) - flake.radius * 4;
+
+      _paintFlake(canvas, Offset(x, y), flake);
+    }
+  }
+
+  _SnowLayerCounts _visibleLayerCounts(Size size) {
+    var farTotal = 0;
+    var middleTotal = 0;
+    var frontTotal = 0;
+
+    for (final flake in _blizzardFlakes) {
+      switch (flake.layer) {
+        case 0:
+          farTotal += 1;
+        case 1:
+          middleTotal += 1;
+        case _:
+          frontTotal += 1;
+      }
+    }
+
+    return _SnowLayerCounts(
+      far: _scaledCount(farTotal, size),
+      middle: _scaledCount(middleTotal, size),
+      front: _scaledCount(frontTotal, size),
+    );
+  }
+
+  int _scaledCount(int count, Size size) {
+    final shortestSide = math.min(size.width, size.height);
+    final scale = shortestSide < 520
+        ? 0.78
+        : shortestSide < 760
+        ? 0.88
+        : 1.0;
+
+    return (count * scale).round().clamp(0, count);
+  }
+
+  bool _shouldDrawFlake(
+    _BlizzardFlakeSpec flake,
+    _SnowLayerCounts visibleCounts,
+    int farCount,
+    int middleCount,
+    int frontCount,
+  ) {
+    return switch (flake.layer) {
+      0 => farCount < visibleCounts.far,
+      1 => middleCount < visibleCounts.middle,
+      _ => frontCount < visibleCounts.front,
+    };
+  }
+
+  double _layerWeight(int layer) {
+    return switch (layer) {
+      0 => 0.34,
+      1 => 0.72,
+      _ => 1.0,
+    };
+  }
+
+  double _wrapHorizontal(double value, double width) {
+    final margin = 40.0;
+    final wrapped = (value + margin) % (width + margin * 2);
+    return wrapped - margin;
+  }
+
+  void _paintFlake(Canvas canvas, Offset center, _BlizzardFlakeSpec flake) {
+    final tint = flake.layer == 2 ? _snowWhite : _snowBlue;
+    final glowPaint = Paint()
+      ..color = tint.withValues(alpha: flake.opacity * 0.34)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, flake.radius * 0.9);
+    final corePaint = Paint()
+      ..color = tint.withValues(alpha: flake.opacity)
+      ..isAntiAlias = true;
+
+    canvas.drawCircle(center, flake.radius * 1.85, glowPaint);
+    canvas.drawCircle(center, flake.radius, corePaint);
+
+    if (flake.layer == 2) {
+      final highlightPaint = Paint()
+        ..color = _snowWhite.withValues(alpha: flake.opacity * 0.28)
+        ..strokeWidth = 0.75
+        ..strokeCap = StrokeCap.round
+        ..isAntiAlias = true;
+      final sparkleRadius = flake.radius * 1.35;
+
+      canvas.drawLine(
+        center.translate(-sparkleRadius, 0),
+        center.translate(sparkleRadius, 0),
+        highlightPaint,
+      );
+      canvas.drawLine(
+        center.translate(0, -sparkleRadius),
+        center.translate(0, sparkleRadius),
+        highlightPaint,
+      );
+    }
   }
 }
 
@@ -1290,6 +1300,40 @@ class _SnowParticleSpec {
   final double wave;
 }
 
+class _BlizzardFlakeSpec {
+  const _BlizzardFlakeSpec({
+    required this.layer,
+    required this.x,
+    required this.y,
+    required this.phase,
+    required this.radius,
+    required this.speed,
+    required this.opacity,
+    required this.drift,
+  });
+
+  final int layer;
+  final double x;
+  final double y;
+  final double phase;
+  final double radius;
+  final double speed;
+  final double opacity;
+  final double drift;
+}
+
+class _SnowLayerCounts {
+  const _SnowLayerCounts({
+    required this.far,
+    required this.middle,
+    required this.front,
+  });
+
+  final int far;
+  final int middle;
+  final int front;
+}
+
 class _TwinkleSpec {
   const _TwinkleSpec({
     required this.position,
@@ -1300,6 +1344,128 @@ class _TwinkleSpec {
   final Offset position;
   final double size;
   final double phase;
+}
+
+class _FlickeringFirePainter {
+  const _FlickeringFirePainter({
+    required this.backgroundSourceSize,
+    required this.baseSourceNormalized,
+  });
+
+  static const double _flickerMultiplier = 4.0;
+  static const double _flameScale = 0.0078;
+
+  final Size backgroundSourceSize;
+  final Offset baseSourceNormalized;
+
+  void draw(
+    Canvas canvas, {
+    required Vector2 viewportSize,
+    required double elapsed,
+  }) {
+    final viewportUnit = math.min(viewportSize.x, viewportSize.y);
+    final base = _pointFromSourceImage(
+      viewportSize: viewportSize,
+      backgroundSourceSize: backgroundSourceSize,
+      normalized: baseSourceNormalized,
+    );
+    final margin = viewportUnit * 0.06;
+    if (base.dx < -margin ||
+        base.dx > viewportSize.x + margin ||
+        base.dy < -margin ||
+        base.dy > viewportSize.y + margin) {
+      return;
+    }
+
+    final baseFlicker =
+        math.sin(elapsed * 8.6) * 0.104 +
+        math.sin(elapsed * 13.4 + 1.2) * 0.065;
+    final flicker = baseFlicker * _flickerMultiplier;
+    final sway = math.sin(elapsed * 5.2) * viewportUnit * 0.00072;
+    final flameSize = viewportUnit * _flameScale;
+    final glowRadius = flameSize * (2.35 + flicker * 2.0);
+    final glowCenter = base + Offset(sway * 0.30, -flameSize * 0.85);
+
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        colors: <Color>[
+          const Color(0xFFFFF0A6).withValues(alpha: 0.26),
+          const Color(0xFFFFA53D).withValues(alpha: 0.12),
+          const Color(0xFFFF7A24).withValues(alpha: 0),
+        ],
+      ).createShader(Rect.fromCircle(center: glowCenter, radius: glowRadius))
+      ..blendMode = BlendMode.plus;
+    canvas.drawCircle(glowCenter, glowRadius, glowPaint);
+
+    final outerHeight = flameSize * (1.55 + flicker);
+    final outerWidth = flameSize * (0.78 - flicker * 0.25);
+    final outerPaint = Paint()
+      ..color = const Color(0xFFFF9B2F).withValues(alpha: 0.62)
+      ..style = PaintingStyle.fill
+      ..blendMode = BlendMode.plus;
+    canvas.drawPath(
+      _flamePath(base, outerWidth, outerHeight, sway),
+      outerPaint,
+    );
+
+    final innerPaint = Paint()
+      ..color = const Color(0xFFFFF2B0).withValues(alpha: 0.78)
+      ..style = PaintingStyle.fill
+      ..blendMode = BlendMode.plus;
+    canvas.drawPath(
+      _flamePath(
+        base + Offset(sway * 0.18, -outerHeight * 0.05),
+        outerWidth * 0.46,
+        outerHeight * 0.68,
+        -sway * 0.35,
+      ),
+      innerPaint,
+    );
+  }
+}
+
+Path _flamePath(Offset base, double width, double height, double sway) {
+  return Path()
+    ..moveTo(base.dx, base.dy)
+    ..cubicTo(
+      base.dx - width * 0.85,
+      base.dy - height * 0.28,
+      base.dx - width * 0.32 + sway,
+      base.dy - height * 0.78,
+      base.dx + sway,
+      base.dy - height,
+    )
+    ..cubicTo(
+      base.dx + width * 0.46 + sway,
+      base.dy - height * 0.76,
+      base.dx + width * 0.84,
+      base.dy - height * 0.28,
+      base.dx,
+      base.dy,
+    );
+}
+
+Offset _pointFromSourceImage({
+  required Vector2 viewportSize,
+  required Size backgroundSourceSize,
+  required Offset normalized,
+}) {
+  final scale = math.max(
+    viewportSize.x / backgroundSourceSize.width,
+    viewportSize.y / backgroundSourceSize.height,
+  );
+  final fittedWidth = backgroundSourceSize.width * scale;
+  final fittedHeight = backgroundSourceSize.height * scale;
+  final offset = Offset(
+    (viewportSize.x - fittedWidth) * 0.5,
+    (viewportSize.y - fittedHeight) * 0.5,
+  );
+
+  return offset +
+      Offset(
+        normalized.dx * backgroundSourceSize.width * scale,
+        normalized.dy * backgroundSourceSize.height * scale,
+      );
 }
 
 double _fadeFor(

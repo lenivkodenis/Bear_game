@@ -123,4 +123,42 @@ void main() {
       );
     });
   });
+
+  group('map unlock-all URL toggle', () {
+    test('is on without debugGeometry parameter', () {
+      expect(
+        isLocationMapUnlockAllEnabledForUri(
+          Uri.parse('http://127.0.0.1:8099/?unlockAll=1'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('is on when debugGeometry and unlockAll are enabled', () {
+      expect(
+        isLocationMapUnlockAllEnabledForUri(
+          Uri.parse('http://127.0.0.1:8099/?debugGeometry=1&unlockAll=1'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('is on when unlockAll appears inside hash route', () {
+      expect(
+        isLocationMapUnlockAllEnabledForUri(
+          Uri.parse('http://127.0.0.1:8099/#/map?unlockAll=1'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('ignores other unlockAll values', () {
+      expect(
+        isLocationMapUnlockAllEnabledForUri(
+          Uri.parse('http://127.0.0.1:8099/?debugGeometry=1&unlockAll=0'),
+        ),
+        isFalse,
+      );
+    });
+  });
 }
