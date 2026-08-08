@@ -118,8 +118,10 @@ void main() {
     expect(game.scoreNotifier.value, 0);
   });
 
-  test('score cannot become greater than 100', () async {
-    SharedPreferences.setMockInitialValues({'score': 100});
+  test('score cannot become greater than 1000', () async {
+    SharedPreferences.setMockInitialValues({
+      'score': GameEconomy.maxTotalSnowflakes,
+    });
     final game = await _loadGame(levelId: 1);
     final question = game.currentQuestion!;
 

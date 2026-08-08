@@ -131,6 +131,12 @@ class FamilyRewardService {
     if (rewards.isEmpty) {
       throw ArgumentError('Family reward list cannot be empty.');
     }
+    if (rewards.length > FamilyReward.maxRewardGrades) {
+      throw ArgumentError(
+        'Family reward list cannot contain more than '
+        '${FamilyReward.maxRewardGrades} rewards.',
+      );
+    }
 
     final validatedRewards =
         rewards.map((reward) => reward.validated()).toList()
@@ -144,6 +150,16 @@ class FamilyRewardService {
 
             return left.title.compareTo(right.title);
           });
+    final allocatedSnowflakes = validatedRewards.fold<int>(
+      0,
+      (total, reward) => total + reward.requiredSnowflakes,
+    );
+    if (allocatedSnowflakes > FamilyReward.maxTotalSnowflakes) {
+      throw ArgumentError(
+        'Family rewards cannot allocate more than '
+        '${FamilyReward.maxTotalSnowflakes} snowflakes.',
+      );
+    }
 
     return validatedRewards;
   }

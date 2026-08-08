@@ -10,6 +10,8 @@ class RoundSettings {
   final int wrongAnswerPenalty;
 
   static const fixedRoundQuestionCount = 10;
+  static const maxMistakesLimit = 10;
+  static const maxWrongAnswerPenalty = 9;
 
   static const defaults = RoundSettings(
     roundQuestionCount: fixedRoundQuestionCount,
@@ -39,8 +41,12 @@ class RoundSettings {
   RoundSettings validated() {
     return RoundSettings(
       roundQuestionCount: fixedRoundQuestionCount,
-      maxMistakesPerRound: maxMistakesPerRound.clamp(0, 100).toInt(),
-      wrongAnswerPenalty: wrongAnswerPenalty.clamp(1, 100).toInt(),
+      maxMistakesPerRound: maxMistakesPerRound
+          .clamp(0, maxMistakesLimit)
+          .toInt(),
+      wrongAnswerPenalty: wrongAnswerPenalty
+          .clamp(1, maxWrongAnswerPenalty)
+          .toInt(),
     );
   }
 

@@ -17,6 +17,8 @@ class FamilyReward {
 
   static const defaultDescription =
       'Покажи результат родителям, чтобы получить награду.';
+  static const maxRewardGrades = 10;
+  static const maxTotalSnowflakes = 1000;
 
   static const defaultRewards = <FamilyReward>[
     FamilyReward(
@@ -123,7 +125,9 @@ class FamilyReward {
       throw const FormatException('Family reward title is empty.');
     }
 
-    final normalizedSnowflakes = requiredSnowflakes.clamp(1, 100).toInt();
+    final normalizedSnowflakes = requiredSnowflakes
+        .clamp(1, maxTotalSnowflakes)
+        .toInt();
     return copyWith(
       title: normalizedTitle,
       requiredSnowflakes: normalizedSnowflakes,

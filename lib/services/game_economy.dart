@@ -1,10 +1,12 @@
+import '../models/family_reward.dart';
+
 class GameEconomy {
   const GameEconomy._();
 
   static const int correctAnswerSnowflakes = 1;
   static const int defaultWrongAnswerPenalty = 2;
   static const int maxQuestionsPerRound = 10;
-  static const int maxTotalSnowflakes = 100;
+  static const int maxTotalSnowflakes = FamilyReward.maxTotalSnowflakes;
   static const int maxSnowflakesPerLevel = maxQuestionsPerRound;
 
   static int snowflakesForCorrectAnswer({bool hadWrongAttempt = false}) {

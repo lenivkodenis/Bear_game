@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/family_reward.dart';
 import '../models/game_difficulty.dart';
@@ -269,6 +270,15 @@ class _ParentsScreenState extends State<ParentsScreen> {
                   'Настройте список семейных наград за снежинки. Приложение не выдаёт награды автоматически — ребёнок показывает результат, а решение остаётся за родителями.',
                   style: AppTheme.bodyStyle,
                 ),
+                const SizedBox(height: 14),
+                _buildRewardBudgetStatus(),
+                const SizedBox(height: 10),
+                Text(
+                  'Грейдов наград: ${_rewardDrafts.length} из ${FamilyReward.maxRewardGrades}',
+                  style: AppTheme.bodyStyle.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 18),
                 if (_rewardDrafts.isEmpty)
                   const Text(
@@ -281,6 +291,7 @@ class _ParentsScreenState extends State<ParentsScreen> {
                       draft: draft,
                       canDelete: _rewardDrafts.length > 1,
                       onDelete: () => _deleteRewardDraft(draft),
+                      onChanged: _onRewardDraftChanged,
                     ),
                     const SizedBox(height: 14),
                   ],
@@ -295,9 +306,16 @@ class _ParentsScreenState extends State<ParentsScreen> {
                   const SizedBox(height: 10),
                 ],
                 OutlinedButton.icon(
-                  onPressed: _addRewardDraft,
+                  onPressed:
+                      _rewardDrafts.length >= FamilyReward.maxRewardGrades
+                      ? null
+                      : _addRewardDraft,
                   icon: const Icon(Icons.add_rounded),
-                  label: const Text('Добавить награду'),
+                  label: Text(
+                    _rewardDrafts.length >= FamilyReward.maxRewardGrades
+                        ? 'Максимум ${FamilyReward.maxRewardGrades} наград'
+                        : 'Добавить награду',
+                  ),
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -371,7 +389,12 @@ class _ParentsScreenState extends State<ParentsScreen> {
                   ),
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.next,
-                  validator: _requiredNonNegativeNumber,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(2),
+                  ],
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  validator: _maxMistakesValidator,
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
@@ -381,7 +404,12 @@ class _ParentsScreenState extends State<ParentsScreen> {
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
-                  validator: _requiredPositiveNumber,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(1),
+                  ],
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  validator: _wrongAnswerPenaltyValidator,
                 ),
                 const SizedBox(height: 18),
                 FilledButton(
@@ -441,6 +469,11 @@ class _ParentsScreenState extends State<ParentsScreen> {
     }
 
     if (!_rewardFormKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_allocatedRewardSnowflakes > FamilyReward.maxTotalSnowflakes) {
+      setState(() => _rewardError = _rewardLimitExceededMessage);
       return;
     }
 
@@ -532,6 +565,14 @@ class _ParentsScreenState extends State<ParentsScreen> {
   }
 
   void _addRewardDraft() {
+    if (_rewardDrafts.length >= FamilyReward.maxRewardGrades) {
+      setState(() {
+        _rewardError =
+            'Можно добавить не более ${FamilyReward.maxRewardGrades} грейдов наград.';
+      });
+      return;
+    }
+
     setState(() {
       _rewardError = null;
       _rewardDrafts.add(
@@ -550,6 +591,10 @@ class _ParentsScreenState extends State<ParentsScreen> {
       _rewardDrafts.remove(draft);
       draft.dispose();
     });
+  }
+
+  void _onRewardDraftChanged() {
+    setState(() => _rewardError = null);
   }
 
   void _setRewardDrafts(List<FamilyReward> rewards) {
@@ -574,19 +619,85 @@ class _ParentsScreenState extends State<ParentsScreen> {
     _wrongAnswerPenaltyController.text = settings.wrongAnswerPenalty.toString();
   }
 
-  String? _requiredPositiveNumber(String? value) {
+  int get _allocatedRewardSnowflakes => _rewardDrafts.fold<int>(
+    0,
+    (total, draft) =>
+        total + (int.tryParse(draft.snowflakesController.text) ?? 0),
+  );
+
+  String get _rewardLimitExceededMessage =>
+      'Распределение наград превышает максимальное количество снежинок, '
+      'возможных в игре — ${FamilyReward.maxTotalSnowflakes}.';
+
+  Widget _buildRewardBudgetStatus() {
+    final allocated = _allocatedRewardSnowflakes;
+    final remaining = FamilyReward.maxTotalSnowflakes - allocated;
+    final exceedsLimit = remaining < 0;
+    final color = exceedsLimit
+        ? Theme.of(context).colorScheme.error
+        : AppTheme.softBlue;
+    final statusText = switch (remaining) {
+      < 0 => '$_rewardLimitExceededMessage Уменьшите сумму на ${-remaining}.',
+      0 => 'Все ${FamilyReward.maxTotalSnowflakes} снежинок распределены.',
+      1 => 'Осталась 1 снежинка.',
+      _ => 'Осталось $remaining ${_snowflakeWord(remaining)}.',
+    };
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.55)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Распределено: $allocated из ${FamilyReward.maxTotalSnowflakes}',
+              style: TextStyle(color: color, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              statusText,
+              style: TextStyle(color: color, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _snowflakeWord(int value) {
+    final modulo100 = value % 100;
+    final modulo10 = value % 10;
+    if (modulo100 >= 11 && modulo100 <= 14) {
+      return 'снежинок';
+    }
+    if (modulo10 >= 2 && modulo10 <= 4) {
+      return 'снежинки';
+    }
+    return 'снежинок';
+  }
+
+  String? _wrongAnswerPenaltyValidator(String? value) {
     final number = int.tryParse(value ?? '');
-    if (number == null || number < 1 || number > 100) {
-      return 'Введите число от 1 до 100';
+    if (number == null ||
+        number < 1 ||
+        number > RoundSettings.maxWrongAnswerPenalty) {
+      return 'Введите число от 1 до ${RoundSettings.maxWrongAnswerPenalty}';
     }
 
     return null;
   }
 
-  String? _requiredNonNegativeNumber(String? value) {
+  String? _maxMistakesValidator(String? value) {
     final number = int.tryParse(value ?? '');
-    if (number == null || number < 0 || number > 100) {
-      return 'Введите число от 0 до 100';
+    if (number == null ||
+        number < 0 ||
+        number > RoundSettings.maxMistakesLimit) {
+      return 'Введите число от 0 до ${RoundSettings.maxMistakesLimit}';
     }
 
     return null;
@@ -598,62 +709,101 @@ class _RewardEditorRow extends StatelessWidget {
     required this.draft,
     required this.canDelete,
     required this.onDelete,
+    required this.onChanged,
   });
 
   final _RewardDraft draft;
   final bool canDelete;
   final VoidCallback onDelete;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 96,
-          child: TextFormField(
-            controller: draft.snowflakesController,
-            decoration: const InputDecoration(
-              labelText: 'Снежинки',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.next,
-            validator: (value) {
-              final snowflakes = int.tryParse(value ?? '');
-              if (snowflakes == null || snowflakes < 1 || snowflakes > 100) {
-                return '1-100';
-              }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 420) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildSnowflakesField()),
+                  const SizedBox(width: 8),
+                  _buildDeleteButton(),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _buildTitleField(),
+            ],
+          );
+        }
 
-              return null;
-            },
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: TextFormField(
-            controller: draft.titleController,
-            decoration: const InputDecoration(
-              labelText: 'Текст награды',
-              border: OutlineInputBorder(),
-            ),
-            textInputAction: TextInputAction.next,
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Введите текст награды';
-              }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(width: 120, child: _buildSnowflakesField()),
+            const SizedBox(width: 10),
+            Expanded(child: _buildTitleField()),
+            const SizedBox(width: 8),
+            _buildDeleteButton(),
+          ],
+        );
+      },
+    );
+  }
 
-              return null;
-            },
-          ),
-        ),
-        const SizedBox(width: 8),
-        IconButton.filledTonal(
-          onPressed: canDelete ? onDelete : null,
-          icon: const Icon(Icons.delete_outline_rounded),
-          tooltip: 'Удалить награду',
-        ),
+  Widget _buildSnowflakesField() {
+    return TextFormField(
+      controller: draft.snowflakesController,
+      decoration: const InputDecoration(
+        labelText: 'Снежинки',
+        border: OutlineInputBorder(),
+      ),
+      keyboardType: TextInputType.number,
+      textInputAction: TextInputAction.next,
+      inputFormatters: [
+        FilteringTextInputFormatter.digitsOnly,
+        LengthLimitingTextInputFormatter(4),
       ],
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      onChanged: (_) => onChanged(),
+      validator: (value) {
+        final snowflakes = int.tryParse(value ?? '');
+        if (snowflakes == null ||
+            snowflakes < 1 ||
+            snowflakes > FamilyReward.maxTotalSnowflakes) {
+          return '1–${FamilyReward.maxTotalSnowflakes}';
+        }
+
+        return null;
+      },
+    );
+  }
+
+  Widget _buildTitleField() {
+    return TextFormField(
+      controller: draft.titleController,
+      decoration: const InputDecoration(
+        labelText: 'Текст награды',
+        border: OutlineInputBorder(),
+      ),
+      textInputAction: TextInputAction.next,
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return 'Введите текст награды';
+        }
+
+        return null;
+      },
+    );
+  }
+
+  Widget _buildDeleteButton() {
+    return IconButton.filledTonal(
+      onPressed: canDelete ? onDelete : null,
+      icon: const Icon(Icons.delete_outline_rounded),
+      tooltip: 'Удалить награду',
     );
   }
 }

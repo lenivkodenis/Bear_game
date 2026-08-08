@@ -1,5 +1,6 @@
 import 'package:bear_game/models/family_reward.dart';
 import 'package:bear_game/services/family_reward_service.dart';
+import 'package:bear_game/services/game_economy.dart';
 import 'package:bear_game/services/progress_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -171,5 +172,72 @@ void main() {
     expect(rewards.map((reward) => reward.toJson()), [
       for (final reward in FamilyReward.defaultRewards) reward.toJson(),
     ]);
+  });
+
+  test('family reward limit matches the maximum game balance', () {
+    expect(FamilyReward.maxTotalSnowflakes, GameEconomy.maxTotalSnowflakes);
+  });
+
+  test('999 snowflakes leave one snowflake in the reward budget', () async {
+    SharedPreferences.setMockInitialValues({});
+    final rewardService = FamilyRewardService();
+
+    await rewardService.saveRewards(const [
+      FamilyReward(
+        id: 'almost_all',
+        title: 'Почти весь бюджет',
+        requiredSnowflakes: 999,
+        description: FamilyReward.defaultDescription,
+        isEnabled: true,
+      ),
+    ]);
+
+    final rewards = await rewardService.loadRewards();
+    final allocated = rewards.fold<int>(
+      0,
+      (total, reward) => total + reward.requiredSnowflakes,
+    );
+
+    expect(FamilyReward.maxTotalSnowflakes - allocated, 1);
+  });
+
+  test('more than ten reward grades are rejected', () async {
+    SharedPreferences.setMockInitialValues({});
+    final rewards = List<FamilyReward>.generate(
+      FamilyReward.maxRewardGrades + 1,
+      (index) => FamilyReward(
+        id: 'reward_$index',
+        title: 'Награда $index',
+        requiredSnowflakes: 1,
+        description: FamilyReward.defaultDescription,
+        isEnabled: true,
+      ),
+    );
+
+    expect(FamilyRewardService().saveRewards(rewards), throwsArgumentError);
+  });
+
+  test('reward distribution over 1000 snowflakes is rejected', () async {
+    SharedPreferences.setMockInitialValues({});
+
+    expect(
+      FamilyRewardService().saveRewards(const [
+        FamilyReward(
+          id: 'first_large_reward',
+          title: 'Первая большая награда',
+          requiredSnowflakes: 600,
+          description: FamilyReward.defaultDescription,
+          isEnabled: true,
+        ),
+        FamilyReward(
+          id: 'second_large_reward',
+          title: 'Вторая большая награда',
+          requiredSnowflakes: 401,
+          description: FamilyReward.defaultDescription,
+          isEnabled: true,
+        ),
+      ]),
+      throwsArgumentError,
+    );
   });
 }

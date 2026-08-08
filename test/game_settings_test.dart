@@ -117,6 +117,25 @@ void main() {
     },
   );
 
+  test('round settings enforce gameplay limits', () async {
+    SharedPreferences.setMockInitialValues({});
+    final settingsService = GameSettingsService();
+
+    await settingsService.saveRoundSettings(
+      const RoundSettings(
+        roundQuestionCount: 25,
+        maxMistakesPerRound: 99,
+        wrongAnswerPenalty: 99,
+      ),
+    );
+
+    final settings = await settingsService.loadRoundSettings();
+
+    expect(settings.roundQuestionCount, RoundSettings.fixedRoundQuestionCount);
+    expect(settings.maxMistakesPerRound, RoundSettings.maxMistakesLimit);
+    expect(settings.wrongAnswerPenalty, RoundSettings.maxWrongAnswerPenalty);
+  });
+
   test('all three difficulty modes exist with readable titles', () {
     expect(GameDifficulty.values, hasLength(3));
     expect(
