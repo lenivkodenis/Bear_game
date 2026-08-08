@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../models/player_progress.dart';
+import '../models/level_completion_summary.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/family_reward_status_card.dart';
 import '../widgets/game_card.dart';
+import '../widgets/learning_statistics_card.dart';
 import '../widgets/primary_game_button.dart';
 import '../widgets/score_badge.dart';
 import 'game_screen.dart';
@@ -31,6 +33,9 @@ class _FinalScreenState extends State<FinalScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final summary =
+        ModalRoute.of(context)?.settings.arguments as LevelCompletionSummary?;
+
     return Scaffold(
       body: DecoratedBox(
         decoration: AppTheme.snowyGradient,
@@ -90,6 +95,17 @@ class _FinalScreenState extends State<FinalScreen> {
                             ),
                           ],
                         ),
+                      ),
+                      if (summary != null) ...[
+                        const SizedBox(height: 24),
+                        LearningStatisticsCard.forLevel(
+                          statistics: summary.levelStatistics,
+                          detailsInitiallyExpanded: true,
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      LearningStatisticsCard.total(
+                        statistics: progress.learningStatistics,
                       ),
                       const SizedBox(height: 24),
                       FamilyRewardStatusCard(

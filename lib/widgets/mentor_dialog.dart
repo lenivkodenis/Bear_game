@@ -86,10 +86,7 @@ class _MentorDialogState extends State<MentorDialog> {
         const SizedBox(height: 12),
         Text(level.introText, style: const TextStyle(fontSize: 18)),
         const SizedBox(height: 20),
-        FilledButton(
-          onPressed: () => setState(() => _showIntro = false),
-          child: const Text('К задаче'),
-        ),
+        FilledButton(onPressed: _startQuestions, child: const Text('К задаче')),
       ];
     }
 
@@ -291,6 +288,7 @@ class _MentorDialogState extends State<MentorDialog> {
       _orderedOptions = const [];
       _manualAnswerController.clear();
     });
+    widget.game.startQuestionTimer();
   }
 
   void _showNextQuestion() {
@@ -301,6 +299,12 @@ class _MentorDialogState extends State<MentorDialog> {
       _orderedOptions = const [];
       _manualAnswerController.clear();
     });
+    widget.game.startQuestionTimer();
+  }
+
+  void _startQuestions() {
+    setState(() => _showIntro = false);
+    widget.game.startQuestionTimer();
   }
 }
 

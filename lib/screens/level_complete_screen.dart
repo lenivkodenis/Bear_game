@@ -7,6 +7,7 @@ import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/family_reward_status_card.dart';
 import '../widgets/game_card.dart';
+import '../widgets/learning_statistics_card.dart';
 import '../widgets/primary_game_button.dart';
 import '../widgets/score_badge.dart';
 import 'location_map_screen.dart';
@@ -125,6 +126,13 @@ class _LevelCompleteScreenState extends State<LevelCompleteScreen> {
                           ],
                         ),
                       ),
+                      if (summary != null) ...[
+                        const SizedBox(height: 24),
+                        LearningStatisticsCard.forLevel(
+                          statistics: summary.levelStatistics,
+                          detailsInitiallyExpanded: true,
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       FamilyRewardStatusCard(
                         snowflakes: score,

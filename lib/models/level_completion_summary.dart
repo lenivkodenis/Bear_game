@@ -1,3 +1,5 @@
+import 'learning_statistics.dart';
+
 class LevelCompletionSummary {
   const LevelCompletionSummary({
     required this.locationName,
@@ -6,6 +8,7 @@ class LevelCompletionSummary {
     required this.score,
     required this.levelSnowflakes,
     required this.solvedQuestions,
+    required this.levelStatistics,
   });
 
   final String locationName;
@@ -14,4 +17,5 @@ class LevelCompletionSummary {
   final int score;
   final int levelSnowflakes;
   final int solvedQuestions;
+  final LevelStatistics levelStatistics;
 }

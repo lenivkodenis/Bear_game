@@ -5,6 +5,7 @@ import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/effects/snowfall_overlay.dart';
 import '../widgets/game_card.dart';
+import '../widgets/learning_statistics_card.dart';
 import '../widgets/score_badge.dart';
 
 class ProgressScreen extends StatefulWidget {
@@ -131,6 +132,51 @@ class _ProgressScreenState extends State<ProgressScreen> {
                           title: 'Пройдено уровней',
                           value: progress.completedLevelIds.length.toString(),
                         ),
+                        const SizedBox(height: 8),
+                        if (progress.learningStatistics.levels.isEmpty)
+                          const GameCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Подробная статистика',
+                                  style: AppTheme.sectionTitleStyle,
+                                ),
+                                SizedBox(height: 10),
+                                Text(
+                                  'Здесь появятся время решения, ошибки и точность после первой решённой задачи.',
+                                  style: AppTheme.bodyStyle,
+                                ),
+                              ],
+                            ),
+                          )
+                        else ...[
+                          LearningStatisticsCard.total(
+                            statistics: progress.learningStatistics,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'По уровням',
+                            style: TextStyle(
+                              color: AppTheme.snowWhite,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              shadows: [
+                                Shadow(
+                                  color: Color(0xB0001026),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          for (final level
+                              in progress.learningStatistics.sortedLevels) ...[
+                            LearningStatisticsCard.forLevel(statistics: level),
+                            const SizedBox(height: 16),
+                          ],
+                        ],
                       ],
                     ),
                   ),

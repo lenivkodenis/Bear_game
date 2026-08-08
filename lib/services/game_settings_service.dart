@@ -18,6 +18,7 @@ class GameSettingsService {
   static const _currentQuestionIndexKey = 'current_question_index';
   static const _currentQuestionIndexesKey = 'current_question_indexes';
   static const _completedLevelIdsKey = 'completed_level_ids';
+  static const _learningStatisticsKey = 'learning_statistics';
   static final ValueNotifier<GameDifficulty> difficultyNotifier =
       ValueNotifier<GameDifficulty>(GameDifficulty.beginner);
   static final ValueNotifier<RoundSettings> roundSettingsNotifier =
@@ -128,6 +129,8 @@ class GameSettingsService {
         (preferences.getInt(_solvedExamplesKey) ?? 0) > 0 ||
         (preferences.getInt(_currentQuestionIndexKey) ?? 0) > 0 ||
         preferences.getString(_currentQuestionIndexesKey) != null ||
-        (preferences.getStringList(_completedLevelIdsKey)?.isNotEmpty ?? false);
+        (preferences.getStringList(_completedLevelIdsKey)?.isNotEmpty ??
+            false) ||
+        preferences.getString(_learningStatisticsKey) != null;
   }
 }

@@ -1,3 +1,5 @@
+import 'learning_statistics.dart';
+
 class PlayerProgress {
   const PlayerProgress({
     required this.score,
@@ -5,6 +7,7 @@ class PlayerProgress {
     required this.solvedExamples,
     required this.currentQuestionIndexes,
     required this.completedLevelIds,
+    required this.learningStatistics,
   });
 
   final int score;
@@ -12,6 +15,7 @@ class PlayerProgress {
   final int solvedExamples;
   final Map<int, int> currentQuestionIndexes;
   final Set<int> completedLevelIds;
+  final LearningStatistics learningStatistics;
 
   int get currentQuestionIndex => questionIndexForLevel(1);
 
@@ -22,6 +26,7 @@ class PlayerProgress {
       solvedExamples: 0,
       currentQuestionIndexes: {},
       completedLevelIds: {},
+      learningStatistics: LearningStatistics.empty,
     );
   }
 
@@ -39,6 +44,7 @@ class PlayerProgress {
     int? solvedExamples,
     Map<int, int>? currentQuestionIndexes,
     Set<int>? completedLevelIds,
+    LearningStatistics? learningStatistics,
   }) {
     return PlayerProgress(
       score: score ?? this.score,
@@ -47,6 +53,7 @@ class PlayerProgress {
       currentQuestionIndexes:
           currentQuestionIndexes ?? this.currentQuestionIndexes,
       completedLevelIds: completedLevelIds ?? this.completedLevelIds,
+      learningStatistics: learningStatistics ?? this.learningStatistics,
     );
   }
 }

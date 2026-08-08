@@ -20,6 +20,7 @@ import 'level_geometry.dart';
 import 'obstacle_collision.dart';
 import '../models/level.dart';
 import '../models/game_difficulty.dart';
+import '../models/learning_statistics.dart';
 import '../models/player_progress.dart';
 import '../models/question.dart';
 import '../models/question_answer_result.dart';
@@ -76,6 +77,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   int _currentQuestionIndex = 0;
   int _levelSnowflakes = 0;
   int _roundMistakeCount = 0;
+  final Stopwatch _questionStopwatch = Stopwatch();
   bool _mentorDialogWasShown = false;
   bool _mentorDialogOpen = false;
   bool _sceneReady = false;
@@ -107,6 +109,14 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   RoundSettings get roundSettings => _roundSettings;
 
   int get levelSnowflakes => _levelSnowflakes;
+
+  LevelStatistics get levelStatistics =>
+      _progress.learningStatistics.forLevel(levelId) ??
+      LevelStatistics(
+        levelId: levelId,
+        locationName: currentLevel?.locationName ?? 'Уровень $levelId',
+        questions: const {},
+      );
 
   GameDifficulty get difficulty => _difficulty;
 
@@ -243,6 +253,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   @override
   void onRemove() {
+    pauseQuestionTimer();
     GameSettingsService.difficultyNotifier.removeListener(_difficultyListener);
     GameSettingsService.roundSettingsNotifier.removeListener(
       _roundSettingsListener,
@@ -341,7 +352,20 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     return _saveWrongAnswer(question);
   }
 
+  void startQuestionTimer() {
+    if (currentQuestion != null && !_questionStopwatch.isRunning) {
+      _questionStopwatch.start();
+    }
+  }
+
+  void pauseQuestionTimer() {
+    if (_questionStopwatch.isRunning) {
+      _questionStopwatch.stop();
+    }
+  }
+
   void closeMentorDialog() {
+    pauseQuestionTimer();
     _mentorDialogOpen = false;
     if (_sceneReady) {
       player.stopInteracting();
@@ -1092,6 +1116,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   Future<QuestionAnswerResult> _saveCorrectAnswer(Question question) async {
+    final elapsedMilliseconds = _finishQuestionTimingSegment();
     final nextQuestionIndex = _currentQuestionIndex + 1;
     final newScore = GameEconomy.scoreAfterCorrectAnswer(_progress.score);
     final actualEarnedSnowflakes = newScore - _progress.score;
@@ -1111,6 +1136,15 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       unlockedLocation: levelComplete
           ? math.max(_progress.unlockedLocation, currentLevel!.id + 1)
           : _progress.unlockedLocation,
+      learningStatistics: _progress.learningStatistics.recordAttempt(
+        levelId: currentLevel!.id,
+        locationName: currentLevel!.locationName,
+        questionId: question.id,
+        questionNumber: _currentQuestionIndex + 1,
+        expression: question.expression,
+        isCorrect: true,
+        elapsedMilliseconds: elapsedMilliseconds,
+      ),
     );
     _currentQuestionIndex = nextQuestionIndex;
     _levelSnowflakes += actualEarnedSnowflakes;
@@ -1127,9 +1161,22 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   Future<QuestionAnswerResult> _saveWrongAnswer(Question question) async {
+    final elapsedMilliseconds = _finishQuestionTimingSegment();
     _questionsWithWrongAttempts.add(_currentQuestionIndex);
     _roundMistakeCount += 1;
+    _progress = _progress.copyWith(
+      learningStatistics: _progress.learningStatistics.recordAttempt(
+        levelId: currentLevel!.id,
+        locationName: currentLevel!.locationName,
+        questionId: question.id,
+        questionNumber: _currentQuestionIndex + 1,
+        expression: question.expression,
+        isCorrect: false,
+        elapsedMilliseconds: elapsedMilliseconds,
+      ),
+    );
     if (_roundMistakeCount > _roundSettings.maxMistakesPerRound) {
+      await _progressService.saveProgress(_progress);
       return QuestionAnswerResult(
         isCorrect: false,
         message: 'Ошибок стало больше, чем разрешено в этом раунде.',
@@ -1140,6 +1187,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     if (_progress.score < _roundSettings.wrongAnswerPenalty) {
+      await _progressService.saveProgress(_progress);
       return QuestionAnswerResult(
         isCorrect: false,
         message: 'Снежинок не хватило для продолжения.',
@@ -1156,6 +1204,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     _progress = _progress.copyWith(score: newScore);
     scoreNotifier.value = newScore;
     await _progressService.saveProgress(_progress);
+    startQuestionTimer();
 
     final hint = hintFor(question);
     final message = hintsEnabled
@@ -1174,16 +1223,31 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     final questionIndexes = Map<int, int>.of(
       _roundStartProgress.currentQuestionIndexes,
     )..[currentLevel!.id] = 0;
+    final learningStatistics = _progress.learningStatistics;
     _progress = _roundStartProgress.copyWith(
       currentQuestionIndexes: questionIndexes,
+      learningStatistics: learningStatistics,
+    );
+    _roundStartProgress = _roundStartProgress.copyWith(
+      learningStatistics: learningStatistics,
     );
     _currentQuestionIndex = 0;
     _levelSnowflakes = 0;
     _roundMistakeCount = 0;
     _questionsWithWrongAttempts.clear();
+    _questionStopwatch
+      ..stop()
+      ..reset();
     scoreNotifier.value = _progress.score;
 
     await _progressService.saveProgress(_progress);
+  }
+
+  int _finishQuestionTimingSegment() {
+    _questionStopwatch.stop();
+    final elapsedMilliseconds = _questionStopwatch.elapsedMilliseconds;
+    _questionStopwatch.reset();
+    return elapsedMilliseconds;
   }
 
   @override

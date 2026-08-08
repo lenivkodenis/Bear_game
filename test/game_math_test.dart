@@ -5,6 +5,7 @@ import 'package:bear_game/models/game_difficulty.dart';
 import 'package:bear_game/models/question_answer_result.dart';
 import 'package:bear_game/models/round_settings.dart';
 import 'package:bear_game/services/game_economy.dart';
+import 'package:bear_game/services/progress_service.dart';
 import 'package:flame/game.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -56,6 +57,31 @@ void main() {
     expect(result.requiresRestart, isFalse);
     expect(result.score, 8);
     expect(game.scoreNotifier.value, 8);
+  });
+
+  test('game records time and mistakes for each question', () async {
+    SharedPreferences.setMockInitialValues({'score': 10});
+    final game = await _loadGame(levelId: 1);
+    final question = game.currentQuestion!;
+    final wrongAnswer = question.options.firstWhere(
+      (option) => option != question.correctAnswer,
+    );
+
+    game.startQuestionTimer();
+    await Future<void>.delayed(const Duration(milliseconds: 15));
+    await game.submitAnswer(wrongAnswer);
+    await Future<void>.delayed(const Duration(milliseconds: 15));
+    await game.submitAnswer(question.correctAnswer);
+
+    final progress = await ProgressService().loadProgress();
+    final statistics = progress.learningStatistics.forLevel(1)!;
+    final questionStatistics = statistics.questions[question.id]!;
+
+    expect(questionStatistics.wrongAnswers, 1);
+    expect(questionStatistics.correctAnswers, 1);
+    expect(questionStatistics.attempts, 2);
+    expect(questionStatistics.elapsedMilliseconds, greaterThan(0));
+    expect(statistics.accuracyPercent, 50);
   });
 
   test('wrong answer with balance below 2 requires restart', () async {

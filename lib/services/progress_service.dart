@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/player_progress.dart';
+import '../models/learning_statistics.dart';
 import 'game_economy.dart';
 
 class ProgressService {
@@ -12,6 +13,7 @@ class ProgressService {
   static const _currentQuestionIndexKey = 'current_question_index';
   static const _currentQuestionIndexesKey = 'current_question_indexes';
   static const _completedLevelIdsKey = 'completed_level_ids';
+  static const _learningStatisticsKey = 'learning_statistics';
 
   Future<PlayerProgress> loadProgress() async {
     final preferences = await SharedPreferences.getInstance();
@@ -32,6 +34,7 @@ class ProgressService {
       solvedExamples: preferences.getInt(_solvedExamplesKey) ?? 0,
       currentQuestionIndexes: questionIndexes,
       completedLevelIds: completedLevelIds,
+      learningStatistics: _loadLearningStatistics(preferences),
     );
   }
 
@@ -61,6 +64,10 @@ class ProgressService {
         _currentQuestionIndexKey,
         progress.currentQuestionIndex,
       ),
+      preferences.setString(
+        _learningStatisticsKey,
+        jsonEncode(progress.learningStatistics.toJson()),
+      ),
     ]);
   }
 
@@ -74,6 +81,7 @@ class ProgressService {
       preferences.remove(_currentQuestionIndexKey),
       preferences.remove(_currentQuestionIndexesKey),
       preferences.remove(_completedLevelIdsKey),
+      preferences.remove(_learningStatisticsKey),
     ]);
   }
 
@@ -122,6 +130,21 @@ class ProgressService {
             ?.map(int.parse)
             .toSet() ??
         {};
+  }
+
+  LearningStatistics _loadLearningStatistics(SharedPreferences preferences) {
+    final storedValue = preferences.getString(_learningStatisticsKey);
+    if (storedValue == null) {
+      return LearningStatistics.empty;
+    }
+
+    try {
+      return LearningStatistics.fromJson(
+        jsonDecode(storedValue) as Map<String, Object?>,
+      );
+    } on Object {
+      return LearningStatistics.empty;
+    }
   }
 
   int _normalizeUnlockedLocation(

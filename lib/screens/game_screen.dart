@@ -156,6 +156,7 @@ class _GameScreenState extends State<GameScreen> {
         score: game.scoreNotifier.value,
         levelSnowflakes: game.levelSnowflakes,
         solvedQuestions: game.totalQuestions,
+        levelStatistics: game.levelStatistics,
       ),
     );
   }
