@@ -11,6 +11,7 @@ import '../services/game_settings_service.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/back_text_button.dart';
+import '../widgets/north_confirmation_dialog.dart';
 import '../widgets/score_badge.dart';
 import 'game_screen.dart';
 
@@ -225,26 +226,12 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
   }
 
   Future<bool> _confirmDifficultyReset(BuildContext context) async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: const Text('Сложность изменилась'),
-            content: const Text(
-              'При новой сложности игра начнётся с первого уровня. Весь текущий прогресс и снежинки будут сброшены.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Отмена'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Начать заново'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    return showNorthConfirmationDialog(
+      context: context,
+      title: 'Сложность изменилась',
+      message:
+          'При новой сложности игра начнётся с первого уровня. Весь текущий прогресс и снежинки будут сброшены.',
+    );
   }
 }
 

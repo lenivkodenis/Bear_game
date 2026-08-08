@@ -2,6 +2,8 @@ import 'package:bear_game/app.dart';
 import 'package:bear_game/game/bear_math_game.dart';
 import 'package:bear_game/screens/game_screen.dart';
 import 'package:bear_game/widgets/game_controls.dart';
+import 'package:bear_game/widgets/north_confirmation_dialog.dart';
+import 'package:bear_game/widgets/primary_game_button.dart';
 import 'package:flame/camera.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
@@ -53,6 +55,33 @@ void main() {
 
     expect(find.text('Начать игру заново?'), findsOneWidget);
     expect(find.textContaining('Отменить это действие'), findsOneWidget);
+    expect(find.byType(NorthConfirmationDialog), findsOneWidget);
+    expect(find.byType(PrimaryGameButton), findsNWidgets(2));
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(TextButton), findsNothing);
+    expect(find.byType(FilledButton), findsNothing);
+
+    await tester.tap(find.text('Отмена'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+  });
+
+  testWidgets('branded restart dialog fits a compact mobile viewport', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const BearGameApp());
+
+    await tester.tap(find.text('Начать игру заново'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(NorthConfirmationDialog), findsOneWidget);
+    expect(find.text('Начать заново'), findsOneWidget);
+    expect(find.text('Отмена'), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
     await tester.tap(find.text('Отмена'));
     await tester.pump();

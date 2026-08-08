@@ -6,6 +6,7 @@ import '../services/game_settings_service.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/effects/snowfall_overlay.dart';
+import '../widgets/north_confirmation_dialog.dart';
 import 'game_screen.dart';
 import 'location_map_screen.dart';
 import 'parents_screen.dart';
@@ -167,24 +168,11 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     required String title,
     required String message,
   }) async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: Text(title),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Отмена'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Начать заново'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+    return showNorthConfirmationDialog(
+      context: context,
+      title: title,
+      message: message,
+    );
   }
 }
 
