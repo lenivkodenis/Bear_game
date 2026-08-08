@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/effects/snowfall_overlay.dart';
 import '../widgets/game_card.dart';
 import '../widgets/learning_statistics_card.dart';
+import '../widgets/north_sign_button.dart';
 import '../widgets/score_badge.dart';
 
 class ProgressScreen extends StatefulWidget {
@@ -121,16 +122,22 @@ class _ProgressScreenState extends State<ProgressScreen> {
                           symbol: '⌂',
                           title: 'Открытая локация',
                           value: '${progress.unlockedLocation.clamp(1, 10)}/10',
+                          tone: NorthSignTone.ice,
+                          snowCap: SnowCapVariant.leftDrift,
                         ),
                         _ProgressTile(
                           symbol: '×',
                           title: 'Решено примеров',
                           value: progress.solvedExamples.toString(),
+                          tone: NorthSignTone.sand,
+                          snowCap: SnowCapVariant.centerDrift,
                         ),
                         _ProgressTile(
                           symbol: '★',
                           title: 'Пройдено уровней',
                           value: progress.completedLevelIds.length.toString(),
+                          tone: NorthSignTone.aurora,
+                          snowCap: SnowCapVariant.rightDrift,
                         ),
                         const SizedBox(height: 8),
                         if (progress.learningStatistics.levels.isEmpty)
@@ -225,22 +232,29 @@ class _ProgressTile extends StatelessWidget {
     required this.symbol,
     required this.title,
     required this.value,
+    required this.tone,
+    required this.snowCap,
   });
 
   final String symbol;
   final String title;
   final String value;
+  final NorthSignTone tone;
+  final SnowCapVariant snowCap;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: GameCard(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      child: NorthSignSurface(
+        tone: tone,
+        snowCap: snowCap,
+        minHeight: 82,
+        padding: const EdgeInsets.fromLTRB(18, 24, 18, 13),
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: AppTheme.frostBlue,
+              backgroundColor: AppTheme.snowWhite.withValues(alpha: 0.72),
               child: Text(
                 symbol,
                 style: const TextStyle(

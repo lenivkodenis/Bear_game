@@ -7,6 +7,7 @@ import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/effects/snowfall_overlay.dart';
 import '../widgets/north_confirmation_dialog.dart';
+import '../widgets/north_sign_button.dart';
 import 'game_screen.dart';
 import 'location_map_screen.dart';
 import 'parents_screen.dart';
@@ -226,30 +227,35 @@ class _MainMenuPanel extends StatelessWidget {
             label: 'Начать игру',
             icon: _NorthSignIcon.play,
             primary: true,
+            snowCap: SnowCapVariant.leftDrift,
             onPressed: onStart,
           ),
           const SizedBox(height: 12),
           _NorthSignButton(
             label: 'Начать игру заново',
             icon: _NorthSignIcon.restart,
+            snowCap: SnowCapVariant.rightDrift,
             onPressed: onRestart,
           ),
           const SizedBox(height: 12),
           _NorthSignButton(
             label: 'Карта',
             icon: _NorthSignIcon.map,
+            snowCap: SnowCapVariant.centerDrift,
             onPressed: onMap,
           ),
           const SizedBox(height: 12),
           _NorthSignButton(
             label: 'Прогресс',
             icon: _NorthSignIcon.snowflake,
+            snowCap: SnowCapVariant.doubleDrift,
             onPressed: onProgress,
           ),
           const SizedBox(height: 12),
           _NorthSignButton(
             label: 'Родителям',
             icon: _NorthSignIcon.lantern,
+            snowCap: SnowCapVariant.softWave,
             onPressed: onParents,
           ),
         ],
@@ -315,119 +321,40 @@ class _MainMenuTitle extends StatelessWidget {
 
 enum _NorthSignIcon { play, restart, map, snowflake, lantern }
 
-class _NorthSignButton extends StatefulWidget {
+class _NorthSignButton extends StatelessWidget {
   const _NorthSignButton({
     required this.label,
     required this.icon,
     required this.onPressed,
+    required this.snowCap,
     this.primary = false,
   });
 
   final String label;
   final _NorthSignIcon icon;
   final VoidCallback onPressed;
+  final SnowCapVariant snowCap;
   final bool primary;
 
   @override
-  State<_NorthSignButton> createState() => _NorthSignButtonState();
-}
-
-class _NorthSignButtonState extends State<_NorthSignButton> {
-  bool _isPressed = false;
-
-  void _setPressed(bool value) {
-    if (_isPressed == value) {
-      return;
-    }
-
-    setState(() {
-      _isPressed = value;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final height = widget.primary ? 72.0 : 58.0;
-    final foreground = widget.primary
+    final foreground = primary
         ? const Color(0xFF12384F)
         : const Color(0xFF173F58);
-    final iconSize = widget.primary ? 34.0 : 28.0;
+    final iconSize = primary ? 34.0 : 28.0;
 
-    return Semantics(
-      button: true,
-      label: widget.label,
-      onTap: widget.onPressed,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => _setPressed(true),
-        onTapUp: (_) => _setPressed(false),
-        onTapCancel: () => _setPressed(false),
-        onTap: widget.onPressed,
-        child: AnimatedSlide(
-          duration: const Duration(milliseconds: 90),
-          curve: Curves.easeOutCubic,
-          offset: Offset(0, _isPressed ? 0.035 : 0),
-          child: AnimatedScale(
-            duration: const Duration(milliseconds: 90),
-            curve: Curves.easeOutCubic,
-            scale: _isPressed ? 0.985 : 1,
-            child: SizedBox(
-              height: height,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  CustomPaint(
-                    painter: _NorthSignPainter(
-                      primary: widget.primary,
-                      pressed: _isPressed,
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      widget.primary ? 22 : 18,
-                      widget.primary ? 12 : 9,
-                      widget.primary ? 22 : 18,
-                      widget.primary ? 8 : 6,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CustomPaint(
-                          size: Size.square(iconSize),
-                          painter: _NorthSignIconPainter(
-                            icon: widget.icon,
-                            color: foreground,
-                            primary: widget.primary,
-                          ),
-                        ),
-                        SizedBox(width: widget.primary ? 13 : 10),
-                        Flexible(
-                          child: Text(
-                            widget.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: foreground,
-                              fontSize: widget.primary ? 20 : 17,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0,
-                              shadows: const [
-                                Shadow(
-                                  color: Color(0x4DFFFFFF),
-                                  blurRadius: 2,
-                                  offset: Offset(0, 1),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+    return NorthSignButton(
+      label: label,
+      onPressed: onPressed,
+      prominent: primary,
+      tone: primary ? NorthSignTone.ice : NorthSignTone.sand,
+      snowCap: snowCap,
+      leading: CustomPaint(
+        size: Size.square(iconSize),
+        painter: _NorthSignIconPainter(
+          icon: icon,
+          color: foreground,
+          primary: primary,
         ),
       ),
     );
@@ -455,127 +382,6 @@ class _TitleSnowDustPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _NorthSignPainter extends CustomPainter {
-  const _NorthSignPainter({required this.primary, required this.pressed});
-
-  final bool primary;
-  final bool pressed;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final signRect = Rect.fromLTWH(3, 8, size.width - 6, size.height - 12);
-    final signRadius = Radius.circular(primary ? 24 : 20);
-    final signRRect = RRect.fromRectAndRadius(signRect, signRadius);
-    final shadowPaint = Paint()
-      ..color = const Color(
-        0xFF001426,
-      ).withValues(alpha: pressed ? 0.12 : (primary ? 0.26 : 0.18))
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, pressed ? 5 : 8);
-    canvas.drawRRect(
-      signRRect.shift(Offset(0, pressed ? 2.5 : 5)),
-      shadowPaint,
-    );
-
-    final basePaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: primary
-            ? const [Color(0xFFFDF9ED), Color(0xFFD7F1FF), Color(0xFF8FCFEC)]
-            : const [Color(0xFFF7EBD4), Color(0xFFE6D4B4), Color(0xFFD3E9EF)],
-        stops: primary ? const [0, 0.55, 1] : const [0, 0.62, 1],
-      ).createShader(signRect);
-    canvas.drawRRect(signRRect, basePaint);
-
-    final edgePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = primary ? 2.2 : 1.8
-      ..color = primary
-          ? AppTheme.snowWhite.withValues(alpha: 0.92)
-          : const Color(0xFFFFFAF0).withValues(alpha: 0.88);
-    canvas.drawRRect(signRRect.deflate(1.1), edgePaint);
-
-    final lowEdgePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4
-      ..color = const Color(0xFF2C6C89).withValues(alpha: 0.18);
-    canvas.drawRRect(signRRect.deflate(3.8), lowEdgePaint);
-
-    final snowPath = Path()
-      ..moveTo(signRect.left + signRadius.x * 0.55, signRect.top + 1)
-      ..lineTo(signRect.right - signRadius.x * 0.55, signRect.top + 1)
-      ..quadraticBezierTo(
-        signRect.right - 12,
-        signRect.top + 8,
-        signRect.right - 22,
-        signRect.top + 14,
-      )
-      ..cubicTo(
-        signRect.right - 70,
-        signRect.top + (primary ? 22 : 18),
-        signRect.left + 92,
-        signRect.top + (primary ? 9 : 8),
-        signRect.left + 54,
-        signRect.top + (primary ? 18 : 15),
-      )
-      ..quadraticBezierTo(
-        signRect.left + 20,
-        signRect.top + 16,
-        signRect.left + signRadius.x * 0.55,
-        signRect.top + 1,
-      )
-      ..close();
-    final snowPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFFFFFFF), Color(0xFFE9F8FF)],
-      ).createShader(snowPath.getBounds());
-    canvas.drawPath(snowPath, snowPaint);
-
-    final snowEdgePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.1
-      ..color = const Color(0xFF8CCBE6).withValues(alpha: 0.35);
-    canvas.drawPath(snowPath, snowEdgePaint);
-
-    if (primary) {
-      final glowPaint = Paint()
-        ..color = AppTheme.iceBlue.withValues(alpha: 0.42)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
-      canvas.drawRRect(signRRect.deflate(7), glowPaint);
-      canvas.drawRRect(signRRect, basePaint);
-      canvas.drawPath(snowPath, snowPaint);
-      canvas.drawPath(snowPath, snowEdgePaint);
-      canvas.drawRRect(signRRect.deflate(1.1), edgePaint);
-    }
-
-    final grainPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0
-      ..strokeCap = StrokeCap.round
-      ..color = const Color(
-        0xFF7B6B50,
-      ).withValues(alpha: primary ? 0.12 : 0.16);
-    final grainY = signRect.top + size.height * 0.62;
-    canvas.drawLine(
-      Offset(signRect.left + 22, grainY),
-      Offset(signRect.left + size.width * 0.34, grainY - 2),
-      grainPaint,
-    );
-    canvas.drawLine(
-      Offset(signRect.right - size.width * 0.34, grainY + 2),
-      Offset(signRect.right - 24, grainY),
-      grainPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _NorthSignPainter oldDelegate) {
-    return oldDelegate.primary != primary || oldDelegate.pressed != pressed;
-  }
 }
 
 class _NorthSignIconPainter extends CustomPainter {

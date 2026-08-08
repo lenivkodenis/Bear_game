@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/family_reward_status_card.dart';
 import '../widgets/game_card.dart';
 import '../widgets/learning_statistics_card.dart';
+import '../widgets/north_sign_button.dart';
 import '../widgets/primary_game_button.dart';
 import '../widgets/score_badge.dart';
 import 'game_screen.dart';
@@ -117,6 +118,8 @@ class _FinalScreenState extends State<FinalScreen> {
                         icon: Icons.map_rounded,
                         symbol: '⌂',
                         label: 'На карту',
+                        tone: NorthSignTone.aurora,
+                        snowCap: SnowCapVariant.doubleDrift,
                         onPressed: _openMap,
                       ),
                       const SizedBox(height: 12),
@@ -125,6 +128,8 @@ class _FinalScreenState extends State<FinalScreen> {
                         symbol: '↺',
                         label: 'Повторить путь',
                         secondary: true,
+                        tone: NorthSignTone.sand,
+                        snowCap: SnowCapVariant.rightDrift,
                         onPressed: _restartJourney,
                       ),
                     ],

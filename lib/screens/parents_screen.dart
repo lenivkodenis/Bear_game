@@ -9,6 +9,8 @@ import '../services/game_settings_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/effects/snowfall_overlay.dart';
 import '../widgets/game_card.dart';
+import '../widgets/north_sign_button.dart';
+import '../widgets/primary_game_button.dart';
 
 class ParentsScreen extends StatefulWidget {
   const ParentsScreen({super.key});
@@ -236,9 +238,12 @@ class _ParentsScreenState extends State<ParentsScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-              FilledButton(
+              PrimaryGameButton(
+                icon: Icons.save_rounded,
+                symbol: '✓',
+                snowCap: SnowCapVariant.leftDrift,
                 onPressed: _isSavingDifficulty ? null : _saveDifficulty,
-                child: const Text('Сохранить настройки'),
+                label: 'Сохранить настройки',
               ),
             ],
           );
@@ -305,34 +310,40 @@ class _ParentsScreenState extends State<ParentsScreen> {
                   ),
                   const SizedBox(height: 10),
                 ],
-                OutlinedButton.icon(
+                PrimaryGameButton(
                   onPressed:
                       _rewardDrafts.length >= FamilyReward.maxRewardGrades
                       ? null
                       : _addRewardDraft,
-                  icon: const Icon(Icons.add_rounded),
-                  label: Text(
-                    _rewardDrafts.length >= FamilyReward.maxRewardGrades
-                        ? 'Максимум ${FamilyReward.maxRewardGrades} наград'
-                        : 'Добавить награду',
-                  ),
+                  icon: Icons.add_rounded,
+                  tone: NorthSignTone.aurora,
+                  snowCap: SnowCapVariant.centerDrift,
+                  label: _rewardDrafts.length >= FamilyReward.maxRewardGrades
+                      ? 'Максимум ${FamilyReward.maxRewardGrades} наград'
+                      : 'Добавить награду',
                 ),
                 const SizedBox(height: 18),
                 Row(
                   children: [
                     Expanded(
-                      child: FilledButton(
+                      child: PrimaryGameButton(
+                        icon: Icons.save_rounded,
+                        symbol: '✓',
+                        snowCap: SnowCapVariant.doubleDrift,
                         onPressed: _isSavingRewards ? null : _saveRewards,
-                        child: Text(
-                          _isSavingRewards ? 'Сохраняем...' : 'Сохранить',
-                        ),
+                        label: _isSavingRewards ? 'Сохраняем...' : 'Сохранить',
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: OutlinedButton(
+                      child: PrimaryGameButton(
+                        icon: Icons.restart_alt_rounded,
+                        symbol: '↺',
+                        secondary: true,
+                        tone: NorthSignTone.coral,
+                        snowCap: SnowCapVariant.rightDrift,
                         onPressed: _isResettingRewards ? null : _resetRewards,
-                        child: const Text('Сбросить'),
+                        label: 'Сбросить',
                       ),
                     ),
                   ],
@@ -412,13 +423,14 @@ class _ParentsScreenState extends State<ParentsScreen> {
                   validator: _wrongAnswerPenaltyValidator,
                 ),
                 const SizedBox(height: 18),
-                FilledButton(
+                PrimaryGameButton(
+                  icon: Icons.rule_rounded,
+                  symbol: '✓',
+                  snowCap: SnowCapVariant.rightDrift,
                   onPressed: _isSavingRoundSettings ? null : _saveRoundSettings,
-                  child: Text(
-                    _isSavingRoundSettings
-                        ? 'Сохраняем...'
-                        : 'Сохранить правила',
-                  ),
+                  label: _isSavingRoundSettings
+                      ? 'Сохраняем...'
+                      : 'Сохранить правила',
                 ),
               ],
             ),

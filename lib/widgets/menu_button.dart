@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'north_sign_button.dart';
+
 class MenuButton extends StatelessWidget {
   const MenuButton({
     required this.label,
@@ -14,16 +16,11 @@ class MenuButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton.icon(
+    return NorthSignButton(
       onPressed: onPressed,
-      icon: Icon(icon),
-      label: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-        ),
-      ),
+      icon: icon,
+      label: label,
+      snowCap: SnowCapVariant.centerDrift,
     );
   }
 }

@@ -4,6 +4,8 @@ import '../models/family_reward.dart';
 import '../services/family_reward_service.dart';
 import '../theme/app_theme.dart';
 import 'game_card.dart';
+import 'north_sign_button.dart';
+import 'primary_game_button.dart';
 
 class FamilyRewardStatusCard extends StatelessWidget {
   const FamilyRewardStatusCard({
@@ -63,9 +65,13 @@ class FamilyRewardStatusCard extends StatelessWidget {
               ],
               if (rewardIsAvailable) ...[
                 const SizedBox(height: 16),
-                FilledButton(
+                PrimaryGameButton(
+                  icon: Icons.family_restroom_rounded,
+                  symbol: '♡',
+                  tone: NorthSignTone.aurora,
+                  snowCap: SnowCapVariant.doubleDrift,
                   onPressed: () => _showParentsDialog(context, reward),
-                  child: const Text('Показать родителям'),
+                  label: 'Показать родителям',
                 ),
               ],
             ],

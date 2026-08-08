@@ -4,6 +4,8 @@ import '../models/learning_statistics.dart';
 import '../theme/app_theme.dart';
 import '../utils/statistics_format.dart';
 import 'game_card.dart';
+import 'north_sign_button.dart';
+import 'primary_game_button.dart';
 
 class LearningStatisticsCard extends StatefulWidget {
   const LearningStatisticsCard({
@@ -130,20 +132,22 @@ class _LearningStatisticsCardState extends State<LearningStatisticsCard> {
           ),
           if (widget.questions.isNotEmpty) ...[
             const SizedBox(height: 16),
-            OutlinedButton.icon(
+            PrimaryGameButton(
               onPressed: () {
                 setState(() => _detailsExpanded = !_detailsExpanded);
               },
-              icon: Icon(
-                _detailsExpanded
-                    ? Icons.expand_less_rounded
-                    : Icons.expand_more_rounded,
-              ),
-              label: Text(
-                _detailsExpanded
-                    ? 'Скрыть задачи'
-                    : 'Показать задачи (${widget.questions.length})',
-              ),
+              icon: _detailsExpanded
+                  ? Icons.expand_less_rounded
+                  : Icons.expand_more_rounded,
+              symbol: _detailsExpanded ? '⌃' : '⌄',
+              secondary: true,
+              tone: NorthSignTone.sand,
+              snowCap: _detailsExpanded
+                  ? SnowCapVariant.rightDrift
+                  : SnowCapVariant.centerDrift,
+              label: _detailsExpanded
+                  ? 'Скрыть задачи'
+                  : 'Показать задачи (${widget.questions.length})',
             ),
             if (_detailsExpanded) ...[
               const SizedBox(height: 12),

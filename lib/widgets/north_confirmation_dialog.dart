@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import 'north_sign_button.dart';
 import 'primary_game_button.dart';
 
 Future<bool> showNorthConfirmationDialog({
@@ -161,6 +162,8 @@ class NorthConfirmationDialog extends StatelessWidget {
                           label: confirmLabel,
                           icon: Icons.refresh_rounded,
                           symbol: '↻',
+                          tone: NorthSignTone.coral,
+                          snowCap: SnowCapVariant.doubleDrift,
                           onPressed: onConfirm,
                         ),
                         const SizedBox(height: 12),
@@ -169,6 +172,8 @@ class NorthConfirmationDialog extends StatelessWidget {
                           icon: Icons.arrow_back_rounded,
                           symbol: '←',
                           secondary: true,
+                          tone: NorthSignTone.sand,
+                          snowCap: SnowCapVariant.leftDrift,
                           onPressed: onCancel,
                         ),
                       ],
