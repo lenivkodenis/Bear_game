@@ -1,6 +1,6 @@
 {
-    "name": "bear_game",
-    "short_name": "bear_game",
+    "name": "Bear Game",
+    "short_name": "Bear Game",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
