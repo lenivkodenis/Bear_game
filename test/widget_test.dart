@@ -6,6 +6,7 @@ import 'package:flame/camera.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('main menu shows primary actions', (tester) async {
@@ -13,9 +14,49 @@ void main() {
 
     expect(find.text('Медвежонок и таблица умножения'), findsOneWidget);
     expect(find.text('Начать игру'), findsOneWidget);
+    expect(find.text('Начать игру заново'), findsOneWidget);
     expect(find.text('Карта'), findsOneWidget);
     expect(find.text('Прогресс'), findsOneWidget);
     expect(find.text('Родителям'), findsOneWidget);
+  });
+
+  testWidgets('difficulty change warns before starting a new game', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'game_difficulty': 'expert',
+      'progress_difficulty': 'beginner',
+      'difficulty_progress_reset_required': true,
+      'unlocked_location': 8,
+    });
+    await tester.pumpWidget(const BearGameApp());
+
+    await tester.tap(find.text('Начать игру'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Сложность изменилась'), findsOneWidget);
+    expect(find.textContaining('текущий прогресс'), findsOneWidget);
+
+    await tester.tap(find.text('Отмена'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+  });
+
+  testWidgets('restart button asks for confirmation', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const BearGameApp());
+
+    await tester.tap(find.text('Начать игру заново'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('Начать игру заново?'), findsOneWidget);
+    expect(find.textContaining('Отменить это действие'), findsOneWidget);
+
+    await tester.tap(find.text('Отмена'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
   });
 
   testWidgets('game movement controls react on pointer down', (tester) async {

@@ -214,7 +214,7 @@ class _ParentsScreenState extends State<ParentsScreen> {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Сейчас выбор режима только сохраняется. Механика вопросов пока остаётся прежней: 3 варианта ответа, перемешивание и подсказки.',
+                'Смена сложности начинает путешествие заново. Перед сбросом прогресса игра попросит подтверждение.',
                 style: AppTheme.bodyStyle,
               ),
               const SizedBox(height: 12),
@@ -412,6 +412,7 @@ class _ParentsScreenState extends State<ParentsScreen> {
     setState(() => _isSavingDifficulty = true);
 
     await _settingsService.saveDifficulty(_selectedDifficulty);
+    final resetRequired = await _settingsService.isDifficultyResetRequired();
 
     if (!mounted) {
       return;
@@ -422,9 +423,15 @@ class _ParentsScreenState extends State<ParentsScreen> {
       _difficultyFuture = Future.value(_selectedDifficulty);
     });
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Настройки сохранены')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          resetRequired
+              ? 'Сложность изменена. Новая игра начнётся после подтверждения.'
+              : 'Настройки сохранены',
+        ),
+      ),
+    );
   }
 
   Future<void> _saveRewards() async {

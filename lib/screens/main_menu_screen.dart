@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../services/game_settings_service.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/effects/snowfall_overlay.dart';
@@ -24,6 +25,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
       'public/assets/main_screen/main_screen_bear_bg.png';
 
   final ProgressService _progressService = ProgressService();
+  final GameSettingsService _settingsService = GameSettingsService();
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +85,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                       width: panelWidth,
                       child: _MainMenuPanel(
                         onStart: _startGame,
+                        onRestart: _restartGame,
                         onMap: () => Navigator.of(
                           context,
                         ).pushNamed(LocationMapScreen.routeName),
@@ -105,6 +108,25 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   }
 
   Future<void> _startGame() async {
+    final resetRequired = await _settingsService.isDifficultyResetRequired();
+    if (resetRequired) {
+      if (!mounted ||
+          !await _confirmRestart(
+            title: 'Сложность изменилась',
+            message:
+                'При новой сложности игра начнётся с первого уровня. Весь текущий прогресс и снежинки будут сброшены.',
+          )) {
+        return;
+      }
+
+      await _resetProgressForNewGame();
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pushNamed(GameScreen.routeName, arguments: 1);
+      return;
+    }
+
     final progress = await _progressService.loadProgress();
 
     if (!mounted) {
@@ -116,6 +138,53 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
           ? LocationMapScreen.routeName
           : GameScreen.routeName,
     );
+  }
+
+  Future<void> _restartGame() async {
+    final confirmed = await _confirmRestart(
+      title: 'Начать игру заново?',
+      message:
+          'Все пройденные уровни, решённые примеры и снежинки будут сброшены. Отменить это действие нельзя.',
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    await _resetProgressForNewGame();
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pushNamed(GameScreen.routeName, arguments: 1);
+  }
+
+  Future<void> _resetProgressForNewGame() async {
+    await _progressService.resetProgress();
+    await _settingsService.confirmProgressResetForCurrentDifficulty();
+  }
+
+  Future<bool> _confirmRestart({
+    required String title,
+    required String message,
+  }) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Отмена'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Начать заново'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 }
 
@@ -143,12 +212,14 @@ class _MenuReadabilityOverlay extends StatelessWidget {
 class _MainMenuPanel extends StatelessWidget {
   const _MainMenuPanel({
     required this.onStart,
+    required this.onRestart,
     required this.onMap,
     required this.onProgress,
     required this.onParents,
   });
 
   final VoidCallback onStart;
+  final VoidCallback onRestart;
   final VoidCallback onMap;
   final VoidCallback onProgress;
   final VoidCallback onParents;
@@ -168,6 +239,12 @@ class _MainMenuPanel extends StatelessWidget {
             icon: _NorthSignIcon.play,
             primary: true,
             onPressed: onStart,
+          ),
+          const SizedBox(height: 12),
+          _NorthSignButton(
+            label: 'Начать игру заново',
+            icon: _NorthSignIcon.restart,
+            onPressed: onRestart,
           ),
           const SizedBox(height: 12),
           _NorthSignButton(
@@ -248,7 +325,7 @@ class _MainMenuTitle extends StatelessWidget {
   }
 }
 
-enum _NorthSignIcon { play, map, snowflake, lantern }
+enum _NorthSignIcon { play, restart, map, snowflake, lantern }
 
 class _NorthSignButton extends StatefulWidget {
   const _NorthSignButton({
@@ -539,6 +616,8 @@ class _NorthSignIconPainter extends CustomPainter {
     switch (icon) {
       case _NorthSignIcon.play:
         _paintPlay(canvas, size, stroke, fill);
+      case _NorthSignIcon.restart:
+        _paintRestart(canvas, size, stroke);
       case _NorthSignIcon.map:
         _paintMap(canvas, size, stroke, fill);
       case _NorthSignIcon.snowflake:
@@ -594,6 +673,24 @@ class _NorthSignIconPainter extends CustomPainter {
       w * 0.045,
       Paint()..color = color,
     );
+  }
+
+  void _paintRestart(Canvas canvas, Size size, Paint stroke) {
+    final w = size.width;
+    final h = size.height;
+    canvas.drawArc(
+      Rect.fromLTWH(w * 0.18, h * 0.18, w * 0.64, h * 0.64),
+      -math.pi * 0.7,
+      math.pi * 1.55,
+      false,
+      stroke,
+    );
+    final arrow = Path()
+      ..moveTo(w * 0.12, h * 0.2)
+      ..lineTo(w * 0.39, h * 0.2)
+      ..lineTo(w * 0.2, h * 0.42)
+      ..close();
+    canvas.drawPath(arrow, Paint()..color = color);
   }
 
   void _paintSnowflake(Canvas canvas, Size size, Paint stroke) {

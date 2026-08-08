@@ -42,6 +42,39 @@ void main() {
     expect(progress.questionIndexForLevel(10), 10);
     expect(progress.unlockedLocation, 11);
   });
+
+  test(
+    'rewinding to a level closes later levels and restarts the target',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'score': 47,
+        'solved_examples': 73,
+        'unlocked_location': 8,
+        'current_question_indexes':
+            '{"1":10,"2":10,"3":10,"4":10,"5":10,"6":10,"7":10,"8":4}',
+        'completed_level_ids': ['1', '2', '3', '4', '5', '6', '7'],
+      });
+
+      final progress = await ProgressService().rewindToLevel(6);
+
+      expect(progress.unlockedLocation, 6);
+      expect(progress.completedLevelIds, {1, 2, 3, 4, 5});
+      expect(progress.currentQuestionIndexes.keys, {1, 2, 3, 4, 5});
+      expect(progress.questionIndexForLevel(6), 0);
+      expect(progress.score, 47);
+      expect(progress.solvedExamples, 73);
+
+      final reloaded = await ProgressService().loadProgress();
+      expect(reloaded.unlockedLocation, 6);
+      expect(reloaded.completedLevelIds, {1, 2, 3, 4, 5});
+    },
+  );
+
+  test('rewinding rejects locations outside the game map', () async {
+    SharedPreferences.setMockInitialValues({});
+
+    expect(ProgressService().rewindToLevel(11), throwsArgumentError);
+  });
 }
 
 Future<BearMathGame> _loadGame({required int levelId}) async {

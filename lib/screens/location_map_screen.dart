@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -6,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../game/level_geometry.dart';
 import '../models/map_location.dart';
 import '../models/player_progress.dart';
+import '../services/game_settings_service.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/back_text_button.dart';
@@ -30,6 +32,10 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
   static const _mapAspectRatio = 1672 / 941;
 
   late Future<_LocationMapData> _mapDataFuture;
+  final ProgressService _progressService = ProgressService();
+  final GameSettingsService _settingsService = GameSettingsService();
+  PlayerProgress? _loadedProgress;
+  bool _isRewinding = false;
 
   static const _locations = [
     _MapStop(
@@ -123,6 +129,7 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
                       stops: _locations,
                       progress: mapData.progress,
                       onOpenLocation: _openLocation,
+                      onRewindToLocation: _rewindToLocation,
                     ),
                   ),
                   const Positioned(
@@ -146,7 +153,8 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
 
   Future<_LocationMapData> _loadMapData() async {
     final progress =
-        await (widget.progressLoader ?? ProgressService().loadProgress)();
+        await (widget.progressLoader ?? _progressService.loadProgress)();
+    _loadedProgress = progress;
     final visibleProgress = isLocationMapUnlockAllEnabled
         ? progress.copyWith(unlockedLocation: 10)
         : progress;
@@ -154,10 +162,89 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
     return _LocationMapData(progress: visibleProgress);
   }
 
-  void _openLocation(BuildContext context, MapLocation location) {
-    Navigator.of(
-      context,
-    ).pushNamed(GameScreen.routeName, arguments: location.id);
+  Future<void> _openLocation(BuildContext context, MapLocation location) async {
+    if (await _settingsService.isDifficultyResetRequired()) {
+      if (!context.mounted || !await _confirmDifficultyReset(context)) {
+        return;
+      }
+
+      await _progressService.resetProgress();
+      await _settingsService.confirmProgressResetForCurrentDifficulty();
+      if (!context.mounted) {
+        return;
+      }
+
+      await Navigator.of(context).pushNamed(GameScreen.routeName, arguments: 1);
+    } else {
+      if (!context.mounted) {
+        return;
+      }
+      await Navigator.of(
+        context,
+      ).pushNamed(GameScreen.routeName, arguments: location.id);
+    }
+
+    if (mounted) {
+      setState(() => _mapDataFuture = _loadMapData());
+    }
+  }
+
+  Future<void> _rewindToLocation(MapLocation location) async {
+    final progress = _loadedProgress;
+    if (_isRewinding ||
+        progress == null ||
+        location.id > progress.unlockedLocation) {
+      return;
+    }
+
+    _isRewinding = true;
+    late final PlayerProgress rewoundProgress;
+    try {
+      rewoundProgress = await _progressService.rewindToLevel(location.id);
+      _loadedProgress = rewoundProgress;
+    } finally {
+      _isRewinding = false;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _mapDataFuture = Future.value(
+        _LocationMapData(progress: rewoundProgress),
+      );
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Уровень ${location.id} начнётся заново. Следующие уровни снова закрыты.',
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _confirmDifficultyReset(BuildContext context) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Сложность изменилась'),
+            content: const Text(
+              'При новой сложности игра начнётся с первого уровня. Весь текущий прогресс и снежинки будут сброшены.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Отмена'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Начать заново'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 }
 
@@ -190,6 +277,7 @@ class _MapViewport extends StatelessWidget {
     required this.stops,
     required this.progress,
     required this.onOpenLocation,
+    required this.onRewindToLocation,
   });
 
   final String imagePath;
@@ -198,6 +286,7 @@ class _MapViewport extends StatelessWidget {
   final PlayerProgress progress;
   final void Function(BuildContext context, MapLocation location)
   onOpenLocation;
+  final ValueChanged<MapLocation> onRewindToLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -218,6 +307,7 @@ class _MapViewport extends StatelessWidget {
           progress: progress,
           currentLocationId: _resolveCurrentLocationId(stops, progress),
           onOpenLocation: onOpenLocation,
+          onRewindToLocation: onRewindToLocation,
         );
 
         if (isCompact || mapHeight > constraints.maxHeight) {
@@ -262,6 +352,7 @@ class _IllustratedProgressionMap extends StatelessWidget {
     required this.progress,
     required this.currentLocationId,
     required this.onOpenLocation,
+    required this.onRewindToLocation,
   });
 
   final double width;
@@ -272,6 +363,7 @@ class _IllustratedProgressionMap extends StatelessWidget {
   final int? currentLocationId;
   final void Function(BuildContext context, MapLocation location)
   onOpenLocation;
+  final ValueChanged<MapLocation> onRewindToLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -296,6 +388,7 @@ class _IllustratedProgressionMap extends StatelessWidget {
               currentLocationId: currentLocationId,
               mapSize: Size(width, height),
               onOpenLocation: onOpenLocation,
+              onRewindToLocation: onRewindToLocation,
             ),
         ],
       ),
@@ -310,6 +403,7 @@ class _MapHotspot extends StatelessWidget {
     required this.currentLocationId,
     required this.mapSize,
     required this.onOpenLocation,
+    required this.onRewindToLocation,
   });
 
   final _MapStop stop;
@@ -318,6 +412,7 @@ class _MapHotspot extends StatelessWidget {
   final Size mapSize;
   final void Function(BuildContext context, MapLocation location)
   onOpenLocation;
+  final ValueChanged<MapLocation> onRewindToLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -352,17 +447,17 @@ class _MapHotspot extends StatelessWidget {
           width: hitbox.width,
           height: hitbox.height,
           child: Tooltip(
-            message: '${stop.location.id}. ${stop.location.name}',
+            message:
+                '${stop.location.id}. ${stop.location.name}\nДважды нажмите, чтобы вернуть прогресс к этому уровню.',
             child: Semantics(
               button: isUnlocked,
               enabled: isUnlocked,
               label: '${stop.location.id}. ${stop.location.name}',
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: isUnlocked
-                    ? () => onOpenLocation(context, stop.location)
-                    : null,
-                child: const SizedBox.expand(),
+              child: _MapHotspotTapTarget(
+                key: ValueKey<String>('map-location-${stop.location.id}'),
+                enabled: isUnlocked,
+                onOpen: () => onOpenLocation(context, stop.location),
+                onRewind: () => onRewindToLocation(stop.location),
               ),
             ),
           ),
@@ -377,6 +472,61 @@ class _MapHotspot extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MapHotspotTapTarget extends StatefulWidget {
+  const _MapHotspotTapTarget({
+    super.key,
+    required this.enabled,
+    required this.onOpen,
+    required this.onRewind,
+  });
+
+  final bool enabled;
+  final VoidCallback onOpen;
+  final VoidCallback onRewind;
+
+  @override
+  State<_MapHotspotTapTarget> createState() => _MapHotspotTapTargetState();
+}
+
+class _MapHotspotTapTargetState extends State<_MapHotspotTapTarget> {
+  static const _doubleClickWindow = Duration(milliseconds: 350);
+  Timer? _singleClickTimer;
+
+  @override
+  void dispose() {
+    _singleClickTimer?.cancel();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    if (!widget.enabled) {
+      return;
+    }
+
+    final pendingSingleClick = _singleClickTimer;
+    if (pendingSingleClick?.isActive ?? false) {
+      pendingSingleClick!.cancel();
+      _singleClickTimer = null;
+      widget.onRewind();
+      return;
+    }
+
+    _singleClickTimer = Timer(_doubleClickWindow, () {
+      _singleClickTimer = null;
+      widget.onOpen();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: widget.enabled ? _handleTap : null,
+      child: const SizedBox.expand(),
     );
   }
 }

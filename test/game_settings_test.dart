@@ -26,6 +26,7 @@ void main() {
     await settingsService.saveDifficulty(GameDifficulty.training);
 
     expect(await settingsService.loadDifficulty(), GameDifficulty.training);
+    expect(await settingsService.isDifficultyResetRequired(), isTrue);
   });
 
   test('selected difficulty loads after reopening the service', () async {
@@ -34,6 +35,54 @@ void main() {
     await GameSettingsService().saveDifficulty(GameDifficulty.expert);
 
     expect(await GameSettingsService().loadDifficulty(), GameDifficulty.expert);
+  });
+
+  test(
+    'confirmed difficulty reset becomes the new progress baseline',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'game_difficulty': GameDifficulty.beginner.name,
+      });
+      final settingsService = GameSettingsService();
+
+      await settingsService.saveDifficulty(GameDifficulty.expert);
+      expect(await settingsService.isDifficultyResetRequired(), isTrue);
+
+      await settingsService.confirmProgressResetForCurrentDifficulty();
+      expect(await settingsService.isDifficultyResetRequired(), isFalse);
+
+      await settingsService.saveDifficulty(GameDifficulty.training);
+      expect(await settingsService.isDifficultyResetRequired(), isTrue);
+    },
+  );
+
+  test(
+    'returning to the progress difficulty cancels the required reset',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'game_difficulty': GameDifficulty.beginner.name,
+      });
+      final settingsService = GameSettingsService();
+
+      await settingsService.saveDifficulty(GameDifficulty.expert);
+      await settingsService.saveDifficulty(GameDifficulty.beginner);
+
+      expect(await settingsService.isDifficultyResetRequired(), isFalse);
+    },
+  );
+
+  test('legacy non-beginner progress requires a one-time reset', () async {
+    SharedPreferences.setMockInitialValues({
+      'game_difficulty': GameDifficulty.expert.name,
+      'unlocked_location': 8,
+      'completed_level_ids': ['1', '2', '3', '4', '5', '6', '7'],
+    });
+    final settingsService = GameSettingsService();
+
+    expect(await settingsService.isDifficultyResetRequired(), isTrue);
+
+    await settingsService.confirmProgressResetForCurrentDifficulty();
+    expect(await settingsService.isDifficultyResetRequired(), isFalse);
   });
 
   test('default round settings are created correctly', () async {
@@ -64,6 +113,7 @@ void main() {
       expect(loadedSettings.roundQuestionCount, 10);
       expect(loadedSettings.maxMistakesPerRound, 1);
       expect(loadedSettings.wrongAnswerPenalty, 2);
+      expect(await settingsService.isDifficultyResetRequired(), isFalse);
     },
   );
 

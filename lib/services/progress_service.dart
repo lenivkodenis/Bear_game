@@ -77,6 +77,26 @@ class ProgressService {
     ]);
   }
 
+  Future<PlayerProgress> rewindToLevel(int levelId) async {
+    if (levelId < 1 || levelId > 10) {
+      throw ArgumentError.value(levelId, 'levelId', 'must be from 1 to 10');
+    }
+
+    final progress = await loadProgress();
+    final questionIndexes = Map<int, int>.of(progress.currentQuestionIndexes)
+      ..removeWhere((savedLevelId, _) => savedLevelId >= levelId);
+    final completedLevelIds = Set<int>.of(progress.completedLevelIds)
+      ..removeWhere((savedLevelId) => savedLevelId >= levelId);
+    final rewoundProgress = progress.copyWith(
+      unlockedLocation: levelId,
+      currentQuestionIndexes: questionIndexes,
+      completedLevelIds: completedLevelIds,
+    );
+
+    await saveProgress(rewoundProgress);
+    return rewoundProgress;
+  }
+
   Map<int, int> _loadQuestionIndexes(SharedPreferences preferences) {
     final storedValue = preferences.getString(_currentQuestionIndexesKey);
     if (storedValue != null) {
