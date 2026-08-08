@@ -60,6 +60,10 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
     expect(find.byType(TextButton), findsNothing);
     expect(find.byType(FilledButton), findsNothing);
+    final dialogTextStyle = tester.widget<DefaultTextStyle>(
+      find.byKey(const Key('north_confirmation_dialog_text_style')),
+    );
+    expect(dialogTextStyle.style.decoration, TextDecoration.none);
 
     await tester.tap(find.text('Отмена'));
     await tester.pump();

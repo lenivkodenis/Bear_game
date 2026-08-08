@@ -68,107 +68,111 @@ class NorthConfirmationDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCompact = MediaQuery.sizeOf(context).width < 600;
 
-    return SafeArea(
-      child: Center(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(isCompact ? 18 : 28),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 570),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFFFFCF4),
-                    AppTheme.frostBlue,
-                    Color(0xFFD5EFFA),
+    return DefaultTextStyle(
+      key: const Key('north_confirmation_dialog_text_style'),
+      style: AppTheme.bodyStyle.copyWith(decoration: TextDecoration.none),
+      child: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(isCompact ? 18 : 28),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 570),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFFFFCF4),
+                      AppTheme.frostBlue,
+                      Color(0xFFD5EFFA),
+                    ],
+                    stops: [0, 0.58, 1],
+                  ),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: AppTheme.snowWhite, width: 3),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x66000C1C),
+                      blurRadius: 30,
+                      offset: Offset(0, 14),
+                    ),
+                    BoxShadow(
+                      color: Color(0x6696DDF4),
+                      blurRadius: 18,
+                      spreadRadius: 2,
+                    ),
                   ],
-                  stops: [0, 0.58, 1],
                 ),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: AppTheme.snowWhite, width: 3),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x66000C1C),
-                    blurRadius: 30,
-                    offset: Offset(0, 14),
-                  ),
-                  BoxShadow(
-                    color: Color(0x6696DDF4),
-                    blurRadius: 18,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: CustomPaint(
-                painter: const _NorthDialogSnowPainter(),
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    isCompact ? 22 : 34,
-                    isCompact ? 24 : 32,
-                    isCompact ? 22 : 34,
-                    isCompact ? 22 : 30,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const _SnowflakeBadge(),
-                          const SizedBox(width: 14),
-                          Expanded(
+                child: CustomPaint(
+                  painter: const _NorthDialogSnowPainter(),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      isCompact ? 22 : 34,
+                      isCompact ? 24 : 32,
+                      isCompact ? 22 : 34,
+                      isCompact ? 22 : 30,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SnowflakeBadge(),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: AppTheme.screenTitleStyle.copyWith(
+                                  fontSize: isCompact ? 25 : 30,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: AppTheme.snowWhite.withValues(alpha: 0.72),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: AppTheme.iceBlue,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 16,
+                            ),
                             child: Text(
-                              title,
-                              style: AppTheme.screenTitleStyle.copyWith(
-                                fontSize: isCompact ? 25 : 30,
-                                height: 1.1,
+                              message,
+                              style: AppTheme.bodyStyle.copyWith(
+                                fontSize: isCompact ? 16 : 18,
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: AppTheme.snowWhite.withValues(alpha: 0.72),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: AppTheme.iceBlue,
-                            width: 1.5,
-                          ),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 16,
-                          ),
-                          child: Text(
-                            message,
-                            style: AppTheme.bodyStyle.copyWith(
-                              fontSize: isCompact ? 16 : 18,
-                            ),
-                          ),
+                        const SizedBox(height: 22),
+                        PrimaryGameButton(
+                          label: confirmLabel,
+                          icon: Icons.refresh_rounded,
+                          symbol: '↻',
+                          onPressed: onConfirm,
                         ),
-                      ),
-                      const SizedBox(height: 22),
-                      PrimaryGameButton(
-                        label: confirmLabel,
-                        icon: Icons.refresh_rounded,
-                        symbol: '↻',
-                        onPressed: onConfirm,
-                      ),
-                      const SizedBox(height: 12),
-                      PrimaryGameButton(
-                        label: cancelLabel,
-                        icon: Icons.arrow_back_rounded,
-                        symbol: '←',
-                        secondary: true,
-                        onPressed: onCancel,
-                      ),
-                    ],
+                        const SizedBox(height: 12),
+                        PrimaryGameButton(
+                          label: cancelLabel,
+                          icon: Icons.arrow_back_rounded,
+                          symbol: '←',
+                          secondary: true,
+                          onPressed: onCancel,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
