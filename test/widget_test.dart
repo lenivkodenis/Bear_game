@@ -1,5 +1,9 @@
 import 'package:bear_game/app.dart';
+import 'package:bear_game/game/bear_math_game.dart';
+import 'package:bear_game/screens/game_screen.dart';
 import 'package:bear_game/widgets/game_controls.dart';
+import 'package:flame/camera.dart';
+import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -45,5 +49,54 @@ void main() {
     await tester.pump(const Duration(milliseconds: 121));
 
     expect(moveEndCount, 1);
+  });
+
+  test('compact portrait game requires landscape orientation', () {
+    expect(requiresLandscapeGameViewport(const Size(390, 844)), isTrue);
+    expect(requiresLandscapeGameViewport(const Size(844, 390)), isFalse);
+    expect(requiresLandscapeGameViewport(const Size(1024, 768)), isFalse);
+  });
+
+  test('compact game keeps the authored 800x600 resolution', () {
+    final game = BearMathGame(levelId: 1, useFixedResolution: true);
+
+    expect(game.camera.viewport, isA<FixedResolutionViewport>());
+    expect(game.size.x, BearMathGame.designWidth);
+    expect(game.size.y, BearMathGame.designHeight);
+    expect(game.camera.viewfinder.anchor, Anchor.topLeft);
+  });
+
+  test('game can close an overlay before the scene finishes loading', () {
+    final game = BearMathGame(levelId: 1, useFixedResolution: true);
+
+    expect(game.closeMentorDialog, returnsNormally);
+  });
+
+  testWidgets('mobile controls remain inside a short landscape viewport', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(667, 375));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SafeArea(
+            child: GameControls(
+              onMoveLeftStart: () {},
+              onMoveRightStart: () {},
+              onMoveEnd: () {},
+              onJump: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final screenRect = const Offset(0, 0) & const Size(667, 375);
+    for (final symbol in ['‹', '›', '↑']) {
+      expect(screenRect.contains(tester.getCenter(find.text(symbol))), isTrue);
+    }
+    expect(tester.takeException(), isNull);
   });
 }

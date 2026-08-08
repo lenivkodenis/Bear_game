@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
@@ -30,11 +31,15 @@ import '../services/progress_service.dart';
 import '../utils/answer_option_order.dart';
 
 class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
-  BearMathGame({required this.levelId});
+  BearMathGame({required this.levelId, this.useFixedResolution = false})
+    : super(camera: _buildGameCamera(useFixedResolution));
 
   static const mentorDialogOverlay = 'mentorDialog';
+  static const designWidth = 800.0;
+  static const designHeight = 600.0;
 
   final int levelId;
+  final bool useFixedResolution;
   late PlayerBear player;
   late final MentorVisualComponent mentor;
   late LevelGeometry levelGeometry;
@@ -168,17 +173,19 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     final mainGround = levelGeometry.mainGround;
     final groundY = mainGround.y;
 
-    add(SnowyBackground(size: size, assetPath: levelGeometry.backgroundAsset));
+    world.add(
+      SnowyBackground(size: size, assetPath: levelGeometry.backgroundAsset),
+    );
     final distantBirdsConfig = DistantBirdsConfig.forLevel(currentLevel!.id);
     if (distantBirdsConfig != null) {
-      add(DistantBirdsComponent(size: size, config: distantBirdsConfig));
+      world.add(DistantBirdsComponent(size: size, config: distantBirdsConfig));
     }
 
     _mainGroundComponent = PlatformComponent(
       position: mainGround.position,
       size: mainGround.size,
     );
-    add(_mainGroundComponent);
+    world.add(_mainGroundComponent);
 
     final playerSpawn = levelGeometry.playerSpawn.toVector2();
     player = PlayerBear(
@@ -195,8 +202,8 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       groundPosition: mentorSpawn,
     );
 
-    add(player);
-    add(mentor);
+    world.add(player);
+    world.add(mentor);
     final ambientEffect = AmbientEffectsFactory.forLevel(
       levelId: currentLevel!.id,
       size: size,
@@ -204,17 +211,17 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       isActive: _isPlayerPastFirstObstacle,
     );
     if (ambientEffect != null) {
-      add(ambientEffect);
+      world.add(ambientEffect);
     }
     final foregroundAmbientEffect = AmbientEffectsFactory.foregroundForLevel(
       levelId: currentLevel!.id,
       size: size,
     );
     if (foregroundAmbientEffect != null) {
-      add(foregroundAmbientEffect);
+      world.add(foregroundAmbientEffect);
     }
     if (isLevelGeometryDebugOverlayEnabled) {
-      add(
+      world.add(
         LevelGeometryDebugOverlay(
           geometry: () => levelGeometry,
           player: () => player,
@@ -336,7 +343,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   void closeMentorDialog() {
     _mentorDialogOpen = false;
-    player.stopInteracting();
+    if (_sceneReady) {
+      player.stopInteracting();
+    }
     overlays.remove(mentorDialogOverlay);
   }
 
@@ -707,7 +716,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       groundY: mainGround.y,
       levelWidth: size.x,
     )..priority = 20;
-    add(player);
+    world.add(player);
 
     final mentorSpawn = levelGeometry.mentorPosition.toVector2();
     mentor.moveToGroundPosition(mentorSpawn);
@@ -1351,4 +1360,17 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
         )
         .toList(growable: false);
   }
+}
+
+CameraComponent _buildGameCamera(bool useFixedResolution) {
+  final camera = useFixedResolution
+      ? CameraComponent.withFixedResolution(
+          width: BearMathGame.designWidth,
+          height: BearMathGame.designHeight,
+        )
+      : CameraComponent();
+  camera.viewfinder
+    ..anchor = Anchor.topLeft
+    ..position = Vector2.zero();
+  return camera;
 }
