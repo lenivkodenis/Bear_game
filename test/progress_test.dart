@@ -24,6 +24,7 @@ void main() {
     await _completeCurrentLevel(game);
 
     final progress = await ProgressService().loadProgress();
+    expect(progress.completedLevelIds, contains(1));
     expect(progress.isLevelCompleted(1), isTrue);
     expect(progress.questionIndexForLevel(1), 10);
     expect(progress.unlockedLocation, 2);

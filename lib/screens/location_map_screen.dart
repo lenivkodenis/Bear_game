@@ -15,9 +15,11 @@ import 'game_screen.dart';
 const _lockedPadlockAssetPath = 'assets/images/map/locked_level_padlock.png';
 
 class LocationMapScreen extends StatefulWidget {
-  const LocationMapScreen({super.key});
+  const LocationMapScreen({super.key, this.progressLoader});
 
   static const routeName = '/map';
+
+  final Future<PlayerProgress> Function()? progressLoader;
 
   @override
   State<LocationMapScreen> createState() => _LocationMapScreenState();
@@ -27,7 +29,6 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
   static const _mapAssetPath = 'assets/images/map/progression_map.png';
   static const _mapAspectRatio = 1672 / 941;
 
-  final ProgressService _progressService = ProgressService();
   late Future<_LocationMapData> _mapDataFuture;
 
   static const _locations = [
@@ -108,9 +109,10 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
           child: FutureBuilder<_LocationMapData>(
             future: _mapDataFuture,
             builder: (context, snapshot) {
-              final mapData =
-                  snapshot.data ??
-                  _LocationMapData.empty(PlayerProgress.initial());
+              final mapData = snapshot.data;
+              if (mapData == null) {
+                return const _LocationMapLoadingState();
+              }
 
               return Stack(
                 children: [
@@ -143,7 +145,8 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
   }
 
   Future<_LocationMapData> _loadMapData() async {
-    final progress = await _progressService.loadProgress();
+    final progress =
+        await (widget.progressLoader ?? ProgressService().loadProgress)();
     final visibleProgress = isLocationMapUnlockAllEnabled
         ? progress.copyWith(unlockedLocation: 10)
         : progress;
@@ -155,6 +158,28 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
     Navigator.of(
       context,
     ).pushNamed(GameScreen.routeName, arguments: location.id);
+  }
+}
+
+class _LocationMapLoadingState extends StatelessWidget {
+  const _LocationMapLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Stack(
+      children: [
+        Center(
+          child: CircularProgressIndicator(
+            key: ValueKey<String>('location-map-loading'),
+          ),
+        ),
+        Positioned(
+          top: 12,
+          left: 12,
+          child: _GlassPanel(child: BackTextButton()),
+        ),
+      ],
+    );
   }
 }
 
@@ -778,8 +803,4 @@ class _LocationMapData {
   const _LocationMapData({required this.progress});
 
   final PlayerProgress progress;
-
-  factory _LocationMapData.empty(PlayerProgress progress) {
-    return _LocationMapData(progress: progress);
-  }
 }
