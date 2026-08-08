@@ -15,7 +15,7 @@ class BearGameApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Медвежонок и таблица умножения',
+      title: 'BearMath — игра для изучения таблицы умножения',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
       routes: {
