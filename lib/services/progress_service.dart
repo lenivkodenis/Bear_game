@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/player_progress.dart';
+import 'game_economy.dart';
 
 class ProgressService {
   static const _scoreKey = 'score';
@@ -21,7 +22,9 @@ class ProgressService {
         preferences.getInt(_unlockedLocationKey) ?? 1;
 
     return PlayerProgress(
-      score: preferences.getInt(_scoreKey) ?? 0,
+      score: (preferences.getInt(_scoreKey) ?? 0)
+          .clamp(0, GameEconomy.maxTotalSnowflakes)
+          .toInt(),
       unlockedLocation: _normalizeUnlockedLocation(
         storedUnlockedLocation,
         completedLevelIds,

@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../game/bear_math_game.dart';
 import '../models/game_difficulty.dart';
+import '../models/question.dart';
 import '../models/question_answer_result.dart';
-import '../theme/app_theme.dart';
-import 'game_card.dart';
-import 'primary_game_button.dart';
 
 class MentorDialog extends StatefulWidget {
   const MentorDialog({
     required this.game,
     required this.onClose,
     required this.onLevelComplete,
+    required this.onReturnToMap,
     super.key,
   });
 
   final BearMathGame game;
   final VoidCallback onClose;
   final VoidCallback onLevelComplete;
+  final VoidCallback onReturnToMap;
 
   @override
   State<MentorDialog> createState() => _MentorDialogState();
@@ -28,36 +27,30 @@ class _MentorDialogState extends State<MentorDialog> {
   bool _showIntro = true;
   bool _isSubmitting = false;
   QuestionAnswerResult? _answerResult;
-  final TextEditingController _numericAnswerController =
-      TextEditingController();
+  int? _orderedQuestionId;
+  GameDifficulty? _orderedDifficulty;
+  List<int> _orderedOptions = const [];
+  final TextEditingController _manualAnswerController = TextEditingController();
 
   @override
   void dispose() {
-    _numericAnswerController.dispose();
+    _manualAnswerController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final level = widget.game.currentLevel;
-    final canOpenQuestion = level != null && _showIntro;
 
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: canOpenQuestion
-                ? () => setState(() => _showIntro = false)
-                : null,
-            child: GameCard(
-              borderColor: _answerResult == null
-                  ? AppTheme.iceBlue
-                  : _answerResult!.isCorrect
-                  ? AppTheme.gentleGreen
-                  : AppTheme.softCoral,
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Card(
+            elevation: 12,
+            child: Padding(
+              padding: const EdgeInsets.all(24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -85,53 +78,76 @@ class _MentorDialogState extends State<MentorDialog> {
 
     if (_showIntro) {
       return [
-        _DialogTitle(title: level.mentorName, subtitle: level.locationName),
+        _DialogTitle(
+          title: level.mentorName,
+          subtitle: level.locationName,
+          onClose: widget.onClose,
+        ),
         const SizedBox(height: 12),
-        Text(level.introText, style: AppTheme.bodyStyle),
+        Text(level.introText, style: const TextStyle(fontSize: 18)),
         const SizedBox(height: 20),
-        PrimaryGameButton(
-          icon: Icons.calculate_rounded,
-          symbol: '×',
-          label: 'К задаче',
+        FilledButton(
           onPressed: () => setState(() => _showIntro = false),
+          child: const Text('К задаче'),
         ),
       ];
     }
 
     if (widget.game.isLevelComplete && _answerResult == null) {
       return [
-        _DialogTitle(title: level.mentorName, subtitle: level.locationName),
+        _DialogTitle(
+          title: level.mentorName,
+          subtitle: level.locationName,
+          onClose: widget.onClose,
+        ),
         const SizedBox(height: 12),
         const Text(
           'Все задачи этой льдины решены. Морская чайка показывает путь дальше.',
-          style: AppTheme.bodyStyle,
+          style: TextStyle(fontSize: 18),
         ),
         const SizedBox(height: 20),
-        PrimaryGameButton(
-          icon: Icons.check_rounded,
-          symbol: '✓',
-          label: 'Закрыть',
-          onPressed: widget.onClose,
-        ),
+        FilledButton(onPressed: widget.onClose, child: const Text('Закрыть')),
       ];
     }
 
     final result = _answerResult;
+    if (result != null && result.requiresRestart) {
+      return [
+        _DialogTitle(
+          title: 'Попробуем ещё раз?',
+          subtitle: level.locationName,
+          onClose: widget.onClose,
+        ),
+        const SizedBox(height: 12),
+        Text(result.message, style: const TextStyle(fontSize: 18)),
+        const SizedBox(height: 20),
+        FilledButton(
+          onPressed: _restartRound,
+          child: const Text('Начать заново'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton(
+          onPressed: widget.onReturnToMap,
+          child: const Text('Вернуться на карту'),
+        ),
+      ];
+    }
+
     if (result != null && result.isCorrect) {
       return [
-        _DialogTitle(title: level.mentorName, subtitle: level.locationName),
+        _DialogTitle(
+          title: level.mentorName,
+          subtitle: level.locationName,
+          onClose: widget.onClose,
+        ),
         const SizedBox(height: 12),
-        _FeedbackBox(result: result),
+        Text(result.message, style: const TextStyle(fontSize: 18)),
         const SizedBox(height: 20),
-        PrimaryGameButton(
-          icon: result.isLevelComplete
-              ? Icons.emoji_events_rounded
-              : Icons.arrow_forward_rounded,
-          symbol: result.isLevelComplete ? '★' : '›',
-          label: result.isLevelComplete ? 'К итогам' : 'Следующий вопрос',
+        FilledButton(
           onPressed: result.isLevelComplete
               ? widget.onLevelComplete
               : _showNextQuestion,
+          child: Text(result.isLevelComplete ? 'К итогам' : 'Следующий вопрос'),
         ),
       ];
     }
@@ -139,16 +155,15 @@ class _MentorDialogState extends State<MentorDialog> {
     final question = widget.game.currentQuestion;
     if (question == null) {
       return [
-        _DialogTitle(title: level.mentorName, subtitle: level.locationName),
-        const SizedBox(height: 12),
-        const Text('Задачи закончились.', style: AppTheme.bodyStyle),
-        const SizedBox(height: 20),
-        PrimaryGameButton(
-          icon: Icons.check_rounded,
-          symbol: '✓',
-          label: 'Закрыть',
-          onPressed: widget.onClose,
+        _DialogTitle(
+          title: level.mentorName,
+          subtitle: level.locationName,
+          onClose: widget.onClose,
         ),
+        const SizedBox(height: 12),
+        const Text('Задачи закончились.', style: TextStyle(fontSize: 18)),
+        const SizedBox(height: 20),
+        FilledButton(onPressed: widget.onClose, child: const Text('Закрыть')),
       ];
     }
 
@@ -157,89 +172,92 @@ class _MentorDialogState extends State<MentorDialog> {
         title: level.mentorName,
         subtitle:
             'Вопрос ${widget.game.currentQuestionNumber} из ${widget.game.totalQuestions}',
+        onClose: widget.onClose,
       ),
       const SizedBox(height: 12),
-      DecoratedBox(
-        decoration: BoxDecoration(
-          color: AppTheme.frostBlue,
-          borderRadius: BorderRadius.circular(AppTheme.smallRadius),
-          border: Border.all(color: AppTheme.iceBlue),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            children: [
-              Text(
-                question.questionText,
-                textAlign: TextAlign.center,
-                style: AppTheme.bodyStyle,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                question.expression,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  color: AppTheme.deepBlue,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-        ),
+      Text(question.questionText, style: const TextStyle(fontSize: 18)),
+      const SizedBox(height: 8),
+      Text(
+        question.expression,
+        textAlign: TextAlign.center,
+        style: Theme.of(
+          context,
+        ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
       ),
       if (result != null && !result.isCorrect) ...[
         const SizedBox(height: 12),
-        _FeedbackBox(result: result),
+        Text(
+          result.message,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.error,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ],
       const SizedBox(height: 20),
-      if (widget.game.difficulty == GameDifficulty.expert)
-        ..._buildNumericAnswerContent()
+      if (widget.game.isManualAnswerMode)
+        _buildManualAnswerInput()
       else
-        for (final option in widget.game.currentAnswerOptions) ...[
-          PrimaryGameButton(
-            icon: Icons.panorama_fish_eye_rounded,
-            symbol: '•',
-            label: option.toString(),
-            secondary: true,
+        for (final option in _optionsFor(question)) ...[
+          FilledButton.tonal(
             onPressed: _isSubmitting ? null : () => _submitAnswer(option),
+            child: Text(option.toString()),
           ),
           const SizedBox(height: 8),
         ],
     ];
   }
 
-  List<Widget> _buildNumericAnswerContent() {
-    return [
-      TextField(
-        controller: _numericAnswerController,
-        keyboardType: TextInputType.number,
-        textInputAction: TextInputAction.done,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        enabled: !_isSubmitting,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: AppTheme.deepBlue,
-          fontSize: 24,
-          fontWeight: FontWeight.w900,
-        ),
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: AppTheme.snowWhite,
-          hintText: 'Ответ',
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppTheme.smallRadius),
+  List<int> _optionsFor(Question question) {
+    if (_orderedQuestionId != question.id ||
+        _orderedDifficulty != widget.game.difficulty) {
+      _orderedQuestionId = question.id;
+      _orderedDifficulty = widget.game.difficulty;
+      _orderedOptions = widget.game.answerOptionsFor(question);
+    }
+
+    return _orderedOptions;
+  }
+
+  Widget _buildManualAnswerInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _manualAnswerController,
+          enabled: !_isSubmitting,
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
+          decoration: const InputDecoration(
+            labelText: 'Ответ',
+            border: OutlineInputBorder(),
           ),
+          onSubmitted: (_) => _submitManualAnswer(),
         ),
-        onSubmitted: (_) => _submitNumericAnswer(),
-      ),
-      const SizedBox(height: 12),
-      PrimaryGameButton(
-        icon: Icons.check_rounded,
-        symbol: '✓',
-        label: 'Проверить',
-        onPressed: _isSubmitting ? null : _submitNumericAnswer,
-      ),
-    ];
+        const SizedBox(height: 12),
+        FilledButton.tonal(
+          onPressed: _isSubmitting ? null : _submitManualAnswer,
+          child: Text(_isSubmitting ? 'Проверяем...' : 'Ответить'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submitManualAnswer() async {
+    final answer = int.tryParse(_manualAnswerController.text.trim());
+    if (answer == null) {
+      setState(() {
+        _answerResult = QuestionAnswerResult(
+          isCorrect: false,
+          message: 'Введите число.',
+          score: widget.game.scoreNotifier.value,
+          isLevelComplete: false,
+        );
+      });
+      return;
+    }
+
+    await _submitAnswer(answer);
   }
 
   Future<void> _submitAnswer(int option) async {
@@ -256,121 +274,78 @@ class _MentorDialogState extends State<MentorDialog> {
     });
   }
 
-  Future<void> _submitNumericAnswer() async {
+  Future<void> _restartRound() async {
     setState(() => _isSubmitting = true);
-    final result = await widget.game.submitNumericAnswer(
-      _numericAnswerController.text,
-    );
+    await widget.game.restartRound();
 
     if (!mounted) {
       return;
     }
 
     setState(() {
-      _answerResult = result;
+      _showIntro = false;
+      _answerResult = null;
       _isSubmitting = false;
+      _orderedQuestionId = null;
+      _orderedDifficulty = null;
+      _orderedOptions = const [];
+      _manualAnswerController.clear();
     });
   }
 
   void _showNextQuestion() {
     setState(() {
       _answerResult = null;
-      _numericAnswerController.clear();
+      _orderedQuestionId = null;
+      _orderedDifficulty = null;
+      _orderedOptions = const [];
+      _manualAnswerController.clear();
     });
   }
 }
 
 class _DialogTitle extends StatelessWidget {
-  const _DialogTitle({required this.title, required this.subtitle});
+  const _DialogTitle({
+    required this.title,
+    required this.subtitle,
+    required this.onClose,
+  });
 
   final String title;
   final String subtitle;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const CircleAvatar(
-          radius: 24,
-          backgroundColor: AppTheme.frostBlue,
-          child: Text(
-            '✦',
-            style: TextStyle(
-              color: AppTheme.softBlue,
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppTheme.deepBlue,
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 4),
-              Text(subtitle, style: AppTheme.helperStyle),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
             ],
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _FeedbackBox extends StatelessWidget {
-  const _FeedbackBox({required this.result});
-
-  final QuestionAnswerResult result;
-
-  @override
-  Widget build(BuildContext context) {
-    final isCorrect = result.isCorrect;
-    final color = isCorrect ? AppTheme.gentleGreen : AppTheme.softCoral;
-    final backgroundColor = isCorrect ? AppTheme.paleGreen : AppTheme.paleCoral;
-    final symbol = isCorrect ? '✓' : '!';
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(AppTheme.smallRadius),
-        border: Border.all(color: color.withValues(alpha: 0.55), width: 2),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              symbol,
-              style: TextStyle(
-                color: color,
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                result.message,
-                style: const TextStyle(
-                  color: AppTheme.deepBlue,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  height: 1.3,
-                ),
-              ),
-            ),
-          ],
+        IconButton(
+          onPressed: onClose,
+          icon: const Icon(Icons.close_rounded),
+          tooltip: 'Закрыть',
         ),
-      ),
+      ],
     );
   }
 }

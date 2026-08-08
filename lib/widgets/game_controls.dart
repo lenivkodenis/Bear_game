@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
@@ -47,7 +49,7 @@ class GameControls extends StatelessWidget {
   }
 }
 
-class _HoldButton extends StatelessWidget {
+class _HoldButton extends StatefulWidget {
   const _HoldButton({
     required this.symbol,
     required this.tooltip,
@@ -61,13 +63,80 @@ class _HoldButton extends StatelessWidget {
   final VoidCallback onHoldEnd;
 
   @override
+  State<_HoldButton> createState() => _HoldButtonState();
+}
+
+class _HoldButtonState extends State<_HoldButton> {
+  static const _minimumHoldDuration = Duration(milliseconds: 120);
+
+  Timer? _stopTimer;
+  DateTime? _holdStartedAt;
+  bool _isHolding = false;
+
+  @override
+  void dispose() {
+    _stopTimer?.cancel();
+    if (_isHolding) {
+      widget.onHoldEnd();
+    }
+    super.dispose();
+  }
+
+  void _startHold() {
+    _stopTimer?.cancel();
+    _stopTimer = null;
+    if (_isHolding) {
+      return;
+    }
+
+    _isHolding = true;
+    _holdStartedAt = DateTime.now();
+    widget.onHoldStart();
+  }
+
+  void _finishHold() {
+    if (!_isHolding) {
+      return;
+    }
+
+    final holdStartedAt = _holdStartedAt;
+    if (holdStartedAt == null) {
+      _stopHoldNow();
+      return;
+    }
+
+    final elapsed = DateTime.now().difference(holdStartedAt);
+    final remaining = _minimumHoldDuration - elapsed;
+    if (remaining.inMicroseconds <= 0) {
+      _stopHoldNow();
+      return;
+    }
+
+    _stopTimer?.cancel();
+    _stopTimer = Timer(remaining, _stopHoldNow);
+  }
+
+  void _stopHoldNow() {
+    _stopTimer?.cancel();
+    _stopTimer = null;
+    if (!_isHolding) {
+      return;
+    }
+
+    _isHolding = false;
+    _holdStartedAt = null;
+    widget.onHoldEnd();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => onHoldStart(),
-      onTapUp: (_) => onHoldEnd(),
-      onTapCancel: onHoldEnd,
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: (_) => _startHold(),
+      onPointerUp: (_) => _finishHold(),
+      onPointerCancel: (_) => _finishHold(),
       child: Tooltip(
-        message: tooltip,
+        message: widget.tooltip,
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: AppTheme.softBlue,
@@ -85,7 +154,7 @@ class _HoldButton extends StatelessWidget {
             dimension: 56,
             child: Center(
               child: Text(
-                symbol,
+                widget.symbol,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 42,

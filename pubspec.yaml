@@ -21,6 +21,43 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - public/assets/main_screen/main_screen_bear_bg.png
+    - assets/images/map/progression_map.png
+    - assets/images/map/locked_level_padlock.png
+    - assets/images/bear_cub/bear_cub_base.png
+    - assets/images/characters/bear_cub/processed/bear_cub_base_5_clean_v2_conservative.png
+    - assets/images/characters/bear_cub/animations/walk/
+    - assets/images/characters/bear_cub/animations/walk_normalized/
+    - assets/images/characters/mentors/level_01_ice_floe/mentor.png
+    - assets/images/characters/mentors/level_02_icy_river/mentor.png
+    - assets/images/characters/mentors/level_03_snowy_shore/mentor.png
+    - assets/images/characters/mentors/level_04_northern_forest/mentor.png
+    - assets/images/characters/mentors/level_05_ice_cave/mentor.png
+    - assets/images/characters/mentors/level_06_snowy_valley/mentor.png
+    - assets/images/characters/mentors/level_07_mountain_pass/mentor.png
+    - assets/images/characters/mentors/level_08_polar_night/mentor.png
+    - assets/images/characters/mentors/level_09_northern_lights/mentor.png
+    - assets/images/characters/mentors/level_10_northern_ocean/seal_mentor_on_crate.png
+    - assets/images/characters/mountain_eagle/animations/fly_land_takeoff/
+    - assets/images/characters/snow_bunny/animations/hop_turn/alpha/
+    - assets/images/locations/snowy_clearing/01_sky.png
+    - assets/images/locations/snowy_clearing/02_far_hills.png
+    - assets/images/locations/snowy_clearing/03_mid_forest.png
+    - assets/images/locations/snowy_clearing/04_ground_platform.png
+    - assets/images/locations/snowy_clearing/preview/snowy_clearing_full_preview.png
+    - assets/images/levels/level_01_ice_floe/background.png
+    - assets/images/levels/level_02_icy_river/background.png
+    - assets/images/levels/level_02_icy_river/foreground_gameplay_overlay.png
+    - assets/images/levels/level_03_snowy_shore/background.png
+    - assets/images/levels/level_04_northern_forest/background.png
+    - assets/images/levels/level_05_ice_cave/background.png
+    - assets/images/levels/level_06_snowy_valley/background.png
+    - assets/images/levels/level_07_mountain_pass/background.png
+    - assets/images/levels/level_08_polar_night/background.png
+    - assets/images/levels/level_09_northern_lights/background.png
+    - assets/images/levels/level_10_northern_ocean/background.png
+    - assets/images/backgrounds/levels/level_2_background_backlayer_realistic_v2.png
     - assets/images/
     - assets/audio/
     - assets/data/
+    - assets/videos/levels/

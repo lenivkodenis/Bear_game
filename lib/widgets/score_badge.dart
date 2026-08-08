@@ -5,7 +5,7 @@ import '../theme/app_theme.dart';
 class ScoreBadge extends StatelessWidget {
   const ScoreBadge({
     required this.score,
-    this.label = 'Очки',
+    this.label = 'Снежинки',
     this.compact = false,
     super.key,
   });

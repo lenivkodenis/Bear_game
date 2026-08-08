@@ -1,17 +1,19 @@
 enum GameDifficulty {
-  beginner('beginner', 'Я учусь'),
-  training('training', 'Я тренируюсь'),
-  expert('expert', 'Я знаю');
+  beginner(
+    title: 'Я учусь',
+    description: '3 варианта ответа и подробные подсказки.',
+  ),
+  training(
+    title: 'Я тренируюсь',
+    description: 'Сложнее варианты ответа и подсказки без прямого ответа.',
+  ),
+  expert(
+    title: 'Я знаю',
+    description: 'Ответ нужно будет вводить самостоятельно.',
+  );
 
-  const GameDifficulty(this.storageValue, this.label);
+  const GameDifficulty({required this.title, required this.description});
 
-  final String storageValue;
-  final String label;
-
-  static GameDifficulty fromStorageValue(String? value) {
-    return GameDifficulty.values.firstWhere(
-      (difficulty) => difficulty.storageValue == value,
-      orElse: () => GameDifficulty.beginner,
-    );
-  }
+  final String title;
+  final String description;
 }

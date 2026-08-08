@@ -6,6 +6,9 @@
 build/
 coverage/
 
+# Local asset-processing tools
+.venv-tools/
+
 # IDE
 .idea/
 .vscode/

@@ -1,0 +1,631 @@
+import 'dart:convert';
+
+import 'package:flame/components.dart';
+import 'package:flutter/services.dart';
+
+const bool kLevelGeometryDebugOverlay = false;
+
+bool get isLevelGeometryDebugOverlayEnabled {
+  return kLevelGeometryDebugOverlay ||
+      isLevelGeometryDebugOverlayEnabledForUri(Uri.base);
+}
+
+bool get isGroundCalibrationModeEnabled {
+  return isGroundCalibrationModeEnabledForUri(Uri.base);
+}
+
+bool get isObstacleCalibrationModeEnabled {
+  return isObstacleCalibrationModeEnabledForUri(Uri.base);
+}
+
+bool get isGroundSegmentCalibrationModeEnabled {
+  return isGroundSegmentCalibrationModeEnabledForUri(Uri.base);
+}
+
+bool get isLocationMapUnlockAllEnabled {
+  return isLocationMapUnlockAllEnabledForUri(Uri.base);
+}
+
+bool isLevelGeometryDebugOverlayEnabledForUri(Uri uri) {
+  return _hasEnabledDebugGeometryFlag(uri.queryParameters) ||
+      _hasEnabledDebugGeometryFlag(_fragmentQueryParameters(uri.fragment));
+}
+
+bool isGroundCalibrationModeEnabledForUri(Uri uri) {
+  final queryParameters = uri.queryParameters;
+  final fragmentParameters = _fragmentQueryParameters(uri.fragment);
+
+  return (_hasEnabledDebugGeometryFlag(queryParameters) ||
+          _hasEnabledDebugGeometryFlag(fragmentParameters)) &&
+      (_hasEnabledGroundCalibrationFlag(queryParameters) ||
+          _hasEnabledGroundCalibrationFlag(fragmentParameters));
+}
+
+bool isObstacleCalibrationModeEnabledForUri(Uri uri) {
+  final queryParameters = uri.queryParameters;
+  final fragmentParameters = _fragmentQueryParameters(uri.fragment);
+
+  return (_hasEnabledDebugGeometryFlag(queryParameters) ||
+          _hasEnabledDebugGeometryFlag(fragmentParameters)) &&
+      (_hasEnabledObstacleCalibrationFlag(queryParameters) ||
+          _hasEnabledObstacleCalibrationFlag(fragmentParameters));
+}
+
+bool isGroundSegmentCalibrationModeEnabledForUri(Uri uri) {
+  final queryParameters = uri.queryParameters;
+  final fragmentParameters = _fragmentQueryParameters(uri.fragment);
+
+  return (_hasEnabledDebugGeometryFlag(queryParameters) ||
+          _hasEnabledDebugGeometryFlag(fragmentParameters)) &&
+      (_hasEnabledGroundSegmentCalibrationFlag(queryParameters) ||
+          _hasEnabledGroundSegmentCalibrationFlag(fragmentParameters));
+}
+
+bool isLocationMapUnlockAllEnabledForUri(Uri uri) {
+  final queryParameters = uri.queryParameters;
+  final fragmentParameters = _fragmentQueryParameters(uri.fragment);
+
+  return _hasEnabledUnlockAllFlag(queryParameters) ||
+      _hasEnabledUnlockAllFlag(fragmentParameters);
+}
+
+bool _hasEnabledDebugGeometryFlag(Map<String, String> parameters) {
+  return parameters['debugGeometry'] == '1';
+}
+
+bool _hasEnabledGroundCalibrationFlag(Map<String, String> parameters) {
+  return parameters['calibrateGround'] == '1';
+}
+
+bool _hasEnabledObstacleCalibrationFlag(Map<String, String> parameters) {
+  return parameters['calibrateObstacle'] == '1';
+}
+
+bool _hasEnabledGroundSegmentCalibrationFlag(Map<String, String> parameters) {
+  return parameters['calibrateGroundSegment'] == '1' ||
+      parameters['calibratePit'] == '1';
+}
+
+bool _hasEnabledUnlockAllFlag(Map<String, String> parameters) {
+  return parameters['unlockAll'] == '1';
+}
+
+Map<String, String> _fragmentQueryParameters(String fragment) {
+  if (fragment.isEmpty) {
+    return const <String, String>{};
+  }
+
+  final queryStart = fragment.indexOf('?');
+  final query = queryStart == -1
+      ? fragment
+      : fragment.substring(queryStart + 1);
+  if (!query.contains('=')) {
+    return const <String, String>{};
+  }
+
+  try {
+    return Uri.splitQueryString(query);
+  } on FormatException {
+    return const <String, String>{};
+  }
+}
+
+class LevelGeometryService {
+  Future<List<LevelGeometry>> loadGeometries() async {
+    final jsonString = await rootBundle.loadString(
+      'assets/data/level_geometry.json',
+    );
+    final decoded = jsonDecode(jsonString);
+    final json = _asJsonObject(decoded, context: 'level_geometry.json');
+    final world = LevelGeometryWorld.fromJson(
+      _requiredObject(json, 'world', context: 'level_geometry.json'),
+    );
+    final levels = _requiredList(
+      json,
+      'levels',
+      context: 'level_geometry.json',
+    );
+
+    return levels
+        .map(
+          (levelJson) => LevelGeometry.fromJson(
+            _asJsonObject(levelJson, context: 'level geometry entry'),
+            world: world,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  Future<LevelGeometry> loadLevelGeometry(int levelId) async {
+    final geometries = await loadGeometries();
+
+    return geometries.firstWhere(
+      (geometry) => geometry.levelId == levelId,
+      orElse: () =>
+          throw StateError('Missing level geometry for level id $levelId.'),
+    );
+  }
+}
+
+class LevelGeometryWorld {
+  const LevelGeometryWorld({required this.width, required this.height});
+
+  factory LevelGeometryWorld.fromJson(Map<String, Object?> json) {
+    return LevelGeometryWorld(
+      width: _requiredDouble(json, 'width', context: 'world'),
+      height: _requiredDouble(json, 'height', context: 'world'),
+    );
+  }
+
+  final double width;
+  final double height;
+}
+
+class LevelGeometryPoint {
+  const LevelGeometryPoint({required this.x, required this.y});
+
+  factory LevelGeometryPoint.fromJson(
+    Map<String, Object?> json, {
+    required String context,
+  }) {
+    return LevelGeometryPoint(
+      x: _requiredDouble(json, 'x', context: context),
+      y: _requiredDouble(json, 'y', context: context),
+    );
+  }
+
+  final double x;
+  final double y;
+
+  LevelGeometryPoint copyWith({double? x, double? y}) {
+    return LevelGeometryPoint(x: x ?? this.x, y: y ?? this.y);
+  }
+
+  LevelGeometryPoint scaledBy({
+    required double scaleX,
+    required double scaleY,
+  }) {
+    return LevelGeometryPoint(x: x * scaleX, y: y * scaleY);
+  }
+
+  Vector2 toVector2() => Vector2(x, y);
+}
+
+class LevelGeometryCollider {
+  const LevelGeometryCollider({
+    required this.id,
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+    this.surfaceYAtLeft,
+    this.surfaceYAtRight,
+    this.edgeCapture,
+  });
+
+  factory LevelGeometryCollider.fromJson(
+    Map<String, Object?> json, {
+    required String context,
+  }) {
+    final surfaceYAtLeft = _optionalDouble(
+      json,
+      'surfaceYAtLeft',
+      context: context,
+    );
+    final surfaceYAtRight = _optionalDouble(
+      json,
+      'surfaceYAtRight',
+      context: context,
+    );
+    if ((surfaceYAtLeft == null) != (surfaceYAtRight == null)) {
+      throw FormatException(
+        '$context slope surface must define both surfaceYAtLeft and '
+        'surfaceYAtRight.',
+      );
+    }
+    final edgeCapture = _optionalDouble(json, 'edgeCapture', context: context);
+
+    return LevelGeometryCollider(
+      id: _requiredString(json, 'id', context: context),
+      x: _requiredDouble(json, 'x', context: context),
+      y: _requiredDouble(json, 'y', context: context),
+      width: _requiredDouble(json, 'width', context: context),
+      height: _requiredDouble(json, 'height', context: context),
+      surfaceYAtLeft: surfaceYAtLeft,
+      surfaceYAtRight: surfaceYAtRight,
+      edgeCapture: edgeCapture,
+    );
+  }
+
+  final String id;
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+  final double? surfaceYAtLeft;
+  final double? surfaceYAtRight;
+  final double? edgeCapture;
+
+  Vector2 get position => Vector2(x, y);
+  Vector2 get size => Vector2(width, height);
+  bool get hasSlopedSurface =>
+      surfaceYAtLeft != null &&
+      surfaceYAtRight != null &&
+      surfaceYAtLeft != surfaceYAtRight;
+
+  LevelGeometryCollider copyWith({
+    String? id,
+    double? x,
+    double? y,
+    double? width,
+    double? height,
+    double? surfaceYAtLeft,
+    double? surfaceYAtRight,
+    double? edgeCapture,
+  }) {
+    return LevelGeometryCollider(
+      id: id ?? this.id,
+      x: x ?? this.x,
+      y: y ?? this.y,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      surfaceYAtLeft: surfaceYAtLeft ?? this.surfaceYAtLeft,
+      surfaceYAtRight: surfaceYAtRight ?? this.surfaceYAtRight,
+      edgeCapture: edgeCapture ?? this.edgeCapture,
+    );
+  }
+
+  LevelGeometryCollider scaledBy({
+    required double scaleX,
+    required double scaleY,
+  }) {
+    return LevelGeometryCollider(
+      id: id,
+      x: x * scaleX,
+      y: y * scaleY,
+      width: width * scaleX,
+      height: height * scaleY,
+      surfaceYAtLeft: surfaceYAtLeft == null ? null : surfaceYAtLeft! * scaleY,
+      surfaceYAtRight: surfaceYAtRight == null
+          ? null
+          : surfaceYAtRight! * scaleY,
+      edgeCapture: edgeCapture == null ? null : edgeCapture! * scaleX,
+    );
+  }
+}
+
+class LevelGeometry {
+  const LevelGeometry({
+    required this.levelId,
+    required this.world,
+    required this.backgroundAsset,
+    required this.playerSpawn,
+    required this.mentorPosition,
+    required this.groundColliders,
+    required this.platformColliders,
+    required this.obstacleColliders,
+    required this.calibrationObstacles,
+    required this.notes,
+  });
+
+  factory LevelGeometry.fromJson(
+    Map<String, Object?> json, {
+    required LevelGeometryWorld world,
+  }) {
+    final levelId = _requiredInt(json, 'levelId', context: 'level geometry');
+
+    return LevelGeometry(
+      levelId: levelId,
+      world: world,
+      backgroundAsset: _requiredString(
+        json,
+        'backgroundAsset',
+        context: 'level geometry $levelId',
+      ),
+      playerSpawn: LevelGeometryPoint.fromJson(
+        _requiredObject(
+          json,
+          'playerSpawn',
+          context: 'level geometry $levelId',
+        ),
+        context: 'level geometry $levelId playerSpawn',
+      ),
+      mentorPosition: LevelGeometryPoint.fromJson(
+        _requiredObject(
+          json,
+          'mentorPosition',
+          context: 'level geometry $levelId',
+        ),
+        context: 'level geometry $levelId mentorPosition',
+      ),
+      groundColliders: _readColliders(
+        json,
+        'groundColliders',
+        context: 'level geometry $levelId',
+      ),
+      platformColliders: _readColliders(
+        json,
+        'platformColliders',
+        context: 'level geometry $levelId',
+      ),
+      obstacleColliders: _readColliders(
+        json,
+        'obstacleColliders',
+        context: 'level geometry $levelId',
+      ),
+      calibrationObstacles: _readOptionalColliders(
+        json,
+        'calibrationObstacles',
+        context: 'level geometry $levelId',
+      ),
+      notes: _requiredString(json, 'notes', context: 'level geometry $levelId'),
+    );
+  }
+
+  final int levelId;
+  final LevelGeometryWorld world;
+  final String backgroundAsset;
+  final LevelGeometryPoint playerSpawn;
+  final LevelGeometryPoint mentorPosition;
+  final List<LevelGeometryCollider> groundColliders;
+  final List<LevelGeometryCollider> platformColliders;
+  final List<LevelGeometryCollider> obstacleColliders;
+  final List<LevelGeometryCollider> calibrationObstacles;
+  final String notes;
+
+  LevelGeometryCollider get mainGround => groundColliders.first;
+
+  String get exportKey {
+    final pathParts = backgroundAsset.split('/');
+    if (pathParts.length >= 2) {
+      return pathParts[pathParts.length - 2];
+    }
+
+    return 'level_${levelId.toString().padLeft(2, '0')}';
+  }
+
+  LevelGeometry withMainGroundTopY(double groundTopY) {
+    final calibratedGroundY = groundTopY.clamp(0, world.height).toDouble();
+    final calibratedMainGround = mainGround.copyWith(
+      y: calibratedGroundY,
+      height: world.height - calibratedGroundY,
+    );
+
+    return LevelGeometry(
+      levelId: levelId,
+      world: world,
+      backgroundAsset: backgroundAsset,
+      playerSpawn: playerSpawn.copyWith(y: calibratedGroundY),
+      mentorPosition: mentorPosition.copyWith(y: calibratedGroundY),
+      groundColliders: <LevelGeometryCollider>[
+        calibratedMainGround,
+        ...groundColliders.skip(1),
+      ],
+      platformColliders: platformColliders,
+      obstacleColliders: obstacleColliders,
+      calibrationObstacles: calibrationObstacles,
+      notes: notes,
+    );
+  }
+
+  LevelGeometry withGroundColliders(
+    List<LevelGeometryCollider> groundColliders,
+  ) {
+    return LevelGeometry(
+      levelId: levelId,
+      world: world,
+      backgroundAsset: backgroundAsset,
+      playerSpawn: playerSpawn,
+      mentorPosition: mentorPosition,
+      groundColliders: groundColliders,
+      platformColliders: platformColliders,
+      obstacleColliders: obstacleColliders,
+      calibrationObstacles: calibrationObstacles,
+      notes: notes,
+    );
+  }
+
+  LevelGeometry withCalibrationObstacles(
+    List<LevelGeometryCollider> calibrationObstacles,
+  ) {
+    return LevelGeometry(
+      levelId: levelId,
+      world: world,
+      backgroundAsset: backgroundAsset,
+      playerSpawn: playerSpawn,
+      mentorPosition: mentorPosition,
+      groundColliders: groundColliders,
+      platformColliders: platformColliders,
+      obstacleColliders: obstacleColliders,
+      calibrationObstacles: calibrationObstacles,
+      notes: notes,
+    );
+  }
+
+  LevelGeometry withObstacleColliders(
+    List<LevelGeometryCollider> obstacleColliders,
+  ) {
+    return LevelGeometry(
+      levelId: levelId,
+      world: world,
+      backgroundAsset: backgroundAsset,
+      playerSpawn: playerSpawn,
+      mentorPosition: mentorPosition,
+      groundColliders: groundColliders,
+      platformColliders: platformColliders,
+      obstacleColliders: obstacleColliders,
+      calibrationObstacles: calibrationObstacles,
+      notes: notes,
+    );
+  }
+
+  LevelGeometry scaledTo(Vector2 targetSize) {
+    final scaleX = targetSize.x / world.width;
+    final scaleY = targetSize.y / world.height;
+
+    return LevelGeometry(
+      levelId: levelId,
+      world: LevelGeometryWorld(width: targetSize.x, height: targetSize.y),
+      backgroundAsset: backgroundAsset,
+      playerSpawn: playerSpawn.scaledBy(scaleX: scaleX, scaleY: scaleY),
+      mentorPosition: mentorPosition.scaledBy(scaleX: scaleX, scaleY: scaleY),
+      groundColliders: _scaleColliders(
+        groundColliders,
+        scaleX: scaleX,
+        scaleY: scaleY,
+      ),
+      platformColliders: _scaleColliders(
+        platformColliders,
+        scaleX: scaleX,
+        scaleY: scaleY,
+      ),
+      obstacleColliders: _scaleColliders(
+        obstacleColliders,
+        scaleX: scaleX,
+        scaleY: scaleY,
+      ),
+      calibrationObstacles: _scaleColliders(
+        calibrationObstacles,
+        scaleX: scaleX,
+        scaleY: scaleY,
+      ),
+      notes: notes,
+    );
+  }
+}
+
+List<LevelGeometryCollider> _readColliders(
+  Map<String, Object?> json,
+  String key, {
+  required String context,
+}) {
+  final colliders = _requiredList(json, key, context: context);
+
+  return colliders
+      .map(
+        (colliderJson) => LevelGeometryCollider.fromJson(
+          _asJsonObject(colliderJson, context: '$context $key entry'),
+          context: '$context $key',
+        ),
+      )
+      .toList(growable: false);
+}
+
+List<LevelGeometryCollider> _readOptionalColliders(
+  Map<String, Object?> json,
+  String key, {
+  required String context,
+}) {
+  if (!json.containsKey(key)) {
+    return const <LevelGeometryCollider>[];
+  }
+
+  return _readColliders(json, key, context: context);
+}
+
+List<LevelGeometryCollider> _scaleColliders(
+  List<LevelGeometryCollider> colliders, {
+  required double scaleX,
+  required double scaleY,
+}) {
+  return colliders
+      .map((collider) => collider.scaledBy(scaleX: scaleX, scaleY: scaleY))
+      .toList(growable: false);
+}
+
+Map<String, Object?> _requiredObject(
+  Map<String, Object?> json,
+  String key, {
+  required String context,
+}) {
+  return _asJsonObject(json[key], context: '$context $key');
+}
+
+List<Object?> _requiredList(
+  Map<String, Object?> json,
+  String key, {
+  required String context,
+}) {
+  final value = json[key];
+  if (value is List<Object?>) {
+    return value;
+  }
+  if (value is List) {
+    return value.cast<Object?>();
+  }
+
+  throw FormatException('$context must contain list "$key".');
+}
+
+Map<String, Object?> _asJsonObject(Object? value, {required String context}) {
+  if (value is Map<String, Object?>) {
+    return value;
+  }
+  if (value is Map) {
+    return value.cast<String, Object?>();
+  }
+
+  throw FormatException('$context must be a JSON object.');
+}
+
+String _requiredString(
+  Map<String, Object?> json,
+  String key, {
+  required String context,
+}) {
+  final value = json[key];
+  if (value is String && value.trim().isNotEmpty) {
+    return value;
+  }
+
+  throw FormatException('$context must contain non-empty string "$key".');
+}
+
+int _requiredInt(
+  Map<String, Object?> json,
+  String key, {
+  required String context,
+}) {
+  final value = json[key];
+  if (value is int) {
+    return value;
+  }
+
+  throw FormatException('$context must contain integer "$key".');
+}
+
+double _requiredDouble(
+  Map<String, Object?> json,
+  String key, {
+  required String context,
+}) {
+  final value = json[key];
+  if (value is int) {
+    return value.toDouble();
+  }
+  if (value is double) {
+    return value;
+  }
+
+  throw FormatException('$context must contain number "$key".');
+}
+
+double? _optionalDouble(
+  Map<String, Object?> json,
+  String key, {
+  required String context,
+}) {
+  if (!json.containsKey(key)) {
+    return null;
+  }
+
+  final value = json[key];
+  if (value is int) {
+    return value.toDouble();
+  }
+  if (value is double) {
+    return value;
+  }
+
+  throw FormatException('$context optional "$key" must be a number.');
+}
