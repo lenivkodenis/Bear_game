@@ -1,0 +1,70 @@
+name: Build and deploy Flutter Web
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: web-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.9
+          channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build production Web app
+        run: flutter build web --release
+
+      - name: Verify deployment output
+        shell: bash
+        run: |
+          test -f build/web/index.html
+          test -f build/web/flutter_bootstrap.js
+
+          lfs_pointers="$(grep -RIl 'version https://git-lfs.github.com/spec/v1' build/web || true)"
+          if [[ -n "$lfs_pointers" ]]; then
+            echo "Git LFS pointer files found in build/web:"
+            echo "$lfs_pointers"
+            exit 1
+          fi
+
+      - name: Publish site to web-deploy
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: web-deploy
+          publish_dir: ./build/web
+          force_orphan: true
+          full_commit_message: Deploy Flutter Web from ${{ github.sha }}
