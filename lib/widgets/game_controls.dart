@@ -28,6 +28,7 @@ class GameControls extends StatelessWidget {
           Row(
             children: [
               _HoldButton(
+                key: const ValueKey<String>('game-control-left'),
                 symbol: '‹',
                 tooltip: 'Влево',
                 onHoldStart: onMoveLeftStart,
@@ -35,6 +36,7 @@ class GameControls extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               _HoldButton(
+                key: const ValueKey<String>('game-control-right'),
                 symbol: '›',
                 tooltip: 'Вправо',
                 onHoldStart: onMoveRightStart,
@@ -42,7 +44,12 @@ class GameControls extends StatelessWidget {
               ),
             ],
           ),
-          _TapButton(symbol: '↑', tooltip: 'Прыжок', onPressed: onJump),
+          _TapButton(
+            key: const ValueKey<String>('game-control-jump'),
+            symbol: '↑',
+            tooltip: 'Прыжок',
+            onPressed: onJump,
+          ),
         ],
       ),
     );
@@ -51,6 +58,7 @@ class GameControls extends StatelessWidget {
 
 class _HoldButton extends StatefulWidget {
   const _HoldButton({
+    super.key,
     required this.symbol,
     required this.tooltip,
     required this.onHoldStart,
@@ -130,36 +138,40 @@ class _HoldButtonState extends State<_HoldButton> {
 
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerDown: (_) => _startHold(),
-      onPointerUp: (_) => _finishHold(),
-      onPointerCancel: (_) => _finishHold(),
-      child: Tooltip(
-        message: widget.tooltip,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppTheme.softBlue,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppTheme.snowWhite, width: 3),
-            boxShadow: const [
-              BoxShadow(
-                color: AppTheme.softShadow,
-                blurRadius: 12,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          child: SizedBox.square(
-            dimension: 56,
-            child: Center(
-              child: Text(
-                widget.symbol,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 42,
-                  fontWeight: FontWeight.w900,
-                  height: 1,
+    return Semantics(
+      button: true,
+      label: widget.tooltip,
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (_) => _startHold(),
+        onPointerUp: (_) => _finishHold(),
+        onPointerCancel: (_) => _finishHold(),
+        child: Tooltip(
+          message: widget.tooltip,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppTheme.softBlue,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.snowWhite, width: 3),
+              boxShadow: const [
+                BoxShadow(
+                  color: AppTheme.softShadow,
+                  blurRadius: 12,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: SizedBox.square(
+              dimension: 56,
+              child: Center(
+                child: Text(
+                  widget.symbol,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 42,
+                    fontWeight: FontWeight.w900,
+                    height: 1,
+                  ),
                 ),
               ),
             ),
@@ -172,6 +184,7 @@ class _HoldButtonState extends State<_HoldButton> {
 
 class _TapButton extends StatelessWidget {
   const _TapButton({
+    super.key,
     required this.symbol,
     required this.tooltip,
     required this.onPressed,
@@ -183,33 +196,38 @@ class _TapButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: GestureDetector(
-        onTap: onPressed,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppTheme.gentleGreen,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppTheme.snowWhite, width: 3),
-            boxShadow: const [
-              BoxShadow(
-                color: AppTheme.softShadow,
-                blurRadius: 12,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          child: SizedBox.square(
-            dimension: 56,
-            child: Center(
-              child: Text(
-                symbol,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w900,
-                  height: 1,
+    return Semantics(
+      button: true,
+      label: tooltip,
+      child: Tooltip(
+        message: tooltip,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onPressed,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppTheme.gentleGreen,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.snowWhite, width: 3),
+              boxShadow: const [
+                BoxShadow(
+                  color: AppTheme.softShadow,
+                  blurRadius: 12,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: SizedBox.square(
+              dimension: 56,
+              child: Center(
+                child: Text(
+                  symbol,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 34,
+                    fontWeight: FontWeight.w900,
+                    height: 1,
+                  ),
                 ),
               ),
             ),

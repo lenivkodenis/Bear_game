@@ -42,25 +42,41 @@ class _MentorDialogState extends State<MentorDialog> {
   Widget build(BuildContext context) {
     final level = widget.game.currentLevel;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Card(
-            elevation: 12,
+    return SafeArea(
+      minimum: const EdgeInsets.all(8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact =
+              constraints.maxWidth < 480 || constraints.maxHeight < 620;
+          final outerPadding = compact ? 8.0 : 16.0;
+          final innerPadding = compact ? 16.0 : 24.0;
+
+          return Center(
             child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: level == null
-                    ? _buildLoadingContent()
-                    : _buildLevelContent(context),
+              padding: EdgeInsets.all(outerPadding),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 420,
+                  maxHeight: constraints.maxHeight - outerPadding * 2,
+                ),
+                child: Card(
+                  elevation: 12,
+                  clipBehavior: Clip.antiAlias,
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(innerPadding),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: level == null
+                          ? _buildLoadingContent()
+                          : _buildLevelContent(context),
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

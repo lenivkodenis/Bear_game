@@ -1,10 +1,10 @@
 import 'package:bear_game/app.dart';
 import 'package:bear_game/game/bear_math_game.dart';
+import 'package:bear_game/game/game_viewport_layout.dart';
 import 'package:bear_game/screens/game_screen.dart';
 import 'package:bear_game/widgets/game_controls.dart';
 import 'package:bear_game/widgets/north_confirmation_dialog.dart';
 import 'package:bear_game/widgets/primary_game_button.dart';
-import 'package:flame/camera.dart';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -125,26 +125,42 @@ void main() {
     expect(moveEndCount, 1);
   });
 
-  test('compact portrait game requires landscape orientation', () {
-    expect(requiresLandscapeGameViewport(const Size(390, 844)), isTrue);
-    expect(requiresLandscapeGameViewport(const Size(844, 390)), isFalse);
-    expect(requiresLandscapeGameViewport(const Size(1024, 768)), isFalse);
+  test('compact portrait and landscape use the responsive game camera', () {
+    expect(usesCompactGameViewport(const Size(390, 844)), isTrue);
+    expect(usesCompactGameViewport(const Size(844, 390)), isTrue);
+    expect(usesCompactGameViewport(const Size(1024, 768)), isFalse);
   });
 
-  test('compact game keeps the authored 800x600 resolution', () {
-    final game = BearMathGame(levelId: 1, useFixedResolution: true);
+  test('responsive game camera uses the full canvas viewport', () {
+    final game = BearMathGame(levelId: 1, useResponsiveCamera: true);
 
-    expect(game.camera.viewport, isA<FixedResolutionViewport>());
-    expect(game.size.x, BearMathGame.designWidth);
-    expect(game.size.y, BearMathGame.designHeight);
     expect(game.camera.viewfinder.anchor, Anchor.topLeft);
   });
 
   test('game can close an overlay before the scene finishes loading', () {
-    final game = BearMathGame(levelId: 1, useFixedResolution: true);
+    final game = BearMathGame(levelId: 1, useResponsiveCamera: true);
 
     expect(game.closeMentorDialog, returnsNormally);
   });
+
+  test(
+    'portrait viewport keeps the player left and first obstacle visible',
+    () {
+      final layout = GameViewportLayout.cover(
+        canvasSize: const Size(390, 844),
+        playerCenterX: 111,
+        gameplayGroundY: 489,
+      );
+
+      expect(layout.visibleWorldRect.contains(const Offset(111, 489)), isTrue);
+      expect(
+        layout.visibleWorldRect.contains(const Offset(197.47, 446.25)),
+        isTrue,
+      );
+      expect(layout.worldToScreen(const Offset(111, 489)).dx, lessThan(195));
+      expect(layout.worldToScreen(const Offset(111, 489)).dy, lessThan(844));
+    },
+  );
 
   testWidgets('mobile controls remain inside a short landscape viewport', (
     tester,
@@ -170,6 +186,16 @@ void main() {
     final screenRect = const Offset(0, 0) & const Size(667, 375);
     for (final symbol in ['‹', '›', '↑']) {
       expect(screenRect.contains(tester.getCenter(find.text(symbol))), isTrue);
+    }
+    for (final key in <String>[
+      'game-control-left',
+      'game-control-right',
+      'game-control-jump',
+    ]) {
+      expect(
+        tester.getSize(find.byKey(ValueKey<String>(key))),
+        const Size(56, 56),
+      );
     }
     expect(tester.takeException(), isNull);
   });

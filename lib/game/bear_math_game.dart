@@ -15,6 +15,7 @@ import 'components/mentor_visual_component.dart';
 import 'components/platform_component.dart';
 import 'components/player_bear.dart';
 import 'components/snowy_background.dart';
+import 'game_viewport_layout.dart';
 import 'ground_segment_collision.dart';
 import 'level_geometry.dart';
 import 'obstacle_collision.dart';
@@ -32,15 +33,15 @@ import '../services/progress_service.dart';
 import '../utils/answer_option_order.dart';
 
 class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
-  BearMathGame({required this.levelId, this.useFixedResolution = false})
-    : super(camera: _buildGameCamera(useFixedResolution));
+  BearMathGame({required this.levelId, this.useResponsiveCamera = false})
+    : super(camera: _buildGameCamera());
 
   static const mentorDialogOverlay = 'mentorDialog';
   static const designWidth = 800.0;
   static const designHeight = 600.0;
 
   final int levelId;
-  final bool useFixedResolution;
+  final bool useResponsiveCamera;
   late PlayerBear player;
   late final MentorVisualComponent mentor;
   late LevelGeometry levelGeometry;
@@ -50,8 +51,8 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   final LevelGeometryService _levelGeometryService = LevelGeometryService();
   final ProgressService _progressService = ProgressService();
   final GameSettingsService _settingsService = GameSettingsService();
-  late final VoidCallback _difficultyListener;
-  late final VoidCallback _roundSettingsListener;
+  VoidCallback? _difficultyListener;
+  VoidCallback? _roundSettingsListener;
   static final Map<int, double> _calibratedGroundYByLevel = <int, double>{};
   static final Map<int, List<LevelGeometryCollider>>
   _calibratedGroundSegmentsByLevel = <int, List<LevelGeometryCollider>>{};
@@ -78,6 +79,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   int _levelSnowflakes = 0;
   int _roundMistakeCount = 0;
   final Stopwatch _questionStopwatch = Stopwatch();
+  final ValueNotifier<bool> mentorDialogOpenNotifier = ValueNotifier<bool>(
+    false,
+  );
   bool _mentorDialogWasShown = false;
   bool _mentorDialogOpen = false;
   bool _sceneReady = false;
@@ -141,9 +145,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     _roundSettingsListener = () {
       _roundSettings = GameSettingsService.roundSettingsNotifier.value;
     };
-    GameSettingsService.difficultyNotifier.addListener(_difficultyListener);
+    GameSettingsService.difficultyNotifier.addListener(_difficultyListener!);
     GameSettingsService.roundSettingsNotifier.addListener(
-      _roundSettingsListener,
+      _roundSettingsListener!,
     );
 
     currentLevel = await _levelService.loadLevel(levelId);
@@ -179,16 +183,22 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       _seedObstacleCalibrationValue(_sourceLevelGeometry);
     }
 
-    levelGeometry = _currentSourceGeometry.scaledTo(size);
+    final worldSize = _runtimeWorldSize;
+    levelGeometry = _currentSourceGeometry.scaledTo(worldSize);
     final mainGround = levelGeometry.mainGround;
     final groundY = mainGround.y;
 
     world.add(
-      SnowyBackground(size: size, assetPath: levelGeometry.backgroundAsset),
+      SnowyBackground(
+        size: worldSize,
+        assetPath: levelGeometry.backgroundAsset,
+      ),
     );
     final distantBirdsConfig = DistantBirdsConfig.forLevel(currentLevel!.id);
     if (distantBirdsConfig != null) {
-      world.add(DistantBirdsComponent(size: size, config: distantBirdsConfig));
+      world.add(
+        DistantBirdsComponent(size: worldSize, config: distantBirdsConfig),
+      );
     }
 
     _mainGroundComponent = PlatformComponent(
@@ -204,7 +214,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
         playerSpawn.y - PlayerBear.defaultSize.y,
       ),
       groundY: groundY,
-      levelWidth: size.x,
+      levelWidth: worldSize.x,
     )..priority = 20;
     final mentorSpawn = levelGeometry.mentorPosition.toVector2();
     mentor = MentorVisualComponent(
@@ -216,7 +226,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     world.add(mentor);
     final ambientEffect = AmbientEffectsFactory.forLevel(
       levelId: currentLevel!.id,
-      size: size,
+      size: worldSize,
       groundY: groundY,
       isActive: _isPlayerPastFirstObstacle,
     );
@@ -225,7 +235,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     }
     final foregroundAmbientEffect = AmbientEffectsFactory.foregroundForLevel(
       levelId: currentLevel!.id,
-      size: size,
+      size: worldSize,
     );
     if (foregroundAmbientEffect != null) {
       world.add(foregroundAmbientEffect);
@@ -249,15 +259,30 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     _sceneReady = true;
+    _updateResponsiveCamera(canvasSize);
+  }
+
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    if (_sceneReady) {
+      _updateResponsiveCamera(size);
+    }
   }
 
   @override
   void onRemove() {
     pauseQuestionTimer();
-    GameSettingsService.difficultyNotifier.removeListener(_difficultyListener);
-    GameSettingsService.roundSettingsNotifier.removeListener(
-      _roundSettingsListener,
-    );
+    final difficultyListener = _difficultyListener;
+    if (difficultyListener != null) {
+      GameSettingsService.difficultyNotifier.removeListener(difficultyListener);
+    }
+    final roundSettingsListener = _roundSettingsListener;
+    if (roundSettingsListener != null) {
+      GameSettingsService.roundSettingsNotifier.removeListener(
+        roundSettingsListener,
+      );
+    }
     super.onRemove();
   }
 
@@ -367,10 +392,32 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   void closeMentorDialog() {
     pauseQuestionTimer();
     _mentorDialogOpen = false;
+    mentorDialogOpenNotifier.value = false;
     if (_sceneReady) {
       player.stopInteracting();
     }
     overlays.remove(mentorDialogOverlay);
+  }
+
+  Vector2 get _runtimeWorldSize =>
+      useResponsiveCamera ? Vector2(designWidth, designHeight) : size.clone();
+
+  void _updateResponsiveCamera(Vector2 currentCanvasSize) {
+    if (!useResponsiveCamera || !_sceneReady) {
+      return;
+    }
+
+    final gameplayGroundY = levelGeometry.groundColliders
+        .map((ground) => ground.y)
+        .reduce(math.max);
+    final layout = GameViewportLayout.cover(
+      canvasSize: Size(currentCanvasSize.x, currentCanvasSize.y),
+      playerCenterX: player.position.x + player.size.x / 2,
+      gameplayGroundY: gameplayGroundY,
+    );
+    camera.viewfinder
+      ..zoom = layout.zoom
+      ..position = Vector2(layout.cameraTopLeft.dx, layout.cameraTopLeft.dy);
   }
 
   LevelGeometry get _currentSourceGeometry {
@@ -689,25 +736,28 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   double get _runtimeScaleX {
-    if (size.x == 0) {
+    final worldSize = _runtimeWorldSize;
+    if (worldSize.x == 0) {
       return 1.0;
     }
 
-    return size.x / _sourceLevelGeometry.world.width;
+    return worldSize.x / _sourceLevelGeometry.world.width;
   }
 
   double get _runtimeScaleY {
-    if (size.y == 0) {
+    final worldSize = _runtimeWorldSize;
+    if (worldSize.y == 0) {
       return 1.0;
     }
 
-    return size.y / _sourceLevelGeometry.world.height;
+    return worldSize.y / _sourceLevelGeometry.world.height;
   }
 
   void _adjustGroundCalibrationByRuntimeDelta(double runtimeDelta) {
-    final scaleY = size.y == 0
+    final worldSize = _runtimeWorldSize;
+    final scaleY = worldSize.y == 0
         ? 1.0
-        : size.y / _sourceLevelGeometry.world.height;
+        : worldSize.y / _sourceLevelGeometry.world.height;
     final currentGroundY =
         _calibratedGroundYByLevel[_sourceLevelGeometry.levelId] ??
         _sourceLevelGeometry.mainGround.y;
@@ -726,19 +776,20 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     _calibratedGroundYByLevel[_sourceLevelGeometry.levelId] = clampedGroundY;
     _groundCalibrationExportPrinted = false;
 
-    levelGeometry = _currentSourceGeometry.scaledTo(size);
+    final worldSize = _runtimeWorldSize;
+    levelGeometry = _currentSourceGeometry.scaledTo(worldSize);
     final mainGround = levelGeometry.mainGround;
     _mainGroundComponent.position = mainGround.position;
     _mainGroundComponent.size = mainGround.size;
 
     final playerX = player.position.x
-        .clamp(0, size.x - PlayerBear.defaultSize.x)
+        .clamp(0, worldSize.x - PlayerBear.defaultSize.x)
         .toDouble();
     player.removeFromParent();
     player = PlayerBear(
       position: Vector2(playerX, mainGround.y - PlayerBear.defaultSize.y),
       groundY: mainGround.y,
-      levelWidth: size.x,
+      levelWidth: worldSize.x,
     )..priority = 20;
     world.add(player);
 
@@ -791,7 +842,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     _calibratedGroundSegmentsByLevel.remove(_sourceLevelGeometry.levelId);
     _seedGroundSegmentCalibrationValue(_sourceLevelGeometry);
     _groundSegmentCalibrationExportPrinted = false;
-    levelGeometry = _currentSourceGeometry.scaledTo(size);
+    levelGeometry = _currentSourceGeometry.scaledTo(_runtimeWorldSize);
     final mainGround = levelGeometry.mainGround;
     _mainGroundComponent.position = mainGround.position;
     _mainGroundComponent.size = mainGround.size;
@@ -822,7 +873,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
           floorY: lockedFloorY,
         );
     _groundSegmentCalibrationExportPrinted = false;
-    levelGeometry = _currentSourceGeometry.scaledTo(size);
+    levelGeometry = _currentSourceGeometry.scaledTo(_runtimeWorldSize);
     final mainGround = levelGeometry.mainGround;
     _mainGroundComponent.position = mainGround.position;
     _mainGroundComponent.size = mainGround.size;
@@ -864,7 +915,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     _selectedObstacleIndexByLevel[_sourceLevelGeometry.levelId] = 0;
     _seedObstacleCalibrationValue(_sourceLevelGeometry);
     _obstacleCalibrationExportPrinted = false;
-    levelGeometry = _currentSourceGeometry.scaledTo(size);
+    levelGeometry = _currentSourceGeometry.scaledTo(_runtimeWorldSize);
   }
 
   void _setObstacleCalibration(LevelGeometryCollider candidate) {
@@ -884,7 +935,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
         updatedObstacles;
     _selectedObstacleIndexByLevel[_sourceLevelGeometry.levelId] = selectedIndex;
     _obstacleCalibrationExportPrinted = false;
-    levelGeometry = _currentSourceGeometry.scaledTo(size);
+    levelGeometry = _currentSourceGeometry.scaledTo(_runtimeWorldSize);
   }
 
   double get _currentSourceGroundTopY {
@@ -1270,10 +1321,13 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     if (!_mentorDialogWasShown && _isPlayerNearMentor) {
       _mentorDialogWasShown = true;
       _mentorDialogOpen = true;
+      mentorDialogOpenNotifier.value = true;
       player.stopMoving();
       player.startInteracting();
       overlays.add(mentorDialogOverlay);
     }
+
+    _updateResponsiveCamera(canvasSize);
   }
 
   Rect get _playerRect {
@@ -1323,14 +1377,14 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       futurePlayerRect: currentRect,
       obstacleRects: obstacleRects,
       minX: 0,
-      maxX: size.x - player.size.x,
+      maxX: levelGeometry.world.width - player.size.x,
     );
     final resolvedRect = resolveSlopedObstacleSideCollision(
       previousPlayerRect: previousPlayerRect,
       futurePlayerRect: resolvedFlatRect,
       slopedSurfaces: _slopedObstacleSurfaces,
       minX: 0,
-      maxX: size.x - player.size.x,
+      maxX: levelGeometry.world.width - player.size.x,
     );
     if (resolvedRect.left != player.position.x) {
       player.position.x = resolvedRect.left;
@@ -1347,7 +1401,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       futurePlayerRect: _playerRect,
       groundRects: _groundRects,
       minX: 0,
-      maxX: size.x - player.size.x,
+      maxX: levelGeometry.world.width - player.size.x,
     );
     if (resolvedRect.left != player.position.x) {
       player.position.x = resolvedRect.left;
@@ -1426,13 +1480,8 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 }
 
-CameraComponent _buildGameCamera(bool useFixedResolution) {
-  final camera = useFixedResolution
-      ? CameraComponent.withFixedResolution(
-          width: BearMathGame.designWidth,
-          height: BearMathGame.designHeight,
-        )
-      : CameraComponent();
+CameraComponent _buildGameCamera() {
+  final camera = CameraComponent();
   camera.viewfinder
     ..anchor = Anchor.topLeft
     ..position = Vector2.zero();
