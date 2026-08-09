@@ -52,4 +52,64 @@ void main() {
 
     expect(closed, isTrue);
   });
+
+  for (final viewport in const <Size>[Size(1280, 800), Size(390, 844)]) {
+    testWidgets('long story fits the ${viewport.width.toInt()}px viewport', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(viewport);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final game = BearMathGame(levelId: 2)
+        ..currentLevel = const Level(
+          id: 2,
+          title: 'Ледяная река',
+          locationName: 'Ледяная река',
+          mentorName: 'Выдра-мудрец',
+          table: 2,
+          rewardPoints: 1,
+          penaltyPoints: 0,
+          introText: 'Начнём?',
+          completionText: 'Готово.',
+          questions: [
+            Question(
+              id: 5,
+              level: 2,
+              table: 2,
+              questionText:
+                  'В школьной администрации готовят карточки для учеников. '
+                  'В кабинете стоят два принтера. Они напечатали по пять '
+                  'карточек. Сколько карточек они напечатали?',
+              expression: '2 x 5',
+              options: [8, 10, 12],
+              correctAnswer: 10,
+              hint: 'Два принтера напечатали по пять карточек: 2 × 5 = 10.',
+              rewardPoints: 1,
+              penaltyPoints: 0,
+            ),
+          ],
+        );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MentorDialog(
+              game: game,
+              onClose: () {},
+              onLevelComplete: () {},
+              onReturnToMap: () {},
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('К задаче'));
+      await tester.pump();
+
+      expect(find.textContaining('В школьной администрации'), findsOneWidget);
+      expect(find.text('2 x 5'), findsOneWidget);
+      expect(find.text('10'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }
