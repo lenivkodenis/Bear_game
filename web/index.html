@@ -87,14 +87,37 @@
   </script>
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+  <script>
+    async function loadBearMath() {
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+        }
+      } catch (error) {
+        console.warn('Could not remove an outdated Flutter service worker.', error);
+      }
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
-  <script src="main.dart.js" type="application/javascript"></script>
+      try {
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(
+            cacheNames
+              .filter((cacheName) => cacheName.startsWith('flutter-'))
+              .map((cacheName) => caches.delete(cacheName)),
+          );
+        }
+      } catch (error) {
+        console.warn('Could not remove an outdated Flutter cache.', error);
+      }
+
+      const script = document.createElement('script');
+      script.src = 'main.dart.js?release=mobile-responsive-20260809';
+      script.type = 'application/javascript';
+      document.body.appendChild(script);
+    }
+
+    loadBearMath();
+  </script>
 </body>
 </html>
