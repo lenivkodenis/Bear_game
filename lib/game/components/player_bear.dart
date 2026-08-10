@@ -205,6 +205,8 @@ class PlayerBear extends PositionComponent with KeyboardHandler {
   static const _moveSpeed = 160.0;
   static const _jumpImpulse = -410.0;
   static const _gravity = 820.0;
+  static const jumpImpulseMagnitude = 410.0;
+  static const gravityMagnitude = 820.0;
   static const _idleCycleSpeed = 2.4;
   static bool _walkLoadLogged = false;
   static bool _walkReadyLogged = false;

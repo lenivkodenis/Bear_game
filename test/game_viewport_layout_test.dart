@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:bear_game/game/game_viewport_layout.dart';
 import 'package:bear_game/game/level_geometry.dart';
+import 'package:flutter/painting.dart' show EdgeInsets;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -18,6 +19,8 @@ void main() {
     Size(667, 375),
     Size(844, 390),
     Size(915, 412),
+    Size(762, 248),
+    Size(848, 340),
   ];
 
   test('compact viewport always fills the canvas without letterboxing', () {
@@ -147,6 +150,14 @@ void main() {
             canvasSize: viewport,
             playerCenterX: playerCenterX,
             gameplayGroundY: gameplayGroundY,
+            obstacleBounds: geometry.obstacleColliders.map(
+              (candidate) => Rect.fromLTWH(
+                candidate.x,
+                candidate.y,
+                candidate.width,
+                candidate.height,
+              ),
+            ),
           );
           final obstacleRect = Rect.fromLTWH(
             obstacle.x,
@@ -174,5 +185,36 @@ void main() {
         }
       }
     }
+  });
+
+  test('camera mode distinguishes toolbar-short landscape and tablet', () {
+    expect(
+      GameViewportLayout.modeFor(const Size(762, 248)),
+      GameViewportMode.ultraShortLandscape,
+    );
+    expect(
+      GameViewportLayout.modeFor(const Size(848, 340)),
+      GameViewportMode.landscape,
+    );
+    expect(
+      GameViewportLayout.modeFor(const Size(1024, 768)),
+      GameViewportMode.tablet,
+    );
+  });
+
+  test('ultra-short camera keeps jump apex and ground above controls', () {
+    final layout = GameViewportLayout.cover(
+      canvasSize: const Size(762, 248),
+      playerCenterX: 220,
+      gameplayGroundY: 489,
+      occlusion: const EdgeInsets.only(top: 50, bottom: 58),
+    );
+    final top = layout.worldToScreen(layout.safeWorldEnvelope.topLeft).dy;
+    final bottom = layout
+        .worldToScreen(layout.safeWorldEnvelope.bottomRight)
+        .dy;
+
+    expect(top, greaterThanOrEqualTo(49.9));
+    expect(bottom, lessThanOrEqualTo(190.1));
   });
 }

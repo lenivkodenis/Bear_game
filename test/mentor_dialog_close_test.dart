@@ -53,7 +53,13 @@ void main() {
     expect(closed, isTrue);
   });
 
-  for (final viewport in const <Size>[Size(1280, 800), Size(390, 844)]) {
+  for (final viewport in const <Size>[
+    Size(1280, 800),
+    Size(390, 844),
+    Size(762, 248),
+    Size(848, 340),
+    Size(667, 375),
+  ]) {
     testWidgets('long story fits the ${viewport.width.toInt()}px viewport', (
       tester,
     ) async {
@@ -112,4 +118,58 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('open question survives rotation without returning to intro', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final game = BearMathGame(levelId: 1)
+      ..currentLevel = const Level(
+        id: 1,
+        title: 'Льдина',
+        locationName: 'Льдина',
+        mentorName: 'Чайка-мудрец',
+        table: 1,
+        rewardPoints: 1,
+        penaltyPoints: 0,
+        introText: 'Начнём?',
+        completionText: 'Готово.',
+        questions: [
+          Question(
+            id: 1,
+            level: 1,
+            table: 1,
+            questionText: 'Сколько будет?',
+            expression: '1 x 4',
+            options: [3, 4, 5],
+            correctAnswer: 4,
+            hint: 'Один раз по четыре.',
+            rewardPoints: 1,
+            penaltyPoints: 0,
+          ),
+        ],
+      );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MentorDialog(
+            game: game,
+            onClose: () {},
+            onLevelComplete: () {},
+            onReturnToMap: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('К задаче'));
+    await tester.pump();
+    await tester.binding.setSurfaceSize(const Size(762, 248));
+    await tester.pump();
+
+    expect(find.text('1 x 4'), findsOneWidget);
+    expect(find.text('К задаче'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -43,12 +43,21 @@ void main() {
       'completed_level_ids': ['1', '2', '3', '4', '5', '6', '7', '8'],
     });
 
-    await tester.pumpWidget(const MaterialApp(home: LocationMapScreen()));
+    await tester.pumpWidget(
+      MaterialApp(home: LocationMapScreen(imagePreloader: (_) async {})),
+    );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    for (var frame = 0; frame < 10; frame += 1) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
 
     final levelEight = find.byKey(const ValueKey<String>('map-location-8'));
     expect(levelEight, findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('location-map-interactive-viewer')),
+      findsOneWidget,
+    );
+    expect(find.byType(SingleChildScrollView), findsNothing);
 
     await tester.tap(levelEight);
     await tester.pump(const Duration(milliseconds: 50));
@@ -61,6 +70,32 @@ void main() {
     expect(progress.questionIndexForLevel(8), 0);
     expect(progress.score, 61);
     expect(progress.solvedExamples, 80);
+  });
+
+  testWidgets('hotspots wait until the map image is ready', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final imageCompleter = Completer<void>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LocationMapScreen(imagePreloader: (_) => imageCompleter.future),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey<String>('location-map-loading')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey<String>('map-location-1')), findsNothing);
+
+    imageCompleter.complete();
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey<String>('map-location-1')),
+      findsOneWidget,
+    );
   });
 }
 

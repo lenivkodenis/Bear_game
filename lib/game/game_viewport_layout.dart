@@ -1,25 +1,36 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-/// Pure layout model that maps the authored 800x600 game world to a compact
-/// browser viewport without changing world coordinates or collision physics.
+import 'package:flutter/painting.dart' show EdgeInsets;
+
+enum GameViewportMode { portrait, landscape, ultraShortLandscape, tablet }
+
+/// Pure camera model for the authored 800×600 world. It intentionally permits
+/// letterboxing when a browser toolbar leaves too little height: gameplay must
+/// remain visible before decorative edge-to-edge filling.
 class GameViewportLayout {
   const GameViewportLayout({
     required this.canvasSize,
     required this.worldSize,
+    required this.mode,
     required this.zoom,
     required this.cameraTopLeft,
+    required this.safeWorldEnvelope,
   });
 
   static const Size authoredWorldSize = Size(800, 600);
-  static const double maxVisibleWorldWidth = 560;
-  static const double playerScreenFraction = 0.20;
-  static const double groundScreenFraction = 0.74;
+  static const double portraitVisibleWorldWidth = 560;
+  static const double playerScreenFraction = 0.22;
+  static const double reversePlayerScreenFraction = 0.78;
+  static const double jumpSafetyMargin = 16;
+  static const double groundSafetyMargin = 12;
 
   final Size canvasSize;
   final Size worldSize;
+  final GameViewportMode mode;
   final double zoom;
   final Offset cameraTopLeft;
+  final Rect safeWorldEnvelope;
 
   Size get visibleWorldSize =>
       Size(canvasSize.width / zoom, canvasSize.height / zoom);
@@ -33,12 +44,30 @@ class GameViewportLayout {
     );
   }
 
+  static GameViewportMode modeFor(Size canvasSize) {
+    if (canvasSize.shortestSide >= 600) return GameViewportMode.tablet;
+    if (canvasSize.width > canvasSize.height && canvasSize.height < 300) {
+      return GameViewportMode.ultraShortLandscape;
+    }
+    if (canvasSize.width > canvasSize.height) {
+      return GameViewportMode.landscape;
+    }
+    return GameViewportMode.portrait;
+  }
+
   static GameViewportLayout cover({
     required Size canvasSize,
     required double playerCenterX,
     required double gameplayGroundY,
     Size worldSize = authoredWorldSize,
+    EdgeInsets occlusion = EdgeInsets.zero,
+    double playerVisualHeight = 96,
+    double jumpImpulse = 410,
+    double gravity = 820,
+    Iterable<Rect> obstacleBounds = const <Rect>[],
+    double movementDirection = 1,
   }) {
+    final mode = modeFor(canvasSize);
     if (canvasSize.width <= 0 ||
         canvasSize.height <= 0 ||
         worldSize.width <= 0 ||
@@ -46,39 +75,115 @@ class GameViewportLayout {
       return GameViewportLayout(
         canvasSize: canvasSize,
         worldSize: worldSize,
+        mode: mode,
         zoom: 1,
         cameraTopLeft: Offset.zero,
+        safeWorldEnvelope: Rect.zero,
       );
     }
 
-    final coverZoom = math.max(
-      canvasSize.width / worldSize.width,
-      canvasSize.height / worldSize.height,
+    final jumpRise = jumpImpulse * jumpImpulse / (2 * math.max(1, gravity));
+    final obstacleTop = obstacleBounds.fold<double>(
+      gameplayGroundY,
+      (top, obstacle) => math.min(top, obstacle.top),
     );
-    // A portrait phone needs the cover crop to keep the bear and obstacles
-    // readable. In landscape the browser chrome leaves very little height;
-    // applying the same horizontal tracking zoom there reduces the game to a
-    // narrow strip. Showing the full authored width keeps the whole route,
-    // bear and mentor usable without changing world coordinates or physics.
-    final isLandscape = canvasSize.width > canvasSize.height;
-    final trackingZoom =
-        canvasSize.width / math.min(worldSize.width, maxVisibleWorldWidth);
-    final zoom = isLandscape ? coverZoom : math.max(coverZoom, trackingZoom);
+    final envelopeTop = math.min(
+      gameplayGroundY - playerVisualHeight - jumpRise - jumpSafetyMargin,
+      obstacleTop - jumpSafetyMargin,
+    );
+    final envelopeBottom = gameplayGroundY + groundSafetyMargin;
+    final envelope = Rect.fromLTRB(
+      0,
+      envelopeTop,
+      worldSize.width,
+      envelopeBottom,
+    );
+
+    final usableHeight = math.max(
+      1.0,
+      canvasSize.height - occlusion.top - occlusion.bottom,
+    );
+    final verticalFitZoom = usableHeight / math.max(1, envelope.height);
+    final preferredZoom = switch (mode) {
+      GameViewportMode.portrait => math.max(
+        canvasSize.width / math.min(worldSize.width, portraitVisibleWorldWidth),
+        canvasSize.height / worldSize.height,
+      ),
+      GameViewportMode.landscape || GameViewportMode.ultraShortLandscape =>
+        canvasSize.width / worldSize.width,
+      GameViewportMode.tablet => math.max(
+        canvasSize.width / worldSize.width,
+        canvasSize.height / worldSize.height,
+      ),
+    };
+    final zoom = math.max(0.1, math.min(preferredZoom, verticalFitZoom));
     final visibleWidth = canvasSize.width / zoom;
     final visibleHeight = canvasSize.height / zoom;
-    final maxLeft = math.max(0.0, worldSize.width - visibleWidth);
-    final maxTop = math.max(0.0, worldSize.height - visibleHeight);
-    final desiredLeft = playerCenterX - visibleWidth * playerScreenFraction;
-    final desiredTop = gameplayGroundY - visibleHeight * groundScreenFraction;
+
+    final playerFraction = movementDirection < 0
+        ? reversePlayerScreenFraction
+        : playerScreenFraction;
+    var desiredLeft = playerCenterX - visibleWidth * playerFraction;
+    final nearestAhead = obstacleBounds
+        .where(
+          (obstacle) => movementDirection < 0
+              ? obstacle.right <= playerCenterX
+              : obstacle.left >= playerCenterX,
+        )
+        .fold<Rect?>(null, (nearest, obstacle) {
+          if (nearest == null) return obstacle;
+          final nearestDistance = (nearest.left - playerCenterX).abs();
+          final distance = (obstacle.left - playerCenterX).abs();
+          return distance < nearestDistance ? obstacle : nearest;
+        });
+    if (nearestAhead != null && visibleWidth < worldSize.width) {
+      const reactionMargin = 20.0;
+      if (movementDirection < 0) {
+        desiredLeft = math.min(desiredLeft, nearestAhead.left - reactionMargin);
+      } else {
+        desiredLeft = math.max(
+          desiredLeft,
+          nearestAhead.right + reactionMargin - visibleWidth,
+        );
+      }
+    }
+
+    final desiredGroundFraction = switch (mode) {
+      GameViewportMode.portrait => 0.72,
+      GameViewportMode.landscape => 0.76,
+      GameViewportMode.ultraShortLandscape => 0.78,
+      GameViewportMode.tablet => 0.76,
+    };
+    final preferredTop =
+        gameplayGroundY - visibleHeight * desiredGroundFraction;
+    final minimumTop =
+        envelopeBottom - (canvasSize.height - occlusion.bottom) / zoom;
+    final maximumTop = envelopeTop - occlusion.top / zoom;
+    var desiredTop = minimumTop <= maximumTop
+        ? preferredTop.clamp(minimumTop, maximumTop).toDouble()
+        : (minimumTop + maximumTop) / 2;
+
+    desiredLeft = _clampCameraAxis(desiredLeft, visibleWidth, worldSize.width);
+    desiredTop = _clampCameraAxis(desiredTop, visibleHeight, worldSize.height);
 
     return GameViewportLayout(
       canvasSize: canvasSize,
       worldSize: worldSize,
+      mode: mode,
       zoom: zoom,
-      cameraTopLeft: Offset(
-        desiredLeft.clamp(0.0, maxLeft).toDouble(),
-        desiredTop.clamp(0.0, maxTop).toDouble(),
-      ),
+      cameraTopLeft: Offset(desiredLeft, desiredTop),
+      safeWorldEnvelope: envelope,
     );
+  }
+
+  static double _clampCameraAxis(
+    double desired,
+    double visibleExtent,
+    double worldExtent,
+  ) {
+    if (visibleExtent >= worldExtent) {
+      return (worldExtent - visibleExtent) / 2;
+    }
+    return desired.clamp(0.0, worldExtent - visibleExtent).toDouble();
   }
 }
