@@ -1,0 +1,15 @@
+{
+  "name": "bear-game-visual-regression",
+  "private": true,
+  "packageManager": "pnpm@11.16.0",
+  "scripts": {
+    "test:visual": "node tools/visual_baseline/run_visual_tests.mjs",
+    "baseline:visual": "UPDATE_VISUAL_BASELINES=1 node tools/visual_baseline/run_visual_tests.mjs"
+  },
+  "devDependencies": {
+    "jpeg-js": "0.4.4",
+    "pixelmatch": "7.2.0",
+    "playwright": "1.62.0",
+    "pngjs": "7.0.0"
+  }
+}

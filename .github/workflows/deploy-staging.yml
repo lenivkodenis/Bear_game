@@ -1,0 +1,98 @@
+name: Build and deploy staging Web
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full commit SHA to publish to staging
+        required: true
+        type: string
+      enable_visual_test_mode:
+        description: Compile deterministic visual-test mode into staging
+        required: true
+        default: true
+        type: boolean
+      staging_url:
+        description: Optional configured URL that serves staging-deploy
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy-staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout requested source and LFS assets
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
+          lfs: true
+
+      - name: Resolve staging source
+        id: source
+        shell: bash
+        run: |
+          resolved_sha="$(git rev-parse HEAD)"
+          requested_sha="${{ inputs.source_sha }}"
+          if [[ "$resolved_sha" != "$requested_sha" ]]; then
+            echo "source_sha must be the full 40-character commit SHA."
+            exit 1
+          fi
+          echo "sha=$resolved_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.9
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build staging Web release with visual-test mode
+        if: ${{ inputs.enable_visual_test_mode }}
+        run: >-
+          flutter build web --release
+          --dart-define=ENABLE_VISUAL_TEST_MODE=true
+
+      - name: Build staging Web release without visual-test mode
+        if: ${{ !inputs.enable_visual_test_mode }}
+        run: flutter build web --release
+
+      - name: Verify staging output
+        run: bash scripts/verify_no_lfs_pointers.sh build/web
+
+      - name: Publish site to isolated staging-deploy branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: staging-deploy
+          publish_dir: ./build/web
+          force_orphan: true
+          full_commit_message: Deploy staging Web from ${{ steps.source.outputs.sha }}
+
+      - name: Summarize staging publication
+        shell: bash
+        run: |
+          {
+            echo "## Staging publication"
+            echo "- Branch: \`staging-deploy\`"
+            echo "- Source SHA: \`${{ steps.source.outputs.sha }}\`"
+            echo "- Visual test mode: \`${{ inputs.enable_visual_test_mode }}\`"
+            if [[ -n "${{ inputs.staging_url }}" ]]; then
+              echo "- URL: ${{ inputs.staging_url }}"
+            else
+              echo "- URL: not configured"
+              echo "- Required: configure a separate host/location to serve the staging-deploy branch."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

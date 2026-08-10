@@ -8,15 +8,20 @@ import '../theme/app_theme.dart';
 import '../widgets/effects/snowfall_overlay.dart';
 import '../widgets/north_confirmation_dialog.dart';
 import '../widgets/north_sign_button.dart';
+import '../visual_test/visual_test_config.dart';
 import 'game_screen.dart';
 import 'location_map_screen.dart';
 import 'parents_screen.dart';
 import 'progress_screen.dart';
 
 class MainMenuScreen extends StatefulWidget {
-  const MainMenuScreen({super.key});
+  const MainMenuScreen({
+    super.key,
+    this.visualTestConfig = const VisualTestConfig.disabled(),
+  });
 
   static const routeName = '/';
+  final VisualTestConfig visualTestConfig;
 
   @override
   State<MainMenuScreen> createState() => _MainMenuScreenState();
@@ -34,6 +39,9 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     final screenSize = MediaQuery.sizeOf(context);
     final isCompact = screenSize.width < 760;
     final panelWidth = (screenSize.width - 32).clamp(320.0, 430.0);
+    final visualTestConfig = widget.visualTestConfig.enabled
+        ? widget.visualTestConfig
+        : VisualTestConfig.fromUri(Uri.base);
 
     return Scaffold(
       body: SizedBox.expand(
@@ -64,11 +72,12 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                 ),
               ),
             const Positioned.fill(child: _MenuReadabilityOverlay()),
-            const Positioned.fill(
-              child: IgnorePointer(
-                child: SnowfallOverlay(intensity: SnowfallIntensity.medium),
+            if (!visualTestConfig.enabled)
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: SnowfallOverlay(intensity: SnowfallIntensity.medium),
+                ),
               ),
-            ),
             SafeArea(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(

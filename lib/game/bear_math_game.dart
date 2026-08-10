@@ -31,10 +31,17 @@ import '../services/game_settings_service.dart';
 import '../services/level_service.dart';
 import '../services/progress_service.dart';
 import '../utils/answer_option_order.dart';
+import '../visual_test/visual_test_collision_overlay.dart';
+import '../visual_test/visual_test_config.dart';
+import '../visual_test/visual_test_dom_bridge.dart';
+import '../visual_test/visual_test_fixtures.dart';
 
 class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
-  BearMathGame({required this.levelId, this.useResponsiveCamera = false})
-    : super(camera: _buildGameCamera());
+  BearMathGame({
+    required this.levelId,
+    this.useResponsiveCamera = false,
+    this.visualTestConfig = const VisualTestConfig.disabled(),
+  }) : super(camera: _buildGameCamera());
 
   static const mentorDialogOverlay = 'mentorDialog';
   static const designWidth = 800.0;
@@ -42,6 +49,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   final int levelId;
   final bool useResponsiveCamera;
+  final VisualTestConfig visualTestConfig;
   late PlayerBear player;
   late final MentorVisualComponent mentor;
   late LevelGeometry levelGeometry;
@@ -136,23 +144,33 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   @override
   Future<void> onLoad() async {
+    if (visualTestConfig.enabled) {
+      markVisualTestStatus('game-loading');
+    }
     await super.onLoad();
 
-    _difficulty = await _settingsService.loadDifficulty();
-    _roundSettings = await _settingsService.loadRoundSettings();
-    _difficultyListener = () {
-      _difficulty = GameSettingsService.difficultyNotifier.value;
-    };
-    _roundSettingsListener = () {
-      _roundSettings = GameSettingsService.roundSettingsNotifier.value;
-    };
-    GameSettingsService.difficultyNotifier.addListener(_difficultyListener!);
-    GameSettingsService.roundSettingsNotifier.addListener(
-      _roundSettingsListener!,
-    );
+    if (visualTestConfig.enabled) {
+      _difficulty = GameDifficulty.beginner;
+      _roundSettings = RoundSettings.defaults;
+    } else {
+      _difficulty = await _settingsService.loadDifficulty();
+      _roundSettings = await _settingsService.loadRoundSettings();
+      _difficultyListener = () {
+        _difficulty = GameSettingsService.difficultyNotifier.value;
+      };
+      _roundSettingsListener = () {
+        _roundSettings = GameSettingsService.roundSettingsNotifier.value;
+      };
+      GameSettingsService.difficultyNotifier.addListener(_difficultyListener!);
+      GameSettingsService.roundSettingsNotifier.addListener(
+        _roundSettingsListener!,
+      );
+    }
 
     currentLevel = await _levelService.loadLevel(levelId);
-    _progress = await _progressService.loadProgress();
+    _progress = visualTestConfig.enabled
+        ? visualTestGameProgress()
+        : await _progressService.loadProgress();
     _roundStartProgress = _progress;
     _currentQuestionIndex = math.min(
       _progress.questionIndexForLevel(levelId),
@@ -195,11 +213,13 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
         assetPath: levelGeometry.backgroundAsset,
       ),
     ];
-    final distantBirdsConfig = DistantBirdsConfig.forLevel(currentLevel!.id);
-    if (distantBirdsConfig != null) {
-      sceneComponents.add(
-        DistantBirdsComponent(size: worldSize, config: distantBirdsConfig),
-      );
+    if (!visualTestConfig.enabled) {
+      final distantBirdsConfig = DistantBirdsConfig.forLevel(currentLevel!.id);
+      if (distantBirdsConfig != null) {
+        sceneComponents.add(
+          DistantBirdsComponent(size: worldSize, config: distantBirdsConfig),
+        );
+      }
     }
 
     _mainGroundComponent = PlatformComponent(
@@ -226,21 +246,32 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     sceneComponents
       ..add(player)
       ..add(mentor);
-    final ambientEffect = AmbientEffectsFactory.forLevel(
-      levelId: currentLevel!.id,
-      size: worldSize,
-      groundY: groundY,
-      isActive: _isPlayerPastFirstObstacle,
-    );
-    if (ambientEffect != null) {
-      sceneComponents.add(ambientEffect);
+    if (!visualTestConfig.enabled) {
+      final ambientEffect = AmbientEffectsFactory.forLevel(
+        levelId: currentLevel!.id,
+        size: worldSize,
+        groundY: groundY,
+        isActive: _isPlayerPastFirstObstacle,
+      );
+      if (ambientEffect != null) {
+        sceneComponents.add(ambientEffect);
+      }
+      final foregroundAmbientEffect = AmbientEffectsFactory.foregroundForLevel(
+        levelId: currentLevel!.id,
+        size: worldSize,
+      );
+      if (foregroundAmbientEffect != null) {
+        sceneComponents.add(foregroundAmbientEffect);
+      }
     }
-    final foregroundAmbientEffect = AmbientEffectsFactory.foregroundForLevel(
-      levelId: currentLevel!.id,
-      size: worldSize,
-    );
-    if (foregroundAmbientEffect != null) {
-      sceneComponents.add(foregroundAmbientEffect);
+    if (visualTestConfig.showCollisionOverlay) {
+      sceneComponents.add(
+        VisualTestCollisionOverlay(
+          geometry: () => levelGeometry,
+          player: () => player,
+          mentor: () => mentor,
+        ),
+      );
     }
     if (isLevelGeometryDebugOverlayEnabled) {
       sceneComponents.add(
@@ -261,9 +292,72 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     }
 
     await world.addAll(sceneComponents);
+    if (visualTestConfig.enabled) {
+      _applyVisualTestCheckpoint();
+    }
     _sceneReady = true;
+    if (visualTestConfig.openTaskDialog) {
+      _mentorDialogOpen = true;
+      mentorDialogOpenNotifier.value = true;
+      player.startInteracting();
+      overlays.add(mentorDialogOverlay);
+    }
     _updateResponsiveCamera(canvasSize);
+    if (visualTestConfig.enabled) {
+      markVisualTestStatus('game-loaded');
+    }
     sceneReadyNotifier.value = true;
+  }
+
+  void _applyVisualTestCheckpoint() {
+    final standingY = levelGeometry.mainGround.y - player.size.y;
+    final obstacles = levelGeometry.obstacleColliders;
+    var target = Vector2(levelGeometry.playerSpawn.x, standingY);
+
+    switch (visualTestConfig.checkpoint) {
+      case VisualTestCheckpoint.start:
+      case VisualTestCheckpoint.collision:
+        break;
+      case VisualTestCheckpoint.beforeFirstObstacle:
+        if (obstacles.isNotEmpty) {
+          target = Vector2(
+            math.max(0, obstacles.first.x - player.size.x - 24),
+            standingY,
+          );
+        }
+        break;
+      case VisualTestCheckpoint.onFirstObstacle:
+        if (obstacles.isNotEmpty) {
+          final obstacle = obstacles.first;
+          target = Vector2(
+            obstacle.x + (obstacle.width - player.size.x) / 2,
+            obstacle.y - player.size.y,
+          );
+        }
+        break;
+      case VisualTestCheckpoint.beforeSecondObstacle:
+        if (obstacles.length > 1) {
+          target = Vector2(
+            math.max(0, obstacles[1].x - player.size.x - 24),
+            standingY,
+          );
+        }
+        break;
+      case VisualTestCheckpoint.mentor:
+      case VisualTestCheckpoint.taskDialog:
+        target = Vector2(
+          (mentor.interactionPoint.x - player.size.x / 2 - 24)
+              .clamp(0, levelGeometry.world.width - player.size.x)
+              .toDouble(),
+          standingY,
+        );
+        break;
+    }
+
+    player
+      ..position = target
+      ..stopMoving();
+    _mentorDialogWasShown = true;
   }
 
   @override
@@ -291,7 +385,13 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   }
 
   List<int> answerOptionsFor(Question question, {math.Random? random}) {
-    return answerOptionsForDifficulty(question, _difficulty, random: random);
+    final optionRandom =
+        random ?? (visualTestConfig.enabled ? math.Random(question.id) : null);
+    return answerOptionsForDifficulty(
+      question,
+      _difficulty,
+      random: optionRandom,
+    );
   }
 
   List<int> get currentAnswerOptions {
