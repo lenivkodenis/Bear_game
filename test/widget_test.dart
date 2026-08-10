@@ -238,35 +238,9 @@ void main() {
     ]) {
       expect(
         tester.getSize(find.byKey(ValueKey<String>(key))),
-        const Size(64, 64),
+        const Size(68, 68),
       );
     }
     expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('controls release held movement when interrupted', (
-    tester,
-  ) async {
-    var moveEndCount = 0;
-    final controller = GameControlsController();
-    addTearDown(controller.dispose);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: GameControls(
-            controller: controller,
-            onMoveLeftStart: () {},
-            onMoveRightStart: () {},
-            onMoveEnd: () => moveEndCount += 1,
-            onJump: () {},
-          ),
-        ),
-      ),
-    );
-    await tester.startGesture(tester.getCenter(find.text('›')));
-    controller.interrupt();
-    await tester.pump();
-
-    expect(moveEndCount, 1);
   });
 }

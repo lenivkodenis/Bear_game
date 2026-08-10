@@ -1,9 +1,7 @@
 {
     "name": "BearMath — таблица умножения",
     "short_name": "BearMath",
-    "id": "/",
-    "start_url": "/",
-    "scope": "/",
+    "start_url": ".",
     "display": "standalone",
     "background_color": "#EAF8FE",
     "theme_color": "#17435A",

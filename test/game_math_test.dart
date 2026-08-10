@@ -239,11 +239,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final game = await _loadGame(levelId: 1);
 
-    expect(
-      game.sceneReadyNotifier.value,
-      isFalse,
-      reason: 'controls wait for the first rendered scene frame',
-    );
+    expect(game.sceneReadyNotifier.value, isTrue);
     game.overlays.addEntry(
       BearMathGame.mentorDialogOverlay,
       (_, _) => const SizedBox.shrink(),

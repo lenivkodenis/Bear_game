@@ -41,101 +41,44 @@ class _MentorDialogState extends State<MentorDialog> {
   @override
   Widget build(BuildContext context) {
     final level = widget.game.currentLevel;
-    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    return AnimatedPadding(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      padding: EdgeInsets.only(bottom: keyboardInset),
-      child: SafeArea(
-        minimum: const EdgeInsets.all(6),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final compact =
-                constraints.maxWidth < 480 || constraints.maxHeight < 620;
-            final ultraShort =
-                constraints.maxWidth > constraints.maxHeight &&
-                constraints.maxHeight < 360;
-            final outerPadding = ultraShort
-                ? 2.0
-                : compact
-                ? 6.0
-                : 16.0;
-            final innerPadding = ultraShort
-                ? 10.0
-                : compact
-                ? 16.0
-                : 24.0;
-            final children = level == null
-                ? _buildLoadingContent()
-                : _buildLevelContent(context, ultraShort: ultraShort);
-            final pinnedCount = _pinnedActionCount();
-            final title = children.firstOrNull;
-            final contentStart = title is _DialogTitle ? 1 : 0;
-            final contentEnd = (children.length - pinnedCount)
-                .clamp(contentStart, children.length)
-                .toInt();
-            final scrollingChildren = children.sublist(
-              contentStart,
-              contentEnd,
-            );
-            final pinnedChildren = children.sublist(contentEnd);
+    return SafeArea(
+      minimum: const EdgeInsets.all(8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact =
+              constraints.maxWidth < 480 || constraints.maxHeight < 620;
+          final outerPadding = compact ? 8.0 : 16.0;
+          final innerPadding = compact ? 16.0 : 24.0;
 
-            return Center(
-              child: Padding(
-                padding: EdgeInsets.all(outerPadding),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: ultraShort ? 760 : 420,
-                    maxHeight: constraints.maxHeight - outerPadding * 2,
-                  ),
-                  child: Card(
-                    elevation: 12,
-                    clipBehavior: Clip.antiAlias,
-                    child: Padding(
-                      padding: EdgeInsets.all(innerPadding),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (title is _DialogTitle) title,
-                          if (title is _DialogTitle) const Divider(height: 12),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              keyboardDismissBehavior:
-                                  ScrollViewKeyboardDismissBehavior.onDrag,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: scrollingChildren,
-                              ),
-                            ),
-                          ),
-                          if (pinnedChildren.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            ...pinnedChildren,
-                          ],
-                        ],
-                      ),
+          return Center(
+            child: Padding(
+              padding: EdgeInsets.all(outerPadding),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 420,
+                  maxHeight: constraints.maxHeight - outerPadding * 2,
+                ),
+                child: Card(
+                  elevation: 12,
+                  clipBehavior: Clip.antiAlias,
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(innerPadding),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: level == null
+                          ? _buildLoadingContent()
+                          : _buildLevelContent(context),
                     ),
                   ),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
-  }
-
-  int _pinnedActionCount() {
-    final result = _answerResult;
-    if (_showIntro ||
-        (widget.game.isLevelComplete && result == null) ||
-        (result != null && result.isCorrect) ||
-        (!_showIntro && widget.game.currentQuestion == null)) {
-      return 1;
-    }
-    if (result != null && result.requiresRestart) return 3;
-    return 0;
   }
 
   List<Widget> _buildLoadingContent() {
@@ -146,10 +89,7 @@ class _MentorDialogState extends State<MentorDialog> {
     ];
   }
 
-  List<Widget> _buildLevelContent(
-    BuildContext context, {
-    required bool ultraShort,
-  }) {
+  List<Widget> _buildLevelContent(BuildContext context) {
     final level = widget.game.currentLevel!;
 
     if (_showIntro) {
@@ -270,22 +210,6 @@ class _MentorDialogState extends State<MentorDialog> {
       const SizedBox(height: 20),
       if (widget.game.isManualAnswerMode)
         _buildManualAnswerInput()
-      else if (ultraShort)
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: [
-            for (final option in _optionsFor(question))
-              SizedBox(
-                width: 112,
-                height: 44,
-                child: FilledButton.tonal(
-                  onPressed: _isSubmitting ? null : () => _submitAnswer(option),
-                  child: Text(option.toString()),
-                ),
-              ),
-          ],
-        )
       else
         for (final option in _optionsFor(question)) ...[
           FilledButton.tonal(
