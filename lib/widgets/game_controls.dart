@@ -2,18 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-class GameControlsController extends ChangeNotifier {
-  void interrupt() => notifyListeners();
-}
-
-class GameControls extends StatefulWidget {
+class GameControls extends StatelessWidget {
   const GameControls({
     required this.onMoveLeftStart,
     required this.onMoveRightStart,
     required this.onMoveEnd,
     required this.onJump,
-    this.enabled = true,
-    this.controller,
     super.key,
   });
 
@@ -21,124 +15,57 @@ class GameControls extends StatefulWidget {
   final VoidCallback onMoveRightStart;
   final VoidCallback onMoveEnd;
   final VoidCallback onJump;
-  final bool enabled;
-  final GameControlsController? controller;
-
-  @override
-  State<GameControls> createState() => _GameControlsState();
-}
-
-class _GameControlsState extends State<GameControls> {
-  int _interruptRevision = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller?.addListener(_interrupt);
-  }
-
-  @override
-  void didUpdateWidget(GameControls oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != widget.controller) {
-      oldWidget.controller?.removeListener(_interrupt);
-      widget.controller?.addListener(_interrupt);
-    }
-    if (oldWidget.enabled && !widget.enabled) {
-      _interrupt();
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.controller?.removeListener(_interrupt);
-    super.dispose();
-  }
-
-  void _interrupt() {
-    if (!mounted) return;
-    setState(() => _interruptRevision += 1);
-  }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final ultraShort = constraints.maxHeight < 300;
         final compactLandscape = constraints.maxHeight < 420;
-        final controlSize = ultraShort
-            ? 50.0
-            : compactLandscape
-            ? 58.0
-            : 64.0;
-        final touchTargetSize = ultraShort
-            ? 56.0
-            : compactLandscape
-            ? 64.0
-            : 76.0;
+        final controlSize = compactLandscape ? 60.0 : 64.0;
+        final touchTargetSize = compactLandscape ? 68.0 : 76.0;
 
-        return IgnorePointer(
-          ignoring: !widget.enabled,
-          child: AnimatedOpacity(
-            opacity: widget.enabled ? 1 : 0.55,
-            duration: const Duration(milliseconds: 100),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                compactLandscape ? 8 : 16,
-                0,
-                compactLandscape ? 8 : 16,
-                ultraShort
-                    ? 2
-                    : compactLandscape
-                    ? 6
-                    : 12,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            compactLandscape ? 12 : 16,
+            0,
+            compactLandscape ? 12 : 16,
+            compactLandscape ? 8 : 12,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      KeyedSubtree(
-                        key: ValueKey<String>('left-$_interruptRevision'),
-                        child: _HoldButton(
-                          key: const ValueKey<String>('game-control-left'),
-                          symbol: '‹',
-                          semanticsLabel: 'Влево',
-                          controlSize: controlSize,
-                          touchTargetSize: touchTargetSize,
-                          onHoldStart: widget.onMoveLeftStart,
-                          onHoldEnd: widget.onMoveEnd,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      KeyedSubtree(
-                        key: ValueKey<String>('right-$_interruptRevision'),
-                        child: _HoldButton(
-                          key: const ValueKey<String>('game-control-right'),
-                          symbol: '›',
-                          semanticsLabel: 'Вправо',
-                          controlSize: controlSize,
-                          touchTargetSize: touchTargetSize,
-                          onHoldStart: widget.onMoveRightStart,
-                          onHoldEnd: widget.onMoveEnd,
-                        ),
-                      ),
-                    ],
+                  _HoldButton(
+                    key: const ValueKey<String>('game-control-left'),
+                    symbol: '‹',
+                    semanticsLabel: 'Влево',
+                    controlSize: controlSize,
+                    touchTargetSize: touchTargetSize,
+                    onHoldStart: onMoveLeftStart,
+                    onHoldEnd: onMoveEnd,
                   ),
-                  KeyedSubtree(
-                    key: ValueKey<String>('jump-$_interruptRevision'),
-                    child: _TapButton(
-                      key: const ValueKey<String>('game-control-jump'),
-                      symbol: '↑',
-                      semanticsLabel: 'Прыжок',
-                      controlSize: controlSize,
-                      touchTargetSize: touchTargetSize,
-                      onPressed: widget.onJump,
-                    ),
+                  const SizedBox(width: 4),
+                  _HoldButton(
+                    key: const ValueKey<String>('game-control-right'),
+                    symbol: '›',
+                    semanticsLabel: 'Вправо',
+                    controlSize: controlSize,
+                    touchTargetSize: touchTargetSize,
+                    onHoldStart: onMoveRightStart,
+                    onHoldEnd: onMoveEnd,
                   ),
                 ],
               ),
-            ),
+              _TapButton(
+                key: const ValueKey<String>('game-control-jump'),
+                symbol: '↑',
+                semanticsLabel: 'Прыжок',
+                controlSize: controlSize,
+                touchTargetSize: touchTargetSize,
+                onPressed: onJump,
+              ),
+            ],
           ),
         );
       },

@@ -1,11 +1,8 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/game_settings_service.dart';
-import '../services/mobile_display_service.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/effects/snowfall_overlay.dart';
@@ -31,13 +28,6 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
 
   final ProgressService _progressService = ProgressService();
   final GameSettingsService _settingsService = GameSettingsService();
-  final MobileDisplayService _displayService = MobileDisplayService.instance;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _showInstallHintOnce());
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +110,6 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   }
 
   Future<void> _startGame() async {
-    unawaited(_displayService.requestImmersive(lockLandscape: true));
     final resetRequired = await _settingsService.isDifficultyResetRequired();
     if (resetRequired) {
       if (!mounted ||
@@ -154,7 +143,6 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   }
 
   Future<void> _restartGame() async {
-    unawaited(_displayService.requestImmersive(lockLandscape: true));
     final confirmed = await _confirmRestart(
       title: 'Начать игру заново?',
       message:
@@ -185,23 +173,6 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
       context: context,
       title: title,
       message: message,
-    );
-  }
-
-  Future<void> _showInstallHintOnce() async {
-    if (!_displayService.isMobile || _displayService.isStandalone) return;
-    final preferences = await SharedPreferences.getInstance();
-    const key = 'mobile_home_screen_hint_shown_v1';
-    if (preferences.getBool(key) ?? false) return;
-    await preferences.setBool(key, true);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        duration: Duration(seconds: 7),
-        content: Text(
-          'Для игры без панели браузера добавьте BearMath на экран «Домой».',
-        ),
-      ),
     );
   }
 }

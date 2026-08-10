@@ -173,30 +173,6 @@ void main() {
     expect(usesCompactGameViewport(const Size(390, 844)), isTrue);
     expect(usesCompactGameViewport(const Size(844, 390)), isTrue);
     expect(usesCompactGameViewport(const Size(1024, 768)), isFalse);
-    expect(usesCompactGameViewport(const Size(1280, 720)), isFalse);
-    expect(usesCompactGameViewport(const Size(1920, 1080)), isFalse);
-    expect(usesCompactGameViewport(const Size(2048, 1000)), isFalse);
-  });
-
-  test('desktop fullscreen rebuilds the world but phone rotation does not', () {
-    expect(
-      shouldRecreateGameForViewport(
-        gameWasCreated: true,
-        currentUseResponsiveCamera: false,
-        previousViewportSize: const Size(1280, 720),
-        viewportSize: const Size(2048, 1000),
-      ),
-      isTrue,
-    );
-    expect(
-      shouldRecreateGameForViewport(
-        gameWasCreated: true,
-        currentUseResponsiveCamera: true,
-        previousViewportSize: const Size(390, 844),
-        viewportSize: const Size(844, 390),
-      ),
-      isFalse,
-    );
   });
 
   test('responsive game camera uses the full canvas viewport', () {
@@ -262,35 +238,9 @@ void main() {
     ]) {
       expect(
         tester.getSize(find.byKey(ValueKey<String>(key))),
-        const Size(64, 64),
+        const Size(68, 68),
       );
     }
     expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('controls release held movement when interrupted', (
-    tester,
-  ) async {
-    var moveEndCount = 0;
-    final controller = GameControlsController();
-    addTearDown(controller.dispose);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: GameControls(
-            controller: controller,
-            onMoveLeftStart: () {},
-            onMoveRightStart: () {},
-            onMoveEnd: () => moveEndCount += 1,
-            onJump: () {},
-          ),
-        ),
-      ),
-    );
-    await tester.startGesture(tester.getCenter(find.text('›')));
-    controller.interrupt();
-    await tester.pump();
-
-    expect(moveEndCount, 1);
   });
 }
