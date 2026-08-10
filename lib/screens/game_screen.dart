@@ -57,6 +57,9 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     final game = _game!;
+    final viewportSize = MediaQuery.sizeOf(context);
+    final useCenteredLandscapeHud =
+        viewportSize.width > viewportSize.height && viewportSize.height < 420;
 
     return Scaffold(
       body: Stack(
@@ -81,10 +84,17 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ),
           Positioned.fill(
-            child: ValueListenableBuilder<bool>(
-              valueListenable: game.mentorDialogOpenNotifier,
-              builder: (context, mentorDialogOpen, _) {
-                if (mentorDialogOpen) {
+            child: ListenableBuilder(
+              listenable: Listenable.merge([
+                game.sceneReadyNotifier,
+                game.mentorDialogOpenNotifier,
+              ]),
+              builder: (context, _) {
+                if (!game.sceneReadyNotifier.value) {
+                  return _GameLoadingOverlay(onBack: _leaveLevel);
+                }
+
+                if (game.mentorDialogOpenNotifier.value) {
                   return const SizedBox.shrink();
                 }
 
@@ -101,11 +111,22 @@ class _GameScreenState extends State<GameScreen> {
                           tooltip: 'Назад',
                         ),
                       ),
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: ScoreHud(scoreListenable: game.scoreNotifier),
-                      ),
+                      if (useCenteredLandscapeHud)
+                        Align(
+                          alignment: Alignment.topCenter,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: ScoreHud(
+                              scoreListenable: game.scoreNotifier,
+                            ),
+                          ),
+                        )
+                      else
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: ScoreHud(scoreListenable: game.scoreNotifier),
+                        ),
                       Align(
                         alignment: Alignment.bottomCenter,
                         child: GameControls(
@@ -214,5 +235,57 @@ class _GameScreenState extends State<GameScreen> {
     } on FormatException {
       return const <String, String>{};
     }
+  }
+}
+
+class _GameLoadingOverlay extends StatelessWidget {
+  const _GameLoadingOverlay({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: AppTheme.nightSnowyGradient,
+      child: SafeArea(
+        minimum: const EdgeInsets.all(12),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              child: IconButton.filledTonal(
+                onPressed: onBack,
+                icon: const Icon(Icons.arrow_back_rounded),
+                tooltip: 'Назад',
+              ),
+            ),
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox.square(
+                    dimension: 42,
+                    child: CircularProgressIndicator(
+                      color: AppTheme.softBlue,
+                      strokeWidth: 4,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Готовим северное путешествие…',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppTheme.deepBlue,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

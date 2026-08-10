@@ -55,9 +55,15 @@ class GameViewportLayout {
       canvasSize.width / worldSize.width,
       canvasSize.height / worldSize.height,
     );
+    // A portrait phone needs the cover crop to keep the bear and obstacles
+    // readable. In landscape the browser chrome leaves very little height;
+    // applying the same horizontal tracking zoom there reduces the game to a
+    // narrow strip. Showing the full authored width keeps the whole route,
+    // bear and mentor usable without changing world coordinates or physics.
+    final isLandscape = canvasSize.width > canvasSize.height;
     final trackingZoom =
         canvasSize.width / math.min(worldSize.width, maxVisibleWorldWidth);
-    final zoom = math.max(coverZoom, trackingZoom);
+    final zoom = isLandscape ? coverZoom : math.max(coverZoom, trackingZoom);
     final visibleWidth = canvasSize.width / zoom;
     final visibleHeight = canvasSize.height / zoom;
     final maxLeft = math.max(0.0, worldSize.width - visibleWidth);

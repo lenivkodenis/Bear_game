@@ -120,8 +120,52 @@ void main() {
     expect(moveEndCount, 0);
 
     await gesture.up();
-    await tester.pump(const Duration(milliseconds: 121));
+    await tester.pump();
 
+    expect(moveEndCount, 1);
+  });
+
+  testWidgets('mobile controls support moving and jumping together', (
+    tester,
+  ) async {
+    var rightStartCount = 0;
+    var moveEndCount = 0;
+    var jumpCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GameControls(
+            onMoveLeftStart: () {},
+            onMoveRightStart: () => rightStartCount += 1,
+            onMoveEnd: () => moveEndCount += 1,
+            onJump: () => jumpCount += 1,
+          ),
+        ),
+      ),
+    );
+
+    final movement = await tester.startGesture(
+      tester.getCenter(find.text('›')),
+      pointer: 1,
+    );
+    await tester.pump();
+    final jump = await tester.startGesture(
+      tester.getCenter(find.text('↑')),
+      pointer: 2,
+    );
+    await tester.pump();
+
+    expect(rightStartCount, 1);
+    expect(jumpCount, 1);
+    expect(moveEndCount, 0);
+
+    await jump.up();
+    await tester.pump();
+    expect(moveEndCount, 0);
+
+    await movement.up();
+    await tester.pump();
     expect(moveEndCount, 1);
   });
 
@@ -194,7 +238,7 @@ void main() {
     ]) {
       expect(
         tester.getSize(find.byKey(ValueKey<String>(key))),
-        const Size(56, 56),
+        const Size(68, 68),
       );
     }
     expect(tester.takeException(), isNull);

@@ -82,6 +82,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   final ValueNotifier<bool> mentorDialogOpenNotifier = ValueNotifier<bool>(
     false,
   );
+  final ValueNotifier<bool> sceneReadyNotifier = ValueNotifier<bool>(false);
   bool _mentorDialogWasShown = false;
   bool _mentorDialogOpen = false;
   bool _sceneReady = false;
@@ -188,15 +189,15 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     final mainGround = levelGeometry.mainGround;
     final groundY = mainGround.y;
 
-    world.add(
+    final sceneComponents = <Component>[
       SnowyBackground(
         size: worldSize,
         assetPath: levelGeometry.backgroundAsset,
       ),
-    );
+    ];
     final distantBirdsConfig = DistantBirdsConfig.forLevel(currentLevel!.id);
     if (distantBirdsConfig != null) {
-      world.add(
+      sceneComponents.add(
         DistantBirdsComponent(size: worldSize, config: distantBirdsConfig),
       );
     }
@@ -205,7 +206,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       position: mainGround.position,
       size: mainGround.size,
     );
-    world.add(_mainGroundComponent);
+    sceneComponents.add(_mainGroundComponent);
 
     final playerSpawn = levelGeometry.playerSpawn.toVector2();
     player = PlayerBear(
@@ -222,8 +223,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       groundPosition: mentorSpawn,
     );
 
-    world.add(player);
-    world.add(mentor);
+    sceneComponents
+      ..add(player)
+      ..add(mentor);
     final ambientEffect = AmbientEffectsFactory.forLevel(
       levelId: currentLevel!.id,
       size: worldSize,
@@ -231,17 +233,17 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       isActive: _isPlayerPastFirstObstacle,
     );
     if (ambientEffect != null) {
-      world.add(ambientEffect);
+      sceneComponents.add(ambientEffect);
     }
     final foregroundAmbientEffect = AmbientEffectsFactory.foregroundForLevel(
       levelId: currentLevel!.id,
       size: worldSize,
     );
     if (foregroundAmbientEffect != null) {
-      world.add(foregroundAmbientEffect);
+      sceneComponents.add(foregroundAmbientEffect);
     }
     if (isLevelGeometryDebugOverlayEnabled) {
-      world.add(
+      sceneComponents.add(
         LevelGeometryDebugOverlay(
           geometry: () => levelGeometry,
           player: () => player,
@@ -258,8 +260,10 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       );
     }
 
+    await world.addAll(sceneComponents);
     _sceneReady = true;
     _updateResponsiveCamera(canvasSize);
+    sceneReadyNotifier.value = true;
   }
 
   @override

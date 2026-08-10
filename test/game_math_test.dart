@@ -7,6 +7,7 @@ import 'package:bear_game/models/round_settings.dart';
 import 'package:bear_game/services/game_economy.dart';
 import 'package:bear_game/services/progress_service.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -232,6 +233,22 @@ void main() {
     expect(result.isCorrect, isFalse);
     expect(result.message, isNot(contains('Подсказка')));
     expect(result.message, isNot(contains(game.currentQuestion!.hint)));
+  });
+
+  test('reaching the mentor opens the question dialog', () async {
+    SharedPreferences.setMockInitialValues({});
+    final game = await _loadGame(levelId: 1);
+
+    expect(game.sceneReadyNotifier.value, isTrue);
+    game.overlays.addEntry(
+      BearMathGame.mentorDialogOverlay,
+      (_, _) => const SizedBox.shrink(),
+    );
+    game.player.position = game.mentor.interactionPoint - game.player.size / 2;
+    game.update(0);
+
+    expect(game.mentorDialogOpenNotifier.value, isTrue);
+    expect(game.overlays.isActive(BearMathGame.mentorDialogOverlay), isTrue);
   });
 }
 

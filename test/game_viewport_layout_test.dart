@@ -57,25 +57,20 @@ void main() {
     expect(layout.visibleWorldRect.right - 400, greaterThan(180));
   });
 
-  test(
-    'wide mobile landscape keeps a tracking window instead of full level',
-    () {
-      final layout = GameViewportLayout.cover(
-        canvasSize: const Size(844, 390),
-        playerCenterX: 300,
-        gameplayGroundY: 489,
-      );
+  test('wide mobile landscape shows the full route above browser controls', () {
+    final layout = GameViewportLayout.cover(
+      canvasSize: const Size(844, 390),
+      playerCenterX: 300,
+      gameplayGroundY: 489,
+    );
 
-      expect(
-        layout.visibleWorldSize.width,
-        closeTo(GameViewportLayout.maxVisibleWorldWidth, 0.001),
-      );
-      expect(
-        layout.worldToScreen(const Offset(300, 489)).dx,
-        closeTo(844 * GameViewportLayout.playerScreenFraction, 0.01),
-      );
-    },
-  );
+    expect(
+      layout.visibleWorldSize.width,
+      closeTo(GameViewportLayout.authoredWorldSize.width, 0.001),
+    );
+    expect(layout.visibleWorldRect.left, 0);
+    expect(layout.visibleWorldRect.right, closeTo(800, 0.001));
+  });
 
   test('resize and rotation recalculate zoom and camera crop', () {
     final portrait = GameViewportLayout.cover(
@@ -105,6 +100,31 @@ void main() {
 
     expect(groundOnScreen.dy, greaterThan(0));
     expect(groundOnScreen.dy, lessThan(320));
+  });
+
+  test('browser-height landscape keeps the bear and mentor fully visible', () {
+    final layout = GameViewportLayout.cover(
+      canvasSize: const Size(848, 249),
+      playerCenterX: 400,
+      gameplayGroundY: 489,
+    );
+
+    const bearBounds = Rect.fromLTWH(361, 397, 78, 92);
+    const mentorBounds = Rect.fromLTWH(650, 359, 100, 130);
+    expect(layout.visibleWorldRect.contains(bearBounds.topLeft), isTrue);
+    expect(
+      layout.visibleWorldRect.contains(
+        bearBounds.bottomRight - const Offset(0.001, 0.001),
+      ),
+      isTrue,
+    );
+    expect(layout.visibleWorldRect.contains(mentorBounds.topLeft), isTrue);
+    expect(
+      layout.visibleWorldRect.contains(
+        mentorBounds.bottomRight - const Offset(0.001, 0.001),
+      ),
+      isTrue,
+    );
   });
 
   test('all level obstacles become fully visible before contact', () async {
