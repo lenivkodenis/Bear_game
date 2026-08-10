@@ -8,6 +8,7 @@ import '../game/level_geometry.dart';
 import '../models/map_location.dart';
 import '../models/player_progress.dart';
 import '../services/game_settings_service.dart';
+import '../services/mobile_display_service.dart';
 import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/back_text_button.dart';
@@ -18,11 +19,16 @@ import 'game_screen.dart';
 const _lockedPadlockAssetPath = 'assets/images/map/locked_level_padlock.png';
 
 class LocationMapScreen extends StatefulWidget {
-  const LocationMapScreen({super.key, this.progressLoader});
+  const LocationMapScreen({
+    super.key,
+    this.progressLoader,
+    this.imagePreloader,
+  });
 
   static const routeName = '/map';
 
   final Future<PlayerProgress> Function()? progressLoader;
+  final Future<void> Function(BuildContext context)? imagePreloader;
 
   @override
   State<LocationMapScreen> createState() => _LocationMapScreenState();
@@ -32,9 +38,10 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
   static const _mapAssetPath = 'assets/images/map/progression_map.png';
   static const _mapAspectRatio = 1672 / 941;
 
-  late Future<_LocationMapData> _mapDataFuture;
+  Future<_LocationMapData>? _mapDataFuture;
   final ProgressService _progressService = ProgressService();
   final GameSettingsService _settingsService = GameSettingsService();
+  final MobileDisplayService _displayService = MobileDisplayService.instance;
   PlayerProgress? _loadedProgress;
   bool _isRewinding = false;
 
@@ -104,7 +111,12 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
   @override
   void initState() {
     super.initState();
-    _mapDataFuture = _loadMapData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _mapDataFuture ??= _loadMapDataAndPrecacheImage();
   }
 
   @override
@@ -163,7 +175,18 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
     return _LocationMapData(progress: visibleProgress);
   }
 
+  Future<_LocationMapData> _loadMapDataAndPrecacheImage() async {
+    final dataFuture = _loadMapData();
+    await Future.wait<void>([
+      widget.imagePreloader?.call(context) ??
+          precacheImage(const AssetImage(_mapAssetPath), context),
+      dataFuture.then<void>((_) {}),
+    ]);
+    return dataFuture;
+  }
+
   Future<void> _openLocation(BuildContext context, MapLocation location) async {
+    unawaited(_displayService.requestImmersive(lockLandscape: true));
     if (await _settingsService.isDifficultyResetRequired()) {
       if (!context.mounted || !await _confirmDifficultyReset(context)) {
         return;
@@ -186,7 +209,7 @@ class _LocationMapScreenState extends State<LocationMapScreen> {
     }
 
     if (mounted) {
-      setState(() => _mapDataFuture = _loadMapData());
+      setState(() => _mapDataFuture = _loadMapDataAndPrecacheImage());
     }
   }
 
@@ -257,7 +280,7 @@ class _LocationMapLoadingState extends StatelessWidget {
   }
 }
 
-class _MapViewport extends StatelessWidget {
+class _MapViewport extends StatefulWidget {
   const _MapViewport({
     required this.imagePath,
     required this.aspectRatio,
@@ -276,39 +299,144 @@ class _MapViewport extends StatelessWidget {
   final ValueChanged<MapLocation> onRewindToLocation;
 
   @override
+  State<_MapViewport> createState() => _MapViewportState();
+}
+
+class _MapViewportState extends State<_MapViewport> {
+  final TransformationController _controller = TransformationController();
+  Size? _lastViewportSize;
+  Size? _lastMapSize;
+  Offset? _logicalCenter;
+  bool _initialized = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 760;
-        final maxMapWidth = math.min(
-          constraints.maxWidth - 24,
-          (constraints.maxHeight - 24) * aspectRatio,
+        final viewportSize = Size(
+          math.max(1.0, constraints.maxWidth),
+          math.max(1.0, constraints.maxHeight),
         );
-        final mapWidth = isCompact ? 980.0 : maxMapWidth.clamp(720.0, 1500.0);
-        final mapHeight = mapWidth / aspectRatio;
+        final availableWidth = math.max(1.0, viewportSize.width - 24);
+        final availableHeight = math.max(1.0, viewportSize.height - 24);
+        final mapWidth = math.min(
+          availableWidth,
+          availableHeight * widget.aspectRatio,
+        );
+        final mapHeight = mapWidth / widget.aspectRatio;
+        final mapSize = Size(mapWidth, mapHeight);
+        final currentLocationId = _resolveCurrentLocationId(
+          widget.stops,
+          widget.progress,
+        );
         final map = _IllustratedProgressionMap(
           width: mapWidth,
           height: mapHeight,
-          imagePath: imagePath,
-          stops: stops,
-          progress: progress,
-          currentLocationId: _resolveCurrentLocationId(stops, progress),
-          onOpenLocation: onOpenLocation,
-          onRewindToLocation: onRewindToLocation,
+          imagePath: widget.imagePath,
+          stops: widget.stops,
+          progress: widget.progress,
+          currentLocationId: currentLocationId,
+          onOpenLocation: widget.onOpenLocation,
+          onRewindToLocation: widget.onRewindToLocation,
         );
 
-        if (isCompact || mapHeight > constraints.maxHeight) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(12),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: map,
-            ),
-          );
+        if (_lastViewportSize != viewportSize || _lastMapSize != mapSize) {
+          final previousViewportSize = _lastViewportSize;
+          final orientationChanged =
+              previousViewportSize != null &&
+              (previousViewportSize.width > previousViewportSize.height) !=
+                  (viewportSize.width > viewportSize.height);
+          _lastViewportSize = viewportSize;
+          _lastMapSize = mapSize;
+          final currentStop = widget.stops
+              .where((stop) => stop.location.id == currentLocationId)
+              .firstOrNull;
+          _logicalCenter ??= currentStop?.center ?? const Offset(0.5, 0.5);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _restoreLogicalCenter(
+                viewportSize,
+                mapSize,
+                recalibrateScale: orientationChanged,
+              );
+            }
+          });
         }
 
-        return Center(child: map);
+        return ClipRect(
+          child: InteractiveViewer(
+            key: const ValueKey<String>('location-map-interactive-viewer'),
+            transformationController: _controller,
+            constrained: false,
+            minScale: 1,
+            maxScale: 3.2,
+            boundaryMargin: EdgeInsets.symmetric(
+              horizontal: viewportSize.width / 2,
+              vertical: viewportSize.height / 2,
+            ),
+            onInteractionEnd: (_) =>
+                _rememberLogicalCenter(viewportSize, mapSize),
+            child: map,
+          ),
+        );
       },
+    );
+  }
+
+  void _restoreLogicalCenter(
+    Size viewportSize,
+    Size mapSize, {
+    required bool recalibrateScale,
+  }) {
+    final logicalCenter = _logicalCenter ?? const Offset(0.5, 0.5);
+    final compact = viewportSize.width < 760;
+    final defaultScale = compact
+        ? math
+              .max(1.65, (viewportSize.height - 140) / mapSize.height)
+              .clamp(1.0, 3.0)
+              .toDouble()
+        : 1.0;
+    final existingScale = _initialized && !recalibrateScale
+        ? _controller.value.getMaxScaleOnAxis().clamp(1.0, 3.2).toDouble()
+        : defaultScale;
+    final mapPoint = Offset(
+      logicalCenter.dx * mapSize.width,
+      logicalCenter.dy * mapSize.height,
+    );
+    final scaledMapSize = mapSize * existingScale;
+    final desiredTranslation =
+        viewportSize.center(Offset.zero) - mapPoint * existingScale;
+    final translation = Offset(
+      scaledMapSize.width <= viewportSize.width
+          ? (viewportSize.width - scaledMapSize.width) / 2
+          : desiredTranslation.dx,
+      scaledMapSize.height <= viewportSize.height
+          ? (viewportSize.height - scaledMapSize.height) / 2
+          : desiredTranslation.dy,
+    );
+    _controller.value = Matrix4.identity()
+      ..setEntry(0, 0, existingScale)
+      ..setEntry(1, 1, existingScale)
+      ..setEntry(0, 3, translation.dx)
+      ..setEntry(1, 3, translation.dy);
+    _initialized = true;
+  }
+
+  void _rememberLogicalCenter(Size viewportSize, Size mapSize) {
+    final inverse = Matrix4.inverted(_controller.value);
+    final mapPoint = MatrixUtils.transformPoint(
+      inverse,
+      viewportSize.center(Offset.zero),
+    );
+    _logicalCenter = Offset(
+      (mapPoint.dx / mapSize.width).clamp(0.0, 1.0),
+      (mapPoint.dy / mapSize.height).clamp(0.0, 1.0),
     );
   }
 

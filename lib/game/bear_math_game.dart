@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:ui' show Canvas, Rect, Size;
 
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' show EdgeInsets;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart' show KeyEventResult;
 
@@ -86,6 +89,9 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   bool _mentorDialogWasShown = false;
   bool _mentorDialogOpen = false;
   bool _sceneReady = false;
+  bool _firstSceneFrameReported = false;
+  GameViewportLayout? _debugViewportLayout;
+  bool _cameraInitialized = false;
   bool _groundCalibrationEnabled = false;
   bool _groundSegmentCalibrationEnabled = false;
   bool _obstacleCalibrationEnabled = false;
@@ -263,7 +269,6 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     await world.addAll(sceneComponents);
     _sceneReady = true;
     _updateResponsiveCamera(canvasSize);
-    sceneReadyNotifier.value = true;
   }
 
   @override
@@ -406,7 +411,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   Vector2 get _runtimeWorldSize =>
       useResponsiveCamera ? Vector2(designWidth, designHeight) : size.clone();
 
-  void _updateResponsiveCamera(Vector2 currentCanvasSize) {
+  void _updateResponsiveCamera(Vector2 currentCanvasSize, {double? dt}) {
     if (!useResponsiveCamera || !_sceneReady) {
       return;
     }
@@ -418,11 +423,50 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       canvasSize: Size(currentCanvasSize.x, currentCanvasSize.y),
       playerCenterX: player.position.x + player.size.x / 2,
       gameplayGroundY: gameplayGroundY,
+      occlusion: EdgeInsets.only(
+        top: currentCanvasSize.y < 420 ? 50 : 64,
+        bottom: currentCanvasSize.y < 300
+            ? 58
+            : currentCanvasSize.y < 420
+            ? 70
+            : 86,
+      ),
+      playerVisualHeight: PlayerBear.visualHeight,
+      jumpImpulse: PlayerBear.jumpImpulseMagnitude,
+      gravity: PlayerBear.gravityMagnitude,
+      obstacleBounds: levelGeometry.obstacleColliders.map(
+        (obstacle) => Rect.fromLTWH(
+          obstacle.x,
+          obstacle.y,
+          obstacle.width,
+          obstacle.height,
+        ),
+      ),
+      movementDirection: player.horizontalVelocityX < 0 ? -1 : 1,
     );
+    _debugViewportLayout = layout;
+    final targetPosition = Vector2(
+      layout.cameraTopLeft.dx,
+      layout.cameraTopLeft.dy,
+    );
+    if (!_cameraInitialized || dt == null) {
+      camera.viewfinder
+        ..zoom = layout.zoom
+        ..position = targetPosition;
+      _cameraInitialized = true;
+      return;
+    }
+
+    final smoothing = 1 - math.exp(-8 * dt.clamp(0.0, 0.1));
     camera.viewfinder
-      ..zoom = layout.zoom
-      ..position = Vector2(layout.cameraTopLeft.dx, layout.cameraTopLeft.dy);
+      ..zoom += (layout.zoom - camera.viewfinder.zoom) * smoothing
+      ..position =
+          camera.viewfinder.position +
+          (targetPosition - camera.viewfinder.position) * smoothing;
   }
+
+  double get debugCameraZoom => camera.viewfinder.zoom;
+  Rect? get debugVisibleWorldRect => _debugViewportLayout?.visibleWorldRect;
 
   LevelGeometry get _currentSourceGeometry {
     var geometry = _sourceLevelGeometry;
@@ -1331,7 +1375,16 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
       overlays.add(mentorDialogOverlay);
     }
 
-    _updateResponsiveCamera(canvasSize);
+    _updateResponsiveCamera(canvasSize, dt: dt);
+  }
+
+  @override
+  void render(Canvas canvas) {
+    super.render(canvas);
+    if (_sceneReady && !_firstSceneFrameReported) {
+      _firstSceneFrameReported = true;
+      scheduleMicrotask(() => sceneReadyNotifier.value = true);
+    }
   }
 
   Rect get _playerRect {

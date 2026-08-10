@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import '../game/bear_math_game.dart';
 import '../models/level_completion_summary.dart';
+import '../services/mobile_display_service.dart';
+import '../services/viewport_stability_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/game_controls.dart';
 import '../widgets/mentor_dialog.dart';
 import '../widgets/score_hud.dart';
+import '../widgets/viewport_debug_overlay.dart';
 import 'final_screen.dart';
 import 'level_complete_screen.dart';
 import 'location_map_screen.dart';
@@ -26,10 +31,40 @@ bool usesCompactGameViewport(Size size) {
   return size.shortestSide < compactGameViewportThreshold;
 }
 
-class _GameScreenState extends State<GameScreen> {
+@visibleForTesting
+bool shouldRecreateGameForViewport({
+  required bool gameWasCreated,
+  required bool? currentUseResponsiveCamera,
+  required Size? previousViewportSize,
+  required Size viewportSize,
+}) {
+  if (!gameWasCreated) return true;
+
+  final nextUseResponsiveCamera = usesCompactGameViewport(viewportSize);
+  if (currentUseResponsiveCamera != nextUseResponsiveCamera) return true;
+
+  // The compact camera owns a stable 800×600 world and must survive a phone
+  // rotation. The desktop world is authored from the actual canvas size, so a
+  // fullscreen/window resize must rebuild it to keep geometry and physics in
+  // the same coordinate system.
+  return !nextUseResponsiveCamera && previousViewportSize != viewportSize;
+}
+
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   BearMathGame? _game;
   bool _gameWasCreated = false;
   Size? _lastViewportSize;
+  final GameControlsController _controlsController = GameControlsController();
+  final ViewportStabilityModel _viewportStability = ViewportStabilityModel();
+  final MobileDisplayService _displayService = MobileDisplayService.instance;
+  Timer? _settleTimer;
+  bool _isResizing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   @override
   void didChangeDependencies() {
@@ -37,9 +72,12 @@ class _GameScreenState extends State<GameScreen> {
 
     final viewportSize = MediaQuery.sizeOf(context);
     final useResponsiveCamera = usesCompactGameViewport(viewportSize);
-    if (_gameWasCreated &&
-        _game?.useResponsiveCamera == useResponsiveCamera &&
-        (useResponsiveCamera || _lastViewportSize == viewportSize)) {
+    if (!shouldRecreateGameForViewport(
+      gameWasCreated: _gameWasCreated,
+      currentUseResponsiveCamera: _game?.useResponsiveCamera,
+      previousViewportSize: _lastViewportSize,
+      viewportSize: viewportSize,
+    )) {
       return;
     }
 
@@ -55,32 +93,58 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   @override
+  void didChangeMetrics() {
+    _beginViewportTransition();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _beginViewportTransition();
+      return;
+    }
+    _interruptGameplay();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _settleTimer?.cancel();
+    _controlsController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final game = _game!;
     final viewportSize = MediaQuery.sizeOf(context);
     final useCenteredLandscapeHud =
         viewportSize.width > viewportSize.height && viewportSize.height < 420;
+    final debugViewport = _debugViewportEnabled(Uri.base);
 
     return Scaffold(
       body: Stack(
         children: [
           Positioned.fill(
-            child: GameWidget<BearMathGame>(
-              key: ValueKey<BearMathGame>(game),
-              game: game,
-              backgroundBuilder: (_) => const SizedBox.expand(
-                child: DecoratedBox(decoration: AppTheme.nightSnowyGradient),
-              ),
-              overlayBuilderMap: {
-                BearMathGame.mentorDialogOverlay: (context, game) {
-                  return MentorDialog(
-                    game: game,
-                    onClose: game.closeMentorDialog,
-                    onLevelComplete: _openLevelCompleteScreen,
-                    onReturnToMap: _returnToMap,
-                  );
+            child: IgnorePointer(
+              ignoring: _isResizing,
+              child: GameWidget<BearMathGame>(
+                key: ValueKey<BearMathGame>(game),
+                game: game,
+                backgroundBuilder: (_) => const SizedBox.expand(
+                  child: DecoratedBox(decoration: AppTheme.nightSnowyGradient),
+                ),
+                overlayBuilderMap: {
+                  BearMathGame.mentorDialogOverlay: (context, game) {
+                    return MentorDialog(
+                      game: game,
+                      onClose: game.closeMentorDialog,
+                      onLevelComplete: _openLevelCompleteScreen,
+                      onReturnToMap: _returnToMap,
+                    );
+                  },
                 },
-              },
+              ),
             ),
           ),
           Positioned.fill(
@@ -90,7 +154,10 @@ class _GameScreenState extends State<GameScreen> {
                 game.mentorDialogOpenNotifier,
               ]),
               builder: (context, _) {
-                if (!game.sceneReadyNotifier.value) {
+                if (!game.sceneReadyNotifier.value || _isResizing) {
+                  if (_isResizing && game.sceneReadyNotifier.value) {
+                    return const _ViewportSettlingOverlay();
+                  }
                   return _GameLoadingOverlay(onBack: _leaveLevel);
                 }
 
@@ -105,10 +172,31 @@ class _GameScreenState extends State<GameScreen> {
                       Positioned(
                         top: 4,
                         left: 4,
-                        child: IconButton.filledTonal(
-                          onPressed: _leaveLevel,
-                          icon: const Icon(Icons.arrow_back_rounded),
-                          tooltip: 'Назад',
+                        child: Row(
+                          children: [
+                            IconButton.filledTonal(
+                              onPressed: _leaveLevel,
+                              icon: const Icon(Icons.arrow_back_rounded),
+                              tooltip: 'Назад',
+                            ),
+                            if (_displayService.fullscreenSupported &&
+                                !_displayService.isStandalone) ...[
+                              const SizedBox(width: 4),
+                              IconButton.filledTonal(
+                                onPressed: () {
+                                  unawaited(
+                                    _displayService.requestImmersive(
+                                      lockLandscape:
+                                          viewportSize.width >
+                                          viewportSize.height,
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.fullscreen_rounded),
+                                tooltip: 'На весь экран',
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       if (useCenteredLandscapeHud)
@@ -130,6 +218,8 @@ class _GameScreenState extends State<GameScreen> {
                       Align(
                         alignment: Alignment.bottomCenter,
                         child: GameControls(
+                          controller: _controlsController,
+                          enabled: !_isResizing,
                           onMoveLeftStart: game.startMovingLeft,
                           onMoveRightStart: game.startMovingRight,
                           onMoveEnd: game.stopMoving,
@@ -142,9 +232,69 @@ class _GameScreenState extends State<GameScreen> {
               },
             ),
           ),
+          if (debugViewport)
+            Positioned.fill(child: ViewportDebugOverlay(game: game)),
         ],
       ),
     );
+  }
+
+  void _beginViewportTransition() {
+    if (!mounted) return;
+    _settleTimer?.cancel();
+    _viewportStability.beginResize();
+    _interruptGameplay();
+    if (!_isResizing) {
+      setState(() => _isResizing = true);
+    }
+    if (_debugViewportEnabled(Uri.base)) {
+      final view = View.of(context);
+      debugPrint(
+        '[BearMath Flutter viewport] resizing '
+        '${view.physicalSize.width / view.devicePixelRatio}×'
+        '${view.physicalSize.height / view.devicePixelRatio} '
+        'dpr=${view.devicePixelRatio}',
+      );
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sampleViewport());
+  }
+
+  void _sampleViewport() {
+    if (!mounted || !_isResizing) return;
+    final view = View.of(context);
+    final size = view.physicalSize / view.devicePixelRatio;
+    if (!_viewportStability.sample(size)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _sampleViewport());
+      return;
+    }
+    _settleTimer?.cancel();
+    _settleTimer = Timer(const Duration(milliseconds: 280), () {
+      if (!mounted || !_isResizing) return;
+      final currentView = View.of(context);
+      final currentSize =
+          currentView.physicalSize / currentView.devicePixelRatio;
+      if (!_viewportStability.sample(currentSize)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _sampleViewport());
+        return;
+      }
+      _viewportStability.complete();
+      _game?.resumeEngine();
+      if (_debugViewportEnabled(Uri.base)) {
+        debugPrint(
+          '[BearMath Flutter viewport] stable '
+          '${currentSize.width}×${currentSize.height}',
+        );
+      }
+      setState(() => _isResizing = false);
+    });
+  }
+
+  void _interruptGameplay() {
+    _controlsController.interrupt();
+    _game?.stopMoving();
+    if (_isResizing || _viewportStability.phase == ViewportPhase.resizing) {
+      _game?.pauseEngine();
+    }
   }
 
   void _openLevelCompleteScreen() {
@@ -235,6 +385,30 @@ class _GameScreenState extends State<GameScreen> {
     } on FormatException {
       return const <String, String>{};
     }
+  }
+
+  bool _debugViewportEnabled(Uri uri) {
+    return uri.queryParameters['debugViewport'] == '1' ||
+        _fragmentQueryParameters(uri.fragment)['debugViewport'] == '1';
+  }
+}
+
+class _ViewportSettlingOverlay extends StatelessWidget {
+  const _ViewportSettlingOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return const IgnorePointer(
+      child: ColoredBox(
+        color: Color(0x33001C38),
+        child: Center(
+          child: SizedBox.square(
+            dimension: 28,
+            child: CircularProgressIndicator(strokeWidth: 3),
+          ),
+        ),
+      ),
+    );
   }
 }
 
