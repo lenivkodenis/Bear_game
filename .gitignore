@@ -5,6 +5,9 @@
 .packages
 build/
 coverage/
+node_modules/
+.pnpm-store/
+artifacts/visual-diffs/
 
 # Local asset-processing tools
 .venv-tools/

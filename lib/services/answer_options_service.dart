@@ -38,9 +38,10 @@ class AnswerOptionsService {
   }
 
   List<int> _beginnerOptions(Question question) {
-    final options = <int>{question.correctAnswer, ...question.options}
-        .where((option) => option > 0)
-        .toList();
+    final options = <int>{
+      question.correctAnswer,
+      ...question.options,
+    }.where((option) => option > 0).toList();
 
     var candidate = question.correctAnswer + 1;
     while (options.length < 3) {

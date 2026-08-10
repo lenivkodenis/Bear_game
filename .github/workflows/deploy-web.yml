@@ -1,10 +1,12 @@
 name: Build and deploy Flutter Web
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full commit SHA from main to publish to production
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -22,8 +24,35 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.source_sha }}
           fetch-depth: 0
           lfs: true
+
+      - name: Validate and describe production source
+        id: source
+        shell: bash
+        run: |
+          git fetch origin main --no-tags
+          resolved_sha="$(git rev-parse HEAD)"
+          requested_sha="${{ inputs.source_sha }}"
+          if [[ "$resolved_sha" != "$requested_sha" ]]; then
+            echo "source_sha must be the full 40-character commit SHA."
+            echo "Requested: $requested_sha"
+            echo "Resolved:  $resolved_sha"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$resolved_sha" origin/main; then
+            echo "Refusing to publish a commit that is not contained in origin/main."
+            exit 1
+          fi
+          commit_message="$(git log -1 --pretty=%s "$resolved_sha")"
+          echo "sha=$resolved_sha" >> "$GITHUB_OUTPUT"
+          echo "message=$commit_message" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Production source"
+            echo "- Commit SHA: \`$resolved_sha\`"
+            echo "- Commit message: $commit_message"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -48,17 +77,7 @@ jobs:
         run: flutter build web --release
 
       - name: Verify deployment output
-        shell: bash
-        run: |
-          test -f build/web/index.html
-          test -f build/web/flutter_bootstrap.js
-
-          lfs_pointers="$(grep -RIl 'version https://git-lfs.github.com/spec/v1' build/web || true)"
-          if [[ -n "$lfs_pointers" ]]; then
-            echo "Git LFS pointer files found in build/web:"
-            echo "$lfs_pointers"
-            exit 1
-          fi
+        run: bash scripts/verify_no_lfs_pointers.sh build/web
 
       - name: Publish site to web-deploy
         uses: peaceiris/actions-gh-pages@v4
@@ -67,4 +86,13 @@ jobs:
           publish_branch: web-deploy
           publish_dir: ./build/web
           force_orphan: true
-          full_commit_message: Deploy Flutter Web from ${{ github.sha }}
+          full_commit_message: Deploy Flutter Web from ${{ steps.source.outputs.sha }}
+
+      - name: Summarize production publication
+        run: |
+          {
+            echo "## Publication"
+            echo "- Branch: \`web-deploy\`"
+            echo "- Source SHA: \`${{ steps.source.outputs.sha }}\`"
+            echo "- Source message: ${{ steps.source.outputs.message }}"
+          } >> "$GITHUB_STEP_SUMMARY"

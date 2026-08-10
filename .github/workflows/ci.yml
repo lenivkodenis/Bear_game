@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+      - web-deploy
+      - staging-deploy
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout source and LFS assets
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.9
+          channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run unit and widget tests
+        run: flutter test
+
+      - name: Build production Web release
+        run: flutter build web --release
+
+      - name: Verify production Web output
+        run: bash scripts/verify_no_lfs_pointers.sh build/web
+
+  visual-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: validate
+
+    steps:
+      - name: Checkout source and LFS assets
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.9
+          channel: stable
+          cache: true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.18.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+
+      - name: Build deterministic visual-test Web release
+        run: >-
+          flutter build web --release
+          --dart-define=ENABLE_VISUAL_TEST_MODE=true
+
+      - name: Verify visual-test Web output
+        run: bash scripts/verify_no_lfs_pointers.sh build/web
+
+      - name: Compare browser screenshots
+        run: pnpm run test:visual
+
+      - name: Upload visual diff artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-diffs
+          path: artifacts/visual-diffs/
+          if-no-files-found: ignore
+          retention-days: 14
