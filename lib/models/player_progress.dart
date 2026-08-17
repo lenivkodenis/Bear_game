@@ -1,6 +1,8 @@
 import 'learning_statistics.dart';
 
 class PlayerProgress {
+  static const int totalLevelCount = 10;
+
   const PlayerProgress({
     required this.score,
     required this.unlockedLocation,
@@ -36,6 +38,12 @@ class PlayerProgress {
 
   bool isLevelCompleted(int levelId) {
     return completedLevelIds.contains(levelId);
+  }
+
+  bool get isGameCompleted {
+    return completedLevelIds.containsAll(
+      Iterable<int>.generate(totalLevelCount, (index) => index + 1),
+    );
   }
 
   PlayerProgress copyWith({

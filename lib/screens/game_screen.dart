@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../game/bear_math_game.dart';
 import '../models/level_completion_summary.dart';
+import '../services/game_settings_service.dart';
+import '../services/progress_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/game_controls.dart';
 import '../widgets/mentor_dialog.dart';
@@ -78,6 +80,7 @@ class _GameScreenState extends State<GameScreen> {
                     onClose: game.closeMentorDialog,
                     onLevelComplete: _openLevelCompleteScreen,
                     onReturnToMap: _returnToMap,
+                    onRestartGame: _restartGame,
                   );
                 },
               },
@@ -195,6 +198,22 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     Navigator.of(context).pushReplacementNamed(LocationMapScreen.routeName);
+  }
+
+  Future<void> _restartGame() async {
+    _game?.closeMentorDialog();
+    await ProgressService().resetProgress();
+    await GameSettingsService().confirmProgressResetForCurrentDifficulty();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      GameScreen.routeName,
+      (route) => route.isFirst,
+      arguments: 1,
+    );
   }
 
   int? _levelIdFromUri(Uri uri) {

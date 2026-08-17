@@ -4,6 +4,7 @@ import '../game/bear_math_game.dart';
 import '../models/game_difficulty.dart';
 import '../models/question.dart';
 import '../models/question_answer_result.dart';
+import 'completed_game_prompt.dart';
 
 class MentorDialog extends StatefulWidget {
   const MentorDialog({
@@ -11,6 +12,7 @@ class MentorDialog extends StatefulWidget {
     required this.onClose,
     required this.onLevelComplete,
     required this.onReturnToMap,
+    required this.onRestartGame,
     super.key,
   });
 
@@ -18,6 +20,7 @@ class MentorDialog extends StatefulWidget {
   final VoidCallback onClose;
   final VoidCallback onLevelComplete;
   final VoidCallback onReturnToMap;
+  final Future<void> Function() onRestartGame;
 
   @override
   State<MentorDialog> createState() => _MentorDialogState();
@@ -31,6 +34,7 @@ class _MentorDialogState extends State<MentorDialog> {
   GameDifficulty? _orderedDifficulty;
   List<int> _orderedOptions = const [];
   final TextEditingController _manualAnswerController = TextEditingController();
+  bool _completedGamePromptHandled = false;
 
   @override
   void dispose() {
@@ -91,6 +95,19 @@ class _MentorDialogState extends State<MentorDialog> {
 
   List<Widget> _buildLevelContent(BuildContext context) {
     final level = widget.game.currentLevel!;
+
+    if (widget.game.gameWasCompletedWhenLevelOpened &&
+        !_completedGamePromptHandled) {
+      return [
+        CompletedGamePrompt(
+          mentorName: level.mentorName,
+          locationName: level.locationName,
+          onReplayLevel: _replayCompletedLevel,
+          onRestartGame: widget.onRestartGame,
+          onClose: widget.onClose,
+        ),
+      ];
+    }
 
     if (_showIntro) {
       return [
@@ -299,6 +316,25 @@ class _MentorDialogState extends State<MentorDialog> {
       _showIntro = false;
       _answerResult = null;
       _isSubmitting = false;
+      _orderedQuestionId = null;
+      _orderedDifficulty = null;
+      _orderedOptions = const [];
+      _manualAnswerController.clear();
+    });
+    widget.game.startQuestionTimer();
+  }
+
+  Future<void> _replayCompletedLevel() async {
+    await widget.game.replayCurrentLevel();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _completedGamePromptHandled = true;
+      _showIntro = false;
+      _answerResult = null;
       _orderedQuestionId = null;
       _orderedDifficulty = null;
       _orderedOptions = const [];

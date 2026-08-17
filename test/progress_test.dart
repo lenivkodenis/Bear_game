@@ -75,6 +75,39 @@ void main() {
 
     expect(ProgressService().rewindToLevel(11), throwsArgumentError);
   });
+
+  test('restarting one completed level preserves the rest of the game', () async {
+    SharedPreferences.setMockInitialValues({
+      'score': 88,
+      'solved_examples': 100,
+      'unlocked_location': 11,
+      'current_question_indexes':
+          '{"1":10,"2":10,"3":10,"4":10,"5":10,"6":10,"7":10,"8":10,"9":10,"10":10}',
+      'completed_level_ids': [
+        '1',
+        '2',
+        '3',
+        '4',
+        '5',
+        '6',
+        '7',
+        '8',
+        '9',
+        '10',
+      ],
+    });
+
+    final progress = await ProgressService().restartLevelOnly(6);
+
+    expect(progress.isGameCompleted, isFalse);
+    expect(progress.isLevelCompleted(6), isFalse);
+    expect(progress.completedLevelIds.length, 9);
+    expect(progress.questionIndexForLevel(6), 0);
+    expect(progress.questionIndexForLevel(7), 10);
+    expect(progress.unlockedLocation, 11);
+    expect(progress.score, 88);
+    expect(progress.solvedExamples, 100);
+  });
 }
 
 Future<BearMathGame> _loadGame({required int levelId}) async {

@@ -85,6 +85,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
   final ValueNotifier<bool> sceneReadyNotifier = ValueNotifier<bool>(false);
   bool _mentorDialogWasShown = false;
   bool _mentorDialogOpen = false;
+  bool _gameWasCompletedWhenLevelOpened = false;
   bool _sceneReady = false;
   bool _groundCalibrationEnabled = false;
   bool _groundSegmentCalibrationEnabled = false;
@@ -129,6 +130,8 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
   bool get hintsEnabled => hintsEnabledForDifficulty(_difficulty);
 
+  bool get gameWasCompletedWhenLevelOpened => _gameWasCompletedWhenLevelOpened;
+
   bool get isLevelComplete {
     final level = currentLevel;
     return level != null && _currentQuestionIndex >= level.questions.length;
@@ -153,6 +156,7 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
 
     currentLevel = await _levelService.loadLevel(levelId);
     _progress = await _progressService.loadProgress();
+    _gameWasCompletedWhenLevelOpened = _progress.isGameCompleted;
     _roundStartProgress = _progress;
     _currentQuestionIndex = math.min(
       _progress.questionIndexForLevel(levelId),
@@ -1296,6 +1300,19 @@ class BearMathGame extends FlameGame with HasKeyboardHandlerComponents {
     scoreNotifier.value = _progress.score;
 
     await _progressService.saveProgress(_progress);
+  }
+
+  Future<void> replayCurrentLevel() async {
+    _progress = await _progressService.restartLevelOnly(levelId);
+    _roundStartProgress = _progress;
+    _currentQuestionIndex = 0;
+    _levelSnowflakes = 0;
+    _roundMistakeCount = 0;
+    _questionsWithWrongAttempts.clear();
+    _questionStopwatch
+      ..stop()
+      ..reset();
+    scoreNotifier.value = _progress.score;
   }
 
   int _finishQuestionTimingSegment() {

@@ -86,9 +86,7 @@ class ProgressService {
   }
 
   Future<PlayerProgress> rewindToLevel(int levelId) async {
-    if (levelId < 1 || levelId > 10) {
-      throw ArgumentError.value(levelId, 'levelId', 'must be from 1 to 10');
-    }
+    _validateLevelId(levelId);
 
     final progress = await loadProgress();
     final questionIndexes = Map<int, int>.of(progress.currentQuestionIndexes)
@@ -103,6 +101,33 @@ class ProgressService {
 
     await saveProgress(rewoundProgress);
     return rewoundProgress;
+  }
+
+  Future<PlayerProgress> restartLevelOnly(int levelId) async {
+    _validateLevelId(levelId);
+
+    final progress = await loadProgress();
+    final questionIndexes = Map<int, int>.of(progress.currentQuestionIndexes)
+      ..remove(levelId);
+    final completedLevelIds = Set<int>.of(progress.completedLevelIds)
+      ..remove(levelId);
+    final restartedProgress = progress.copyWith(
+      currentQuestionIndexes: questionIndexes,
+      completedLevelIds: completedLevelIds,
+    );
+
+    await saveProgress(restartedProgress);
+    return restartedProgress;
+  }
+
+  void _validateLevelId(int levelId) {
+    if (levelId < 1 || levelId > PlayerProgress.totalLevelCount) {
+      throw ArgumentError.value(
+        levelId,
+        'levelId',
+        'must be from 1 to ${PlayerProgress.totalLevelCount}',
+      );
+    }
   }
 
   Map<int, int> _loadQuestionIndexes(SharedPreferences preferences) {

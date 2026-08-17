@@ -250,6 +250,42 @@ void main() {
     expect(game.mentorDialogOpenNotifier.value, isTrue);
     expect(game.overlays.isActive(BearMathGame.mentorDialogOverlay), isTrue);
   });
+
+  test('a completed game can replay only the current hero level', () async {
+    SharedPreferences.setMockInitialValues({
+      'score': 75,
+      'solved_examples': 100,
+      'unlocked_location': 11,
+      'current_question_indexes':
+          '{"1":10,"2":10,"3":10,"4":10,"5":10,"6":10,"7":10,"8":10,"9":10,"10":10}',
+      'completed_level_ids': [
+        '1',
+        '2',
+        '3',
+        '4',
+        '5',
+        '6',
+        '7',
+        '8',
+        '9',
+        '10',
+      ],
+    });
+    final game = await _loadGame(levelId: 4);
+
+    expect(game.gameWasCompletedWhenLevelOpened, isTrue);
+    expect(game.currentQuestion, isNull);
+
+    await game.replayCurrentLevel();
+
+    final progress = await ProgressService().loadProgress();
+    expect(game.currentQuestionNumber, 1);
+    expect(game.currentQuestion, isNotNull);
+    expect(progress.completedLevelIds.length, 9);
+    expect(progress.isLevelCompleted(4), isFalse);
+    expect(progress.isLevelCompleted(5), isTrue);
+    expect(progress.score, 75);
+  });
 }
 
 Future<BearMathGame> _loadGame({required int levelId}) async {
